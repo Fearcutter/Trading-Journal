@@ -127,8 +127,8 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* Confluences & Setups */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* Confluences, Setups & Grades */}
+      <div className="grid grid-cols-3 gap-4">
         <ListManager
           title="Confluences"
           items={settings.confluences}
@@ -140,6 +140,12 @@ export default function SettingsPage() {
           items={settings.setupTypes}
           onAdd={settings.addSetupType}
           onRemove={settings.removeSetupType}
+        />
+        <ListManager
+          title="Grades"
+          items={settings.grades}
+          onAdd={settings.addGrade}
+          onRemove={settings.removeGrade}
         />
       </div>
 

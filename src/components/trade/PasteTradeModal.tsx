@@ -4,6 +4,7 @@ import { ClipboardPaste, AlertCircle, ArrowRight, Keyboard } from 'lucide-react'
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { parseTradingViewClipboard, parseTradingViewHTML } from '../../utils/tradingview-parser';
+import { useSettings } from '../../context/SettingsContext';
 import type { ParsedTradeData } from '../../utils/tradingview-parser';
 
 interface PasteTradeModalProps {
@@ -13,6 +14,7 @@ interface PasteTradeModalProps {
 
 export default function PasteTradeModal({ open, onOpenChange }: PasteTradeModalProps) {
   const navigate = useNavigate();
+  const settings = useSettings();
   const [parsed, setParsed] = useState<ParsedTradeData | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,7 +40,7 @@ export default function PasteTradeModal({ open, onOpenChange }: PasteTradeModalP
               const htmlBlob = await item.getType('text/html');
               const html = await htmlBlob.text();
               console.log('[PasteTradeModal] HTML content:', html);
-              result = parseTradingViewHTML(html);
+              result = parseTradingViewHTML(html, settings.instruments);
               if (result) break;
             }
 

@@ -1,3 +1,5 @@
+import type { Instrument } from '../types/instrument';
+
 export interface ParsedTradeData {
   direction: 'long' | 'short';
   entry: number;
@@ -10,62 +12,81 @@ export interface ParsedTradeData {
 
 /**
  * Parse TradingView Position Tool HTML clipboard content.
- * TradingView's rich clipboard often contains structured HTML with price data
- * in table cells, spans, or data attributes.
+ * TradingView copies a <span> with a `data-tradingview-clip` attribute
+ * containing a JSON blob with all trade data.
  */
-export function parseTradingViewHTML(html: string): ParsedTradeData | null {
+export function parseTradingViewHTML(html: string, instruments?: Instrument[]): ParsedTradeData | null {
   if (!html || html.trim().length === 0) return null;
 
   try {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
-    const text = doc.body.textContent || '';
 
-    // Try parsing the extracted text content with the text parser
-    const fromText = parseTradingViewClipboard(text);
-    if (fromText) return fromText;
+    // Find element with data-tradingview-clip attribute
+    const el = doc.querySelector('[data-tradingview-clip]');
+    if (!el) return null;
 
-    // Try to extract numbers from any structured HTML elements
-    const allText = doc.body.innerHTML;
+    const jsonStr = el.getAttribute('data-tradingview-clip');
+    if (!jsonStr) return null;
 
-    // Look for direction
+    const clip = JSON.parse(jsonStr);
+
+    // Determine direction from title or source type
     let direction: 'long' | 'short' | null = null;
-    const lowerAll = allText.toLowerCase();
-    if (lowerAll.includes('long position') || lowerAll.includes('long')) {
+    const title = (clip.title || '').toLowerCase();
+    if (title.includes('long')) {
       direction = 'long';
-    } else if (lowerAll.includes('short position') || lowerAll.includes('short')) {
+    } else if (title.includes('short')) {
       direction = 'short';
     }
+
+    // Fallback: check source type (e.g. "LineToolRiskRewardLong")
+    if (!direction) {
+      const sourceType = (clip.sources?.[0]?.source?.type || '').toLowerCase();
+      if (sourceType.includes('long')) {
+        direction = 'long';
+      } else if (sourceType.includes('short')) {
+        direction = 'short';
+      }
+    }
+
     if (!direction) return null;
 
-    // Extract all numbers from the HTML
-    const numbers = allText.match(/[\d,]+\.?\d*/g)?.map(n => parseFloat(n.replace(/,/g, ''))).filter(n => !isNaN(n) && n > 0) || [];
+    // Extract entry price
+    const entry = clip.sources?.[0]?.source?.points?.[0]?.price;
+    if (typeof entry !== 'number' || entry <= 0) return null;
 
-    // Look for labeled values in the HTML
-    let entry = 0, stopLoss = 0, takeProfit = 0;
+    // Compute R:R from profitLevel / stopLevel (tick-based offsets)
+    const state = clip.sources?.[0]?.source?.state;
+    const stopLevel = state?.stopLevel;
+    const profitLevel = state?.profitLevel;
+    const riskReward = (stopLevel && profitLevel && stopLevel > 0)
+      ? Math.round((profitLevel / stopLevel) * 100) / 100
+      : 0;
 
-    const entryMatch = allText.match(/(?:entry|open|price)[:\s]*([\d,]+\.?\d*)/i);
-    if (entryMatch) entry = parseFloat(entryMatch[1].replace(/,/g, ''));
+    // Compute stop/target prices from tick offsets if instrument is known
+    let stopLoss = 0;
+    let takeProfit = 0;
+    let pointsPL = 0;
 
-    const stopMatch = allText.match(/(?:stop|sl)[:\s]*([\d,]+\.?\d*)/i);
-    if (stopMatch) stopLoss = parseFloat(stopMatch[1].replace(/,/g, ''));
+    if (instruments && stopLevel && profitLevel) {
+      // Extract base symbol: "CME_MINI:NQ1!" → "NQ"
+      const symbolRaw = state?.symbol || '';
+      const afterColon = symbolRaw.includes(':') ? symbolRaw.split(':')[1] : symbolRaw;
+      const baseSymbol = afterColon.replace(/\d+!?$/, '');
 
-    const targetMatch = allText.match(/(?:target|tp|take\s*profit)[:\s]*([\d,]+\.?\d*)/i);
-    if (targetMatch) takeProfit = parseFloat(targetMatch[1].replace(/,/g, ''));
-
-    if (!entry || !stopLoss) return null;
-
-    const risk = Math.abs(entry - stopLoss);
-    const riskReward = takeProfit && risk ? Math.abs(takeProfit - entry) / risk : 0;
-    const pointsPL = takeProfit ? (direction === 'long' ? takeProfit - entry : entry - takeProfit) : 0;
-
-    let result: 'win' | 'loss' | 'breakeven';
-    if (Math.abs(pointsPL) < 0.001) {
-      result = 'breakeven';
-    } else if (pointsPL > 0) {
-      result = 'win';
-    } else {
-      result = 'loss';
+      const instrument = instruments.find(i => i.symbol === baseSymbol);
+      if (instrument) {
+        const { tickSize } = instrument;
+        if (direction === 'long') {
+          stopLoss = entry - stopLevel * tickSize;
+          takeProfit = entry + profitLevel * tickSize;
+        } else {
+          stopLoss = entry + stopLevel * tickSize;
+          takeProfit = entry - profitLevel * tickSize;
+        }
+        pointsPL = profitLevel * tickSize;
+      }
     }
 
     return {
@@ -73,9 +94,9 @@ export function parseTradingViewHTML(html: string): ParsedTradeData | null {
       entry: Math.round(entry * 100) / 100,
       stopLoss: Math.round(stopLoss * 100) / 100,
       takeProfit: Math.round(takeProfit * 100) / 100,
-      riskReward: Math.round(riskReward * 100) / 100,
+      riskReward,
       pointsPL: Math.round(pointsPL * 100) / 100,
-      result,
+      result: 'breakeven',
     };
   } catch {
     return null;

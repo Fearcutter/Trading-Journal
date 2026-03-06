@@ -16,6 +16,7 @@ export default function Modal({ open, onOpenChange, title, children, wide }: Mod
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" />
         <Dialog.Content
+          aria-describedby={undefined}
           className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-[85vh] overflow-y-auto ${wide ? 'w-[640px]' : 'w-[480px]'}`}
         >
           <div className="flex items-center justify-between p-4 border-b border-slate-700">

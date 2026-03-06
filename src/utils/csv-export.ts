@@ -5,7 +5,7 @@ export function exportTradesToCSV(trades: Trade[]): string {
     'Date', 'Time', 'Instrument', 'Direction', 'Entry', 'Stop Loss',
     'Take Profit', 'Exit Price', 'Contracts', 'Result', 'Points P&L',
     'Dollar P&L', 'R:R', 'Setup Type', 'Confluences', 'Emotion Before',
-    'Emotion After', 'Rating', 'Pre-Trade Notes', 'Post-Trade Notes', 'Tags',
+    'Emotion After', 'Grade', 'Pre-Trade Notes', 'Post-Trade Notes', 'Tags',
   ];
 
   const rows = trades.map(t => [
@@ -26,7 +26,7 @@ export function exportTradesToCSV(trades: Trade[]): string {
     t.confluences.join('; '),
     t.emotionBefore,
     t.emotionAfter,
-    t.rating,
+    t.grade,
     `"${(t.preTradeNotes || '').replace(/"/g, '""')}"`,
     `"${(t.postTradeNotes || '').replace(/"/g, '""')}"`,
     t.tags.join('; '),

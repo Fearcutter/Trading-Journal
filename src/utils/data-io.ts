@@ -71,7 +71,7 @@ export function validateImportData(data: unknown): { valid: boolean; trades: Tra
       confluences: Array.isArray(t.confluences) ? t.confluences.map(String) : [],
       emotionBefore: (t.emotionBefore as Trade['emotionBefore']) || '',
       emotionAfter: (t.emotionAfter as Trade['emotionAfter']) || '',
-      rating: Number(t.rating) || 0,
+      grade: String(t.grade || ''),
       preTradeNotes: String(t.preTradeNotes || ''),
       postTradeNotes: String(t.postTradeNotes || ''),
       setupScreenshot: String(t.setupScreenshot || ''),

@@ -5,12 +5,15 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import { DEFAULT_INSTRUMENTS } from '../constants/instruments';
 import { DEFAULT_CONFLUENCES } from '../constants/confluences';
 import { DEFAULT_SETUP_TYPES } from '../constants/setupTypes';
+import { DEFAULT_GRADES } from '../constants/grades';
 
 interface SettingsContextValue extends Settings {
   addConfluence: (name: string) => void;
   removeConfluence: (name: string) => void;
   addSetupType: (name: string) => void;
   removeSetupType: (name: string) => void;
+  addGrade: (name: string) => void;
+  removeGrade: (name: string) => void;
   addInstrument: (instrument: Instrument) => void;
   removeInstrument: (symbol: string) => void;
   updateDefaultContracts: (n: number) => void;
@@ -24,6 +27,7 @@ const SettingsContext = createContext<SettingsContextValue | null>(null);
 const DEFAULT_SETTINGS: Settings = {
   confluences: DEFAULT_CONFLUENCES,
   setupTypes: DEFAULT_SETUP_TYPES,
+  grades: DEFAULT_GRADES,
   instruments: DEFAULT_INSTRUMENTS,
   defaultContracts: 1,
   defaultInstrument: 'NQ',
@@ -57,6 +61,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings(prev => ({
       ...prev,
       setupTypes: prev.setupTypes.filter(s => s !== name),
+    }));
+  }, [setSettings]);
+
+  const addGrade = useCallback((name: string) => {
+    setSettings(prev => ({
+      ...prev,
+      grades: prev.grades.includes(name) ? prev.grades : [...prev.grades, name],
+    }));
+  }, [setSettings]);
+
+  const removeGrade = useCallback((name: string) => {
+    setSettings(prev => ({
+      ...prev,
+      grades: prev.grades.filter(g => g !== name),
     }));
   }, [setSettings]);
 
@@ -99,6 +117,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       removeConfluence,
       addSetupType,
       removeSetupType,
+      addGrade,
+      removeGrade,
       addInstrument,
       removeInstrument,
       updateDefaultContracts,

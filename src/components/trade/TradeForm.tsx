@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import type { TradeFormData, TradeDirection, TradeResult, EmotionBefore, EmotionAfter } from '../../types/trade';
 import { useSettings } from '../../context/SettingsContext';
@@ -6,7 +6,6 @@ import { calculatePointsPL, calculateDollarPL, calculateRiskReward } from '../..
 import Input from '../ui/Input';
 import Select from '../ui/Select';
 import Button from '../ui/Button';
-import StarRating from '../ui/StarRating';
 import TagInput from '../ui/TagInput';
 import ImageUpload from '../ui/ImageUpload';
 import ConfluenceSelector from './ConfluenceSelector';
@@ -34,7 +33,7 @@ function getDefaultFormData(settings: { defaultInstrument: string; defaultContra
     confluences: [],
     emotionBefore: '',
     emotionAfter: '',
-    rating: 0,
+    grade: '',
     preTradeNotes: '',
     postTradeNotes: '',
     setupScreenshot: '',
@@ -50,14 +49,19 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
     ...initialData,
   }));
 
-  useEffect(() => {
-    if (initialData) {
-      setForm(prev => ({ ...prev, ...initialData }));
-    }
-  }, [initialData]);
-
   const update = <K extends keyof TradeFormData>(key: K, value: TradeFormData[K]) => {
-    setForm(prev => ({ ...prev, [key]: value }));
+    setForm(prev => {
+      const next = { ...prev, [key]: value };
+      if (key === 'entry' || key === 'exitPrice' || key === 'direction') {
+        const entry = Number(next.entry);
+        const exitPrice = Number(next.exitPrice);
+        if (entry && exitPrice) {
+          const pointsPL = calculatePointsPL(entry, exitPrice, next.direction);
+          next.result = pointsPL > 0 ? 'win' : pointsPL < 0 ? 'loss' : 'breakeven';
+        }
+      }
+      return next;
+    });
   };
 
   const instrument = useMemo(
@@ -79,9 +83,15 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
     return { pointsPL, dollarPL, rr };
   }, [form.entry, form.stopLoss, form.takeProfit, form.exitPrice, form.direction, form.contracts, instrument]);
 
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(form);
+    onSubmit({
+      ...form,
+      pointsPL: computed?.pointsPL ?? 0,
+      dollarPL: computed?.dollarPL ?? 0,
+      riskReward: computed?.rr ?? 0,
+    });
   };
 
   const instrumentOptions = settings.instruments.map(i => ({ value: i.symbol, label: `${i.symbol} — ${i.name}` }));
@@ -97,6 +107,10 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
   const setupOptions = [
     { value: '', label: 'None' },
     ...settings.setupTypes.map(s => ({ value: s, label: s })),
+  ];
+  const gradeOptions = [
+    { value: '', label: 'None' },
+    ...settings.grades.map(g => ({ value: g, label: g })),
   ];
   const emotionBeforeOptions = [
     { value: '', label: 'None' },
@@ -160,7 +174,7 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
       <div className="grid grid-cols-3 gap-4">
         <Select label="Result" value={form.result} onValueChange={v => update('result', v as TradeResult)} options={resultOptions} />
         <Select label="Setup Type" value={form.setupType} onValueChange={v => update('setupType', v)} options={setupOptions} />
-        <StarRating label="Trade Rating" value={form.rating} onChange={v => update('rating', v)} />
+        <Select label="Grade" value={form.grade} onValueChange={v => update('grade', v)} options={gradeOptions} />
       </div>
 
       {/* Confluences */}

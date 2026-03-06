@@ -2,7 +2,6 @@ import type { Trade } from '../../types/trade';
 import Badge from '../ui/Badge';
 import Card from '../ui/Card';
 import { formatCurrency, formatDate, formatTime, formatPoints } from '../../utils/formatters';
-import { Star } from 'lucide-react';
 
 interface TradeDetailProps {
   trade: Trade;
@@ -85,11 +84,10 @@ export default function TradeDetail({ trade }: TradeDetailProps) {
             <p className="text-xs text-slate-500 mb-1">Contracts</p>
             <p className="font-mono text-slate-200">{trade.contracts}</p>
           </div>
-          {trade.rating > 0 && (
-            <div className="mt-2 flex gap-0.5">
-              {[1, 2, 3, 4, 5].map(s => (
-                <Star key={s} size={14} className={s <= trade.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-600'} />
-              ))}
+          {trade.grade && (
+            <div className="mt-2">
+              <p className="text-xs text-slate-500">Grade</p>
+              <p className="text-sm font-medium text-slate-200">{trade.grade}</p>
             </div>
           )}
         </Card>

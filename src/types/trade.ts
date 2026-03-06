@@ -22,7 +22,7 @@ export interface Trade {
   confluences: string[];
   emotionBefore: EmotionBefore | '';
   emotionAfter: EmotionAfter | '';
-  rating: number; // 1-5
+  grade: string;
   preTradeNotes: string;
   postTradeNotes: string;
   setupScreenshot: string; // base64
@@ -47,10 +47,13 @@ export interface TradeFormData {
   confluences: string[];
   emotionBefore: EmotionBefore | '';
   emotionAfter: EmotionAfter | '';
-  rating: number;
+  grade: string;
   preTradeNotes: string;
   postTradeNotes: string;
   setupScreenshot: string;
   resultScreenshot: string;
   tags: string[];
+  pointsPL?: number;
+  dollarPL?: number;
+  riskReward?: number;
 }
