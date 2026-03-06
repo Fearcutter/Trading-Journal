@@ -21,7 +21,9 @@ import { LayoutDashboard, PlusCircle } from 'lucide-react';
 export default function DashboardPage() {
   const { trades } = useTrades();
   const [filters, setFilters] = useState<TradeFilters>(defaultFilters);
-  const filtered = useFilteredTrades(trades, filters);
+  const [tradeScope, setTradeScope] = useState<'live' | 'all'>('live');
+  const scopedTrades = tradeScope === 'live' ? trades.filter(t => !t.sessionId) : trades;
+  const filtered = useFilteredTrades(scopedTrades, filters);
   const dashboard = useDashboardStats(filtered);
 
   if (trades.length === 0) {
@@ -41,6 +43,24 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setTradeScope('live')}
+          className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+            tradeScope === 'live' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          Live
+        </button>
+        <button
+          onClick={() => setTradeScope('all')}
+          className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+            tradeScope === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          All
+        </button>
+      </div>
       <FilterBar filters={filters} onChange={setFilters} />
       <StatsBar stats={dashboard.stats} />
       <div className="grid grid-cols-2 gap-4">

@@ -18,6 +18,8 @@ import SettingsPage from './pages/SettingsPage';
 import RiskCalculatorPage from './pages/RiskCalculatorPage';
 import JournalPage from './pages/JournalPage';
 import PlaybookPage from './pages/PlaybookPage';
+import BacktestingPage from './pages/BacktestingPage';
+import BacktestSessionPage from './pages/BacktestSessionPage';
 
 export default function App() {
   return (
@@ -50,6 +52,8 @@ export default function App() {
               <Route path="/playbook" element={<PlaybookPage />} />
               <Route path="/confluences" element={<ConfluencesPage />} />
               <Route path="/risk-calculator" element={<RiskCalculatorPage />} />
+              <Route path="/backtesting" element={<BacktestingPage />} />
+              <Route path="/backtesting/:sessionId" element={<BacktestSessionPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
           </Routes>
