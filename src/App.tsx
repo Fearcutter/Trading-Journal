@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { TradeProvider } from './context/TradeContext';
 import { SettingsProvider } from './context/SettingsContext';
+import { JournalProvider } from './context/JournalContext';
+import { PlaybookProvider } from './context/PlaybookContext';
 import AppLayout from './components/layout/AppLayout';
 import DashboardPage from './pages/DashboardPage';
 import TradeEntryPage from './pages/TradeEntryPage';
@@ -13,11 +15,15 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import MFEMAEPage from './pages/MFEMAEPage';
 import SettingsPage from './pages/SettingsPage';
 import RiskCalculatorPage from './pages/RiskCalculatorPage';
+import JournalPage from './pages/JournalPage';
+import PlaybookPage from './pages/PlaybookPage';
 
 export default function App() {
   return (
     <TradeProvider>
-      <SettingsProvider>
+      <JournalProvider>
+        <PlaybookProvider>
+          <SettingsProvider>
         <BrowserRouter>
           <Toaster
             position="bottom-right"
@@ -38,13 +44,17 @@ export default function App() {
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/mfe-mae" element={<MFEMAEPage />} />
+              <Route path="/journal" element={<JournalPage />} />
+              <Route path="/playbook" element={<PlaybookPage />} />
               <Route path="/confluences" element={<ConfluencesPage />} />
               <Route path="/risk-calculator" element={<RiskCalculatorPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
           </Routes>
         </BrowserRouter>
-      </SettingsProvider>
+          </SettingsProvider>
+        </PlaybookProvider>
+      </JournalProvider>
     </TradeProvider>
   );
 }
