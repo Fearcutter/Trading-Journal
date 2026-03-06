@@ -48,6 +48,7 @@ export function TradeProvider({ children }: { children: ReactNode }) {
       tags: data.tags,
       mae: data.mae ? Number(data.mae) : undefined,
       mfe: data.mfe ? Number(data.mfe) : undefined,
+      sessionId: data.sessionId || undefined,
       createdAt: now,
       updatedAt: now,
     };

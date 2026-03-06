@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import { TradeProvider } from './context/TradeContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { JournalProvider } from './context/JournalContext';
+import { BacktestProvider } from './context/BacktestContext';
 import { PlaybookProvider } from './context/PlaybookContext';
 import AppLayout from './components/layout/AppLayout';
 import DashboardPage from './pages/DashboardPage';
@@ -21,6 +22,7 @@ import PlaybookPage from './pages/PlaybookPage';
 export default function App() {
   return (
     <TradeProvider>
+      <BacktestProvider>
       <JournalProvider>
         <PlaybookProvider>
           <SettingsProvider>
@@ -55,6 +57,7 @@ export default function App() {
           </SettingsProvider>
         </PlaybookProvider>
       </JournalProvider>
+      </BacktestProvider>
     </TradeProvider>
   );
 }

@@ -15,6 +15,7 @@ interface TradeFormProps {
   initialData?: Partial<TradeFormData>;
   onSubmit: (data: TradeFormData) => void;
   submitLabel?: string;
+  sessionId?: string;
 }
 
 function getDefaultFormData(settings: { defaultInstrument: string; defaultContracts: number }): TradeFormData {
@@ -44,11 +45,12 @@ function getDefaultFormData(settings: { defaultInstrument: string; defaultContra
   };
 }
 
-export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save Trade' }: TradeFormProps) {
+export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save Trade', sessionId }: TradeFormProps) {
   const settings = useSettings();
   const [form, setForm] = useState<TradeFormData>(() => ({
     ...getDefaultFormData(settings),
     ...initialData,
+    ...(sessionId ? { sessionId } : {}),
   }));
 
   const update = <K extends keyof TradeFormData>(key: K, value: TradeFormData[K]) => {
@@ -95,6 +97,7 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
       riskReward: computed?.rr ?? 0,
       mae: form.mae === '' ? undefined : Number(form.mae),
       mfe: form.mfe === '' ? undefined : Number(form.mfe),
+      sessionId: form.sessionId,
     });
   };
 

@@ -9,6 +9,7 @@ export interface TradeFilters {
   result: TradeResult | '';
   setupType: string;
   search: string;
+  sessionId?: string;
 }
 
 export const defaultFilters: TradeFilters = {
@@ -24,6 +25,15 @@ export const defaultFilters: TradeFilters = {
 export function useFilteredTrades(trades: Trade[], filters: TradeFilters): Trade[] {
   return useMemo(() => {
     return trades.filter(trade => {
+      if (filters.sessionId) {
+        if (filters.sessionId === 'live') {
+          if (trade.sessionId) return false;
+        } else if (filters.sessionId === 'all-backtest') {
+          if (!trade.sessionId) return false;
+        } else {
+          if (trade.sessionId !== filters.sessionId) return false;
+        }
+      }
       if (filters.dateFrom && trade.date < filters.dateFrom) return false;
       if (filters.dateTo && trade.date > filters.dateTo) return false;
       if (filters.instrument && trade.instrument !== filters.instrument) return false;

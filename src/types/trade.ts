@@ -30,6 +30,7 @@ export interface Trade {
   tags: string[];
   mae?: number;
   mfe?: number;
+  sessionId?: string;
   createdAt: string; // ISO datetime
   updatedAt: string; // ISO datetime
 }
@@ -60,4 +61,5 @@ export interface TradeFormData {
   pointsPL?: number;
   dollarPL?: number;
   riskReward?: number;
+  sessionId?: string;
 }
