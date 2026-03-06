@@ -28,6 +28,8 @@ export interface Trade {
   setupScreenshot: string; // base64
   resultScreenshot: string; // base64
   tags: string[];
+  mae?: number;
+  mfe?: number;
   createdAt: string; // ISO datetime
   updatedAt: string; // ISO datetime
 }
@@ -53,6 +55,8 @@ export interface TradeFormData {
   setupScreenshot: string;
   resultScreenshot: string;
   tags: string[];
+  mae?: number | '';
+  mfe?: number | '';
   pointsPL?: number;
   dollarPL?: number;
   riskReward?: number;

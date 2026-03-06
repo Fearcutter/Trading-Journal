@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import * as RadixTooltip from '@radix-ui/react-tooltip';
 
 interface TooltipProps {

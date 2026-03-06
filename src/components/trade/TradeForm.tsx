@@ -39,6 +39,8 @@ function getDefaultFormData(settings: { defaultInstrument: string; defaultContra
     setupScreenshot: '',
     resultScreenshot: '',
     tags: [],
+    mae: '',
+    mfe: '',
   };
 }
 
@@ -91,6 +93,8 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
       pointsPL: computed?.pointsPL ?? 0,
       dollarPL: computed?.dollarPL ?? 0,
       riskReward: computed?.rr ?? 0,
+      mae: form.mae === '' ? undefined : Number(form.mae),
+      mfe: form.mfe === '' ? undefined : Number(form.mfe),
     });
   };
 
@@ -144,6 +148,12 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
         <Input label="Stop Loss" type="number" step="any" mono value={form.stopLoss} onChange={e => update('stopLoss', e.target.value === '' ? '' : Number(e.target.value))} />
         <Input label="Take Profit" type="number" step="any" mono value={form.takeProfit} onChange={e => update('takeProfit', e.target.value === '' ? '' : Number(e.target.value))} />
         <Input label="Exit Price" type="number" step="any" mono value={form.exitPrice} onChange={e => update('exitPrice', e.target.value === '' ? '' : Number(e.target.value))} />
+      </div>
+
+      {/* Excursion Tracking (Optional) */}
+      <div className="grid grid-cols-2 gap-4">
+        <Input label="MAE (points)" type="number" step="any" mono value={form.mae} onChange={e => update('mae', e.target.value === '' ? '' : Number(e.target.value))} placeholder="Max Adverse Excursion" />
+        <Input label="MFE (points)" type="number" step="any" mono value={form.mfe} onChange={e => update('mfe', e.target.value === '' ? '' : Number(e.target.value))} placeholder="Max Favorable Excursion" />
       </div>
 
       {/* Computed values display */}

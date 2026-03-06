@@ -21,8 +21,8 @@ export default function TimeOfDayChart({ data }: Props) {
           <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} />
           <Tooltip
             contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
-            formatter={(value: number, _: string, entry: { payload: { count: number } }) => [
-              `$${value.toFixed(2)} (${entry.payload.count} trades)`,
+            formatter={(value: number | undefined) => [
+              `$${(value ?? 0).toFixed(2)}`,
               'P&L',
             ]}
           />

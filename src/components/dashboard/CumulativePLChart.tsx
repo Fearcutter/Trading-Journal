@@ -16,7 +16,7 @@ export default function CumulativePLChart({ data }: Props) {
           <Tooltip
             contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
             labelStyle={{ color: '#94a3b8' }}
-            formatter={(value: number) => [`$${value.toFixed(2)}`, 'P&L']}
+            formatter={(value: number | undefined) => [`$${(value ?? 0).toFixed(2)}`, 'P&L']}
           />
           <ReferenceLine y={0} stroke="#334155" />
           <Line type="monotone" dataKey="pl" stroke="#2dd4bf" strokeWidth={2} dot={false} />

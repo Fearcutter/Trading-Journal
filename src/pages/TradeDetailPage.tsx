@@ -38,6 +38,8 @@ export default function TradeDetailPage() {
       pointsPL: data.pointsPL ?? 0,
       dollarPL: data.dollarPL ?? 0,
       riskReward: data.riskReward ?? 0,
+      mae: data.mae === '' ? undefined : data.mae,
+      mfe: data.mfe === '' ? undefined : data.mfe,
     });
     setEditing(false);
     toast.success('Trade updated');
@@ -97,6 +99,8 @@ export default function TradeDetailPage() {
             setupScreenshot: trade.setupScreenshot,
             resultScreenshot: trade.resultScreenshot,
             tags: trade.tags,
+            mae: trade.mae,
+            mfe: trade.mfe,
           }}
           onSubmit={handleUpdate}
           submitLabel="Update Trade"

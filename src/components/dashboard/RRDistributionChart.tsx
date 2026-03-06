@@ -15,7 +15,7 @@ export default function RRDistributionChart({ data }: Props) {
           <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
           <Tooltip
             contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
-            formatter={(value: number) => [value, 'Trades']}
+            formatter={(value: number | undefined) => [value ?? 0, 'Trades']}
           />
           <Bar dataKey="count" fill="#818cf8" radius={[4, 4, 0, 0]} />
         </BarChart>

@@ -19,7 +19,7 @@ export default function PLByEmotionChart({ data }: Props) {
           <YAxis type="category" dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={false} width={120} />
           <Tooltip
             contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
-            formatter={(value: number) => [`$${value.toFixed(2)}`, 'P&L']}
+            formatter={(value: number | undefined) => [`$${(value ?? 0).toFixed(2)}`, 'P&L']}
           />
           <ReferenceLine x={0} stroke="#334155" />
           <Bar dataKey="pl" radius={[0, 4, 4, 0]}>

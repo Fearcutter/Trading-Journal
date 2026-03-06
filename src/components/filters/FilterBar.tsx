@@ -17,7 +17,7 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
     onChange({ ...filters, [key]: value });
   };
 
-  const hasFilters = Object.entries(filters).some(([k, v]) => v !== '' && v !== (defaultFilters as Record<string, string>)[k]);
+  const hasFilters = Object.entries(filters).some(([k, v]) => v !== '' && v !== (defaultFilters as unknown as Record<string, string>)[k]);
 
   return (
     <div className="flex items-end gap-3 flex-wrap">

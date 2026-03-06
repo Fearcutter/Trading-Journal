@@ -9,6 +9,8 @@ import TradeLogPage from './pages/TradeLogPage';
 import TradeDetailPage from './pages/TradeDetailPage';
 import CalendarPage from './pages/CalendarPage';
 import ConfluencesPage from './pages/ConfluencesPage';
+import AnalyticsPage from './pages/AnalyticsPage';
+import MFEMAEPage from './pages/MFEMAEPage';
 import SettingsPage from './pages/SettingsPage';
 
 export default function App() {
@@ -33,6 +35,8 @@ export default function App() {
               <Route path="/trades/new" element={<TradeEntryPage />} />
               <Route path="/trades/:id" element={<TradeDetailPage />} />
               <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/mfe-mae" element={<MFEMAEPage />} />
               <Route path="/confluences" element={<ConfluencesPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>

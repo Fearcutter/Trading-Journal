@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode, useCallback } from 'react';
+import { createContext, useContext, type ReactNode, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Trade, TradeFormData } from '../types/trade';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -45,6 +45,8 @@ export function TradeProvider({ children }: { children: ReactNode }) {
       setupScreenshot: data.setupScreenshot,
       resultScreenshot: data.resultScreenshot,
       tags: data.tags,
+      mae: data.mae ? Number(data.mae) : undefined,
+      mfe: data.mfe ? Number(data.mfe) : undefined,
       createdAt: now,
       updatedAt: now,
     };

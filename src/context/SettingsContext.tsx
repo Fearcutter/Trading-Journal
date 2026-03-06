@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode, useCallback } from 'react';
+import { createContext, useContext, type ReactNode, useCallback } from 'react';
 import type { Instrument } from '../types/instrument';
 import type { Settings } from '../types/settings';
 import { useLocalStorage } from '../hooks/useLocalStorage';

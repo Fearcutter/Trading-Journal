@@ -21,8 +21,8 @@ export default function WinRateByConfluences({ data }: Props) {
           <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={v => `${v}%`} domain={[0, 100]} />
           <Tooltip
             contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
-            formatter={(value: number, _: string, entry: { payload: { total: number } }) => [
-              `${value.toFixed(1)}% (${entry.payload.total} trades)`,
+            formatter={(value: number | undefined) => [
+              `${(value ?? 0).toFixed(1)}%`,
               'Win Rate',
             ]}
           />

@@ -4,6 +4,8 @@ import {
   BookOpen,
   PlusCircle,
   Calendar,
+  BarChart3,
+  Target,
   Layers,
   Settings,
 } from 'lucide-react';
@@ -13,6 +15,8 @@ const navItems = [
   { to: '/trades', icon: BookOpen, label: 'Trade Log' },
   { to: '/trades/new', icon: PlusCircle, label: 'New Trade' },
   { to: '/calendar', icon: Calendar, label: 'Calendar' },
+  { to: '/analytics', icon: BarChart3, label: 'Analytics' },
+  { to: '/mfe-mae', icon: Target, label: 'MFE / MAE' },
   { to: '/confluences', icon: Layers, label: 'Confluences' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];

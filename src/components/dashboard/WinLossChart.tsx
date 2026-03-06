@@ -28,7 +28,7 @@ export default function WinLossChart({ wins, losses, breakeven }: Props) {
           </Pie>
           <Tooltip
             contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
-            formatter={(value: number, name: string) => [value, name]}
+            formatter={(value: number | undefined, name: string | undefined) => [value ?? 0, name ?? '']}
           />
         </PieChart>
       </ResponsiveContainer>
