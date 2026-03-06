@@ -1,10 +1,11 @@
 import { createContext, useContext, ReactNode, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Trade, TradeFormData } from '../types/trade';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useIndexedDB } from '../hooks/useIndexedDB';
 
 interface TradeContextValue {
   trades: Trade[];
+  loading: boolean;
   addTrade: (data: TradeFormData) => Trade;
   updateTrade: (id: string, updates: Partial<Trade>) => void;
   deleteTrade: (id: string) => void;
@@ -16,7 +17,7 @@ interface TradeContextValue {
 const TradeContext = createContext<TradeContextValue | null>(null);
 
 export function TradeProvider({ children }: { children: ReactNode }) {
-  const [trades, setTrades] = useLocalStorage<Trade[]>('trading-journal-trades', []);
+  const [trades, setTrades, loading] = useIndexedDB<Trade[]>('trades', 'trading-journal-trades', []);
 
   const addTrade = useCallback((data: TradeFormData): Trade => {
     const now = new Date().toISOString();
@@ -82,7 +83,7 @@ export function TradeProvider({ children }: { children: ReactNode }) {
   }, [setTrades]);
 
   return (
-    <TradeContext.Provider value={{ trades, addTrade, updateTrade, deleteTrade, deleteTrades, importTrades, clearAllTrades }}>
+    <TradeContext.Provider value={{ trades, loading, addTrade, updateTrade, deleteTrade, deleteTrades, importTrades, clearAllTrades }}>
       {children}
     </TradeContext.Provider>
   );

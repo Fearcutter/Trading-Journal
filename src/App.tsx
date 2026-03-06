@@ -10,6 +10,7 @@ import TradeDetailPage from './pages/TradeDetailPage';
 import CalendarPage from './pages/CalendarPage';
 import ConfluencesPage from './pages/ConfluencesPage';
 import SettingsPage from './pages/SettingsPage';
+import RiskCalculatorPage from './pages/RiskCalculatorPage';
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
               <Route path="/trades/:id" element={<TradeDetailPage />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/confluences" element={<ConfluencesPage />} />
+              <Route path="/risk-calculator" element={<RiskCalculatorPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
           </Routes>

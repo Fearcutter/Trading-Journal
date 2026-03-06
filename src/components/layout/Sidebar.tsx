@@ -5,6 +5,7 @@ import {
   PlusCircle,
   Calendar,
   Layers,
+  Calculator,
   Settings,
 } from 'lucide-react';
 
@@ -14,6 +15,7 @@ const navItems = [
   { to: '/trades/new', icon: PlusCircle, label: 'New Trade' },
   { to: '/calendar', icon: Calendar, label: 'Calendar' },
   { to: '/confluences', icon: Layers, label: 'Confluences' },
+  { to: '/risk-calculator', icon: Calculator, label: 'Risk Calculator' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
