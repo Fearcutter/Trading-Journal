@@ -7,6 +7,7 @@ import {
   BarChart3,
   Target,
   Layers,
+  Calculator,
   Settings,
 } from 'lucide-react';
 
@@ -18,6 +19,7 @@ const navItems = [
   { to: '/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/mfe-mae', icon: Target, label: 'MFE / MAE' },
   { to: '/confluences', icon: Layers, label: 'Confluences' },
+  { to: '/risk-calculator', icon: Calculator, label: 'Risk Calculator' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 

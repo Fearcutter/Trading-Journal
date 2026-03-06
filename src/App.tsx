@@ -12,6 +12,7 @@ import ConfluencesPage from './pages/ConfluencesPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import MFEMAEPage from './pages/MFEMAEPage';
 import SettingsPage from './pages/SettingsPage';
+import RiskCalculatorPage from './pages/RiskCalculatorPage';
 
 export default function App() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/mfe-mae" element={<MFEMAEPage />} />
               <Route path="/confluences" element={<ConfluencesPage />} />
+              <Route path="/risk-calculator" element={<RiskCalculatorPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
           </Routes>
