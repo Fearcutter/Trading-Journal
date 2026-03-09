@@ -85,7 +85,7 @@ export function parseTradingViewHTML(html: string, instruments?: Instrument[], t
       time = converted.time;
     }
 
-    // Derive SL/TP from tick offsets using instrument tickSize
+    // Derive SL/TP — try tick-based calculation first, then fall back to points
     let stopLoss = 0;
     let takeProfit = 0;
 
@@ -105,6 +105,14 @@ export function parseTradingViewHTML(html: string, instruments?: Instrument[], t
           takeProfit = entry - profitLevel * tickSize;
         }
       }
+    }
+
+    // Fallback: read SL/TP directly from points[1] and points[2] if tick-based calc failed
+    if (!stopLoss && points?.[1]?.price && typeof points[1].price === 'number') {
+      stopLoss = points[1].price;
+    }
+    if (!takeProfit && points?.[2]?.price && typeof points[2].price === 'number') {
+      takeProfit = points[2].price;
     }
 
     const pointsPL = calculatePointsPL(entry, exitPrice, direction);
