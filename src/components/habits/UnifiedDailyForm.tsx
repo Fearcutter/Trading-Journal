@@ -10,19 +10,7 @@ import EmotionSelector from './EmotionSelector';
 import TendencySelector from './TendencySelector';
 import HabitChecklist from './HabitChecklist';
 import RuleAdherenceChecklist from './RuleAdherenceChecklist';
-import Select from '../ui/Select';
-import TagInput from '../ui/TagInput';
 import toast from 'react-hot-toast';
-
-const MARKET_CONDITIONS = [
-  { value: '', label: 'Select...' },
-  { value: 'Trending Up', label: 'Trending Up' },
-  { value: 'Trending Down', label: 'Trending Down' },
-  { value: 'Ranging', label: 'Ranging' },
-  { value: 'Volatile', label: 'Volatile' },
-  { value: 'Low Volume', label: 'Low Volume' },
-  { value: 'News-Driven', label: 'News-Driven' },
-];
 
 interface UnifiedDailyFormProps {
   date: string;
@@ -36,8 +24,6 @@ export default function UnifiedDailyForm({ date, existingCheckIn, existingJourna
 
   // Journal fields
   const [preMarketPlan, setPreMarketPlan] = useState(existingJournalEntry?.preMarketPlan ?? '');
-  const [marketConditions, setMarketConditions] = useState(existingJournalEntry?.marketConditions ?? '');
-  const [goals, setGoals] = useState<string[]>(existingJournalEntry?.goals ?? []);
 
   // Habit check-in fields
   const [emotionBefore, setEmotionBefore] = useState<EmotionBefore | ''>(existingCheckIn?.emotionBefore || '');
@@ -60,8 +46,6 @@ export default function UnifiedDailyForm({ date, existingCheckIn, existingJourna
 
   useEffect(() => {
     setPreMarketPlan(existingJournalEntry?.preMarketPlan ?? '');
-    setMarketConditions(existingJournalEntry?.marketConditions ?? '');
-    setGoals(existingJournalEntry?.goals ?? []);
     setEmotionBefore(existingCheckIn?.emotionBefore || '');
     setEmotionAfter(existingCheckIn?.emotionAfter || '');
     setTendencies(existingCheckIn?.tendencies || []);
@@ -88,11 +72,11 @@ export default function UnifiedDailyForm({ date, existingCheckIn, existingJourna
     const journalData = {
       date,
       preMarketPlan,
-      marketConditions,
+      marketConditions: '',
       emotionalState: emotionBefore || '',
       lessonsLearned: reflection,
       rating: dayRating,
-      goals,
+      goals: [],
     };
 
     if (existingJournalEntry) {
