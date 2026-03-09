@@ -38,10 +38,10 @@ export default function TendencyFrequencyChart() {
           <Tooltip
             contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
             labelStyle={{ color: '#f8fafc' }}
-            formatter={(value: number, name: string) => {
-              if (name === 'count') return [value, 'Occurrences'];
-              return [formatCurrency(value), 'Avg P&L'];
-            }}
+            formatter={((value: number | undefined, name: string | undefined) => {
+              if (name === 'count') return [value ?? 0, 'Occurrences'];
+              return [formatCurrency(value ?? 0), 'Avg P&L'];
+            }) as never}
           />
           <Bar dataKey="count" radius={[0, 4, 4, 0]}>
             {data.map((entry, index) => (

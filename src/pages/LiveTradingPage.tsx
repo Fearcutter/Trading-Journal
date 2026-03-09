@@ -34,7 +34,7 @@ const TABS: { key: Tab; label: string; icon: typeof BarChart3 }[] = [
 export default function LiveTradingPage() {
   const { trades, addTrade } = useTrades();
   const { accounts } = useApexAccounts();
-  const settings = useSettings();
+
   const [activeTab, setActiveTab] = useState<Tab>('tradelog');
 
   const liveTrades = useMemo(
@@ -192,6 +192,7 @@ function TradeLogTab({ liveTrades, onTradeSubmit }: {
   const [hiddenColumns, setHiddenColumns] = useState<HiddenColumns>({ points: true, pl: true, setup: true });
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const { deleteTrades } = useTrades();
+  const settings = useSettings();
 
   const activeFilters = { ...filters, search };
   const filtered = useFilteredTrades(liveTrades, activeFilters);
@@ -363,10 +364,10 @@ function TradeLogTab({ liveTrades, onTradeSubmit }: {
       <PasteTradeModal open={pasteModalOpen} onOpenChange={setPasteModalOpen} onParsed={(data) => {
         setPasteInitialData({
           direction: data.direction,
-          entry: String(data.entry),
-          stopLoss: String(data.stopLoss),
-          takeProfit: String(data.takeProfit),
-          exitPrice: String(data.exitPrice),
+          entry: data.entry != null ? Number(data.entry) : '',
+          stopLoss: data.stopLoss != null ? Number(data.stopLoss) : '',
+          takeProfit: data.takeProfit != null ? Number(data.takeProfit) : '',
+          exitPrice: data.exitPrice != null ? Number(data.exitPrice) : '',
           result: data.result,
           date: data.date || '',
           time: data.time || '',

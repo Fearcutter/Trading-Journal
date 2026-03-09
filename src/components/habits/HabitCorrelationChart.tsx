@@ -1,4 +1,4 @@
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useHabitCorrelation } from '../../hooks/useHabitCorrelation';
 import { formatCurrency } from '../../utils/formatters';
 
@@ -39,7 +39,7 @@ export default function HabitCorrelationChart() {
           <Tooltip
             contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
             labelStyle={{ color: '#f8fafc' }}
-            formatter={(value: number, name: string) => [formatCurrency(value), name === 'followed' ? 'When Followed' : 'When Not Followed']}
+            formatter={((value: number | undefined, name: string | undefined) => [formatCurrency(value ?? 0), name === 'followed' ? 'When Followed' : 'When Not Followed']) as never}
           />
           <Legend
             formatter={v => v === 'followed' ? 'When Followed' : 'When Not Followed'}

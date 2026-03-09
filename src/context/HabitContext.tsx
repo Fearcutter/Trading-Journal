@@ -1,9 +1,9 @@
 import { createContext, useContext, type ReactNode, useCallback, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import type { HabitDefinition, DailyHabitCheckIn, EarnedBadge, BadgeType } from '../types/habit';
+import type { HabitDefinition, DailyHabitCheckIn, EarnedBadge } from '../types/habit';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import { PRESET_HABITS, BADGE_DEFINITIONS } from '../constants/habits';
-import { computeStreaks, evaluateBadges } from '../utils/habit-stats';
+import { evaluateBadges } from '../utils/habit-stats';
 import toast from 'react-hot-toast';
 
 interface HabitContextValue {

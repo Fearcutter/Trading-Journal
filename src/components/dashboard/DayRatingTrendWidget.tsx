@@ -1,14 +1,13 @@
 import { useMemo } from 'react';
 import { AreaChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useHabits } from '../../context/HabitContext';
-import { format, subDays, parseISO } from 'date-fns';
+import { format, subDays } from 'date-fns';
 
 export default function DayRatingTrendWidget() {
   const { checkIns } = useHabits();
 
   const { chartData, avgRating, avgAdherence } = useMemo(() => {
     const today = new Date();
-    const startDate = subDays(today, 29);
     const checkInMap = new Map(checkIns.map(c => [c.date, c]));
 
     const data: { date: string; label: string; rating: number | null; adherence: number | null }[] = [];
@@ -103,10 +102,10 @@ export default function DayRatingTrendWidget() {
             <Tooltip
               contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', fontSize: '12px' }}
               labelStyle={{ color: '#94a3b8' }}
-              formatter={(value: number, name: string) => {
-                if (name === 'rating') return [value, 'Rating'];
-                return [value + '%', 'Adherence'];
-              }}
+              formatter={((value: number | undefined, name: string | undefined) => {
+                if (name === 'rating') return [value ?? '--', 'Rating'];
+                return [(value != null ? value + '%' : '--'), 'Adherence'];
+              }) as never}
             />
             <Area
               yAxisId="rating"

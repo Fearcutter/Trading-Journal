@@ -1,6 +1,6 @@
 import type { Trade } from '../types/trade';
 import type { DailyHabitCheckIn, TradingTendency } from '../types/habit';
-import { format, parseISO, subDays, startOfWeek, endOfWeek } from 'date-fns';
+import { format, parseISO, startOfWeek } from 'date-fns';
 
 interface HabitPLCorrelation {
   habitId: string;

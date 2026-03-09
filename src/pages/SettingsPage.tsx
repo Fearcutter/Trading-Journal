@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { useTrades } from '../context/TradeContext';
-import { exportToJSON, downloadJSON, validateImportData, readFileAsJSON, extractHabitData } from '../utils/data-io';
+import { exportToJSON, downloadJSON, validateImportData, readFileAsJSON } from '../utils/data-io';
 import { useHabits } from '../context/HabitContext';
 import { getStorageUsage } from '../utils/storage';
 import Button from '../components/ui/Button';

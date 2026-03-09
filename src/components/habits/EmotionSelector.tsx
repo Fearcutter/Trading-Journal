@@ -1,4 +1,3 @@
-import type { EmotionBefore, EmotionAfter } from '../../types/trade';
 import { EMOTIONS_BEFORE, EMOTIONS_AFTER } from '../../constants/emotions';
 
 interface EmotionSelectorProps {

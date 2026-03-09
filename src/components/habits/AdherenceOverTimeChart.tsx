@@ -38,7 +38,7 @@ export default function AdherenceOverTimeChart() {
           <Tooltip
             contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
             labelStyle={{ color: '#f8fafc' }}
-            formatter={(value: number) => [`${value}%`, 'Adherence']}
+            formatter={(value: number | undefined) => [`${value ?? 0}%`, 'Adherence']}
           />
           <Line
             type="monotone"

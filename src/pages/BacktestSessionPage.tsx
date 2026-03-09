@@ -44,7 +44,7 @@ export default function BacktestSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const { getSession, updateSession } = useBacktest();
   const { trades, addTrade } = useTrades();
-  const settingsCtx = useSettings();
+
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get('tab') as Tab) || 'dashboard';
   const setActiveTab = (tab: Tab) => setSearchParams(tab === 'dashboard' ? {} : { tab }, { replace: true });
@@ -228,6 +228,7 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit }: {
   const [hiddenColumns, setHiddenColumns] = useState<HiddenColumns>({ points: true, pl: true, setup: true });
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const { deleteTrades } = useTrades();
+  const settingsCtx = useSettings();
 
   const activeFilters = { ...filters, search };
   const filtered = useFilteredTrades(trades, activeFilters);
@@ -400,10 +401,10 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit }: {
       <PasteTradeModal open={pasteModalOpen} onOpenChange={setPasteModalOpen} sessionId={sessionId} onParsed={(data) => {
         setPasteInitialData({
           direction: data.direction,
-          entry: String(data.entry),
-          stopLoss: String(data.stopLoss),
-          takeProfit: String(data.takeProfit),
-          exitPrice: String(data.exitPrice),
+          entry: data.entry != null ? Number(data.entry) : '',
+          stopLoss: data.stopLoss != null ? Number(data.stopLoss) : '',
+          takeProfit: data.takeProfit != null ? Number(data.takeProfit) : '',
+          exitPrice: data.exitPrice != null ? Number(data.exitPrice) : '',
           result: data.result,
           date: data.date || '',
           time: data.time || '',
