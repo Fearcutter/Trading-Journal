@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardPaste, AlertCircle, ArrowRight, Keyboard } from 'lucide-react';
 import Modal from '../ui/Modal';
@@ -22,6 +22,13 @@ export default function PasteTradeModal({ open, onOpenChange, sessionId, onParse
   const [loading, setLoading] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [manualText, setManualText] = useState('');
+
+  // Auto-read clipboard when modal opens
+  useEffect(() => {
+    if (open && !parsed) {
+      handlePaste();
+    }
+  }, [open]);
 
   const handlePaste = async () => {
     setLoading(true);
@@ -126,10 +133,12 @@ export default function PasteTradeModal({ open, onOpenChange, sessionId, onParse
           )}
         </p>
 
-        <Button onClick={handlePaste} disabled={loading} className="w-full">
-          <ClipboardPaste size={16} />
-          {loading ? 'Reading clipboard...' : 'Paste from Clipboard'}
-        </Button>
+        {!parsed && (
+          <Button onClick={handlePaste} disabled={loading} className="w-full">
+            <ClipboardPaste size={16} />
+            {loading ? 'Reading clipboard...' : 'Paste from Clipboard'}
+          </Button>
+        )}
 
         {error && (
           <div className="flex items-start gap-2 p-3 bg-rose-400/10 border border-rose-400/20 rounded-lg">
