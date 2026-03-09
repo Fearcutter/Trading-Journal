@@ -1,5 +1,6 @@
-import { useState, useEffect, type ReactNode } from 'react';
-import { useIndexedDB } from '../../hooks/useIndexedDB';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 import { hashPassword, verifyPassword } from '../../utils/password';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -15,8 +16,38 @@ interface ApexPasswordGateProps {
 }
 
 export default function ApexPasswordGate({ children, onLockStateChange, showChangePassword = false, onChangePasswordDone, requestLock = false }: ApexPasswordGateProps) {
-  const [passwordHash, setPasswordHash, loading] = useIndexedDB<string | null>('apex-accounts', 'apex-password-hash', null);
+  const { user } = useAuth();
+  const [passwordHash, setPasswordHashState] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [unlocked, setUnlocked] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('user_settings')
+      .select('data')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        const hash = (data?.data as Record<string, unknown>)?.fundedAccountsPasswordHash as string | null;
+        setPasswordHashState(hash ?? null);
+        setLoading(false);
+      });
+  }, [user]);
+
+  const setPasswordHash = useCallback(async (hash: string | null) => {
+    setPasswordHashState(hash);
+    if (!user) return;
+    const { data: existing } = await supabase
+      .from('user_settings')
+      .select('data')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    const current = (existing?.data ?? {}) as Record<string, unknown>;
+    await supabase
+      .from('user_settings')
+      .upsert({ user_id: user.id, data: { ...current, fundedAccountsPasswordHash: hash } }, { onConflict: 'user_id' });
+  }, [user]);
 
   // Parent can request re-lock
   useEffect(() => {
