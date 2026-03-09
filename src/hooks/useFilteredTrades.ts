@@ -50,6 +50,8 @@ export function useFilteredTrades(trades: Trade[], filters: TradeFilters): Trade
           trade.postTradeNotes,
           ...trade.tags,
           ...trade.confluences,
+          ...(trade.confluencesAgainst ?? []),
+          ...Object.values(trade.customFields ?? {}).flat(),
         ].join(' ').toLowerCase();
         if (!searchable.includes(q)) return false;
       }

@@ -1,36 +1,47 @@
 import type { Trade } from '../types/trade';
+import type { CustomCategory } from '../types/settings';
 
-export function exportTradesToCSV(trades: Trade[]): string {
+export function exportTradesToCSV(trades: Trade[], customCategories: CustomCategory[] = []): string {
   const headers = [
     'Date', 'Time', 'Instrument', 'Direction', 'Entry', 'Stop Loss',
     'Take Profit', 'Exit Price', 'Contracts', 'Result', 'Points P&L',
-    'Dollar P&L', 'R:R', 'Setup Type', 'Confluences', 'Emotion Before',
+    'Dollar P&L', 'R:R', 'Setup Type', 'Confluences', 'Confluences Against', 'Emotion Before',
     'Emotion After', 'Grade', 'Pre-Trade Notes', 'Post-Trade Notes', 'Tags',
+    ...customCategories.map(c => c.name),
   ];
 
-  const rows = trades.map(t => [
-    t.date,
-    t.time,
-    t.instrument,
-    t.direction,
-    t.entry,
-    t.stopLoss,
-    t.takeProfit,
-    t.exitPrice,
-    t.contracts,
-    t.result,
-    t.pointsPL,
-    t.dollarPL,
-    t.riskReward,
-    t.setupType,
-    t.confluences.join('; '),
-    t.emotionBefore,
-    t.emotionAfter,
-    t.grade,
-    `"${(t.preTradeNotes || '').replace(/"/g, '""')}"`,
-    `"${(t.postTradeNotes || '').replace(/"/g, '""')}"`,
-    t.tags.join('; '),
-  ]);
+  const rows = trades.map(t => {
+    const base = [
+      t.date,
+      t.time,
+      t.instrument,
+      t.direction,
+      t.entry,
+      t.stopLoss,
+      t.takeProfit,
+      t.exitPrice,
+      t.contracts,
+      t.result,
+      t.pointsPL,
+      t.dollarPL,
+      t.riskReward,
+      t.setupType,
+      t.confluences.join('; '),
+      (t.confluencesAgainst ?? []).join('; '),
+      t.emotionBefore,
+      t.emotionAfter,
+      t.grade,
+      `"${(t.preTradeNotes || '').replace(/"/g, '""')}"`,
+      `"${(t.postTradeNotes || '').replace(/"/g, '""')}"`,
+      t.tags.join('; '),
+    ];
+    const customCols = customCategories.map(c => {
+      const val = t.customFields?.[c.id];
+      if (!val) return '';
+      return val.join('; ');
+    });
+    return [...base, ...customCols];
+  });
 
   const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
   return csv;

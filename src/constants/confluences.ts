@@ -12,3 +12,5 @@ export const DEFAULT_CONFLUENCES: string[] = [
   'Delta divergence',
   'Market structure shift',
 ];
+
+export const DEFAULT_CONFLUENCES_AGAINST: string[] = [];

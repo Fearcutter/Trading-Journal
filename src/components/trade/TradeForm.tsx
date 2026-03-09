@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
-import { format } from 'date-fns';
+import { useState, useMemo, useEffect } from 'react';
 import type { TradeFormData, TradeDirection, TradeResult, EmotionBefore, EmotionAfter } from '../../types/trade';
 import { useSettings } from '../../context/SettingsContext';
-import { calculatePointsPL, calculateDollarPL, calculateRiskReward } from '../../utils/pnl-calculator';
+import { useApexAccounts } from '../../context/ApexAccountContext';
+import { calculatePointsPL, calculateDollarPL, calculateRiskReward, computeResult } from '../../utils/pnl-calculator';
 import Input from '../ui/Input';
 import Select from '../ui/Select';
 import Button from '../ui/Button';
@@ -10,6 +10,7 @@ import TagInput from '../ui/TagInput';
 import ImageUpload from '../ui/ImageUpload';
 import ConfluenceSelector from './ConfluenceSelector';
 import { EMOTIONS_BEFORE, EMOTIONS_AFTER } from '../../constants/emotions';
+import { nowInTimezone } from '../../utils/timezone';
 
 interface TradeFormProps {
   initialData?: Partial<TradeFormData>;
@@ -18,10 +19,11 @@ interface TradeFormProps {
   sessionId?: string;
 }
 
-function getDefaultFormData(settings: { defaultInstrument: string; defaultContracts: number }): TradeFormData {
+function getDefaultFormData(settings: { defaultInstrument: string; defaultContracts: number; tradingTimezone: string }): TradeFormData {
+  const now = nowInTimezone(settings.tradingTimezone);
   return {
-    date: format(new Date(), 'yyyy-MM-dd'),
-    time: format(new Date(), 'HH:mm'),
+    date: now.date,
+    time: now.time,
     instrument: settings.defaultInstrument,
     direction: 'long',
     entry: '',
@@ -32,6 +34,7 @@ function getDefaultFormData(settings: { defaultInstrument: string; defaultContra
     result: 'win',
     setupType: '',
     confluences: [],
+    confluencesAgainst: [],
     emotionBefore: '',
     emotionAfter: '',
     grade: '',
@@ -40,13 +43,35 @@ function getDefaultFormData(settings: { defaultInstrument: string; defaultContra
     setupScreenshot: '',
     resultScreenshot: '',
     tags: [],
+    customFields: {},
     mae: '',
     mfe: '',
+    drawback1R: '',
+    drawback2R: '',
+    returnedTo1R: undefined,
   };
 }
 
 export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save Trade', sessionId }: TradeFormProps) {
   const settings = useSettings();
+  const { accounts } = useApexAccounts();
+  const activeAccounts = useMemo(() => accounts.filter(a => a.status === 'active'), [accounts]);
+  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('apex-last-selected-accounts');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Persist last selection
+  useEffect(() => {
+    localStorage.setItem('apex-last-selected-accounts', JSON.stringify(selectedAccountIds));
+  }, [selectedAccountIds]);
+
+  const toggleAccountId = (id: string) => {
+    setSelectedAccountIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
   const [form, setForm] = useState<TradeFormData>(() => ({
     ...getDefaultFormData(settings),
     ...initialData,
@@ -56,12 +81,11 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
   const update = <K extends keyof TradeFormData>(key: K, value: TradeFormData[K]) => {
     setForm(prev => {
       const next = { ...prev, [key]: value };
-      if (key === 'entry' || key === 'exitPrice' || key === 'direction') {
+      if (key === 'entry' || key === 'exitPrice' || key === 'direction' || key === 'stopLoss' || key === 'takeProfit') {
         const entry = Number(next.entry);
         const exitPrice = Number(next.exitPrice);
         if (entry && exitPrice) {
-          const pointsPL = calculatePointsPL(entry, exitPrice, next.direction);
-          next.result = pointsPL > 0 ? 'win' : pointsPL < 0 ? 'loss' : 'breakeven';
+          next.result = computeResult(entry, exitPrice, next.direction, Number(next.stopLoss) || undefined, Number(next.takeProfit) || undefined);
         }
       }
       return next;
@@ -97,6 +121,11 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
       riskReward: computed?.rr ?? 0,
       mae: form.mae === '' ? undefined : Number(form.mae),
       mfe: form.mfe === '' ? undefined : Number(form.mfe),
+      drawback1R: form.drawback1R === '' ? undefined : Number(form.drawback1R),
+      drawback2R: form.drawback2R === '' ? undefined : Number(form.drawback2R),
+      customFields: form.customFields || {},
+      returnedTo1R: form.returnedTo1R,
+      accountIds: selectedAccountIds.length > 0 ? selectedAccountIds : undefined,
       sessionId: form.sessionId,
     });
   };
@@ -144,6 +173,33 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
         />
       </div>
 
+      {/* Apex Account Selector */}
+      {activeAccounts.length > 0 && (
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-slate-300">Apex Accounts</label>
+          <div className="flex flex-wrap gap-2">
+            {activeAccounts.map(acc => {
+              const selected = selectedAccountIds.includes(acc.id);
+              const sizeLabel = acc.accountSize >= 1000 ? `${acc.accountSize / 1000}K` : acc.accountSize;
+              return (
+                <button
+                  key={acc.id}
+                  type="button"
+                  onClick={() => toggleAccountId(acc.id)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                    selected
+                      ? 'bg-blue-600/20 border-blue-500 text-blue-300'
+                      : 'bg-slate-800 border-slate-600 text-slate-400 hover:text-slate-200 hover:border-slate-500'
+                  }`}
+                >
+                  {sizeLabel} {acc.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Direction & Prices */}
       <div className="grid grid-cols-5 gap-4">
         <Select label="Direction" value={form.direction} onValueChange={v => update('direction', v as TradeDirection)} options={directionOptions} />
@@ -159,6 +215,50 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
         <Input label="MFE (points)" type="number" step="any" mono value={form.mfe} onChange={e => update('mfe', e.target.value === '' ? '' : Number(e.target.value))} placeholder="Max Favorable Excursion" />
       </div>
 
+      {/* Runner Drawback Tracking (Optional) */}
+      <div className="grid grid-cols-3 gap-4">
+        <Input label="Drawback from 1R (pts)" type="number" step="any" mono value={form.drawback1R} onChange={e => update('drawback1R', e.target.value === '' ? '' : Number(e.target.value))} placeholder="Max pullback after reaching 1R" />
+        <Input label="Drawback from 2R (pts)" type="number" step="any" mono value={form.drawback2R} onChange={e => update('drawback2R', e.target.value === '' ? '' : Number(e.target.value))} placeholder="Max pullback after reaching 2R" />
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-slate-300">Returned to 1R?</label>
+          <div className="inline-flex rounded-lg border border-slate-600 overflow-hidden mt-1">
+            <button
+              type="button"
+              onClick={() => update('returnedTo1R', undefined)}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${
+                form.returnedTo1R === undefined
+                  ? 'bg-slate-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              N/A
+            </button>
+            <button
+              type="button"
+              onClick={() => update('returnedTo1R', true)}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${
+                form.returnedTo1R === true
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Yes
+            </button>
+            <button
+              type="button"
+              onClick={() => update('returnedTo1R', false)}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${
+                form.returnedTo1R === false
+                  ? 'bg-rose-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              No
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Computed values display */}
       {computed && (
         <div className="flex gap-6 p-3 bg-slate-800/50 border border-slate-700 rounded-lg">
@@ -168,12 +268,14 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
               {computed.pointsPL > 0 ? '+' : ''}{computed.pointsPL.toFixed(2)}
             </p>
           </div>
-          <div>
-            <span className="text-xs text-slate-500">Dollar P&L</span>
-            <p className={`font-mono font-medium ${computed.dollarPL > 0 ? 'text-emerald-400' : computed.dollarPL < 0 ? 'text-rose-400' : 'text-slate-300'}`}>
-              {computed.dollarPL > 0 ? '+' : ''}${computed.dollarPL.toFixed(2)}
-            </p>
-          </div>
+          {settings.plDisplayMode === 'dollar' && (
+            <div>
+              <span className="text-xs text-slate-500">Dollar P&L</span>
+              <p className={`font-mono font-medium ${computed.dollarPL > 0 ? 'text-emerald-400' : computed.dollarPL < 0 ? 'text-rose-400' : 'text-slate-300'}`}>
+                {computed.dollarPL > 0 ? '+' : ''}${computed.dollarPL.toFixed(2)}
+              </p>
+            </div>
+          )}
           <div>
             <span className="text-xs text-slate-500">Risk:Reward</span>
             <p className="font-mono font-medium text-slate-300">
@@ -191,11 +293,45 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
       </div>
 
       {/* Confluences */}
-      <ConfluenceSelector
-        available={settings.confluences}
-        selected={form.confluences}
-        onChange={v => update('confluences', v)}
-      />
+      <div className="grid grid-cols-2 gap-4">
+        <ConfluenceSelector
+          label="Confluences (FOR)"
+          available={settings.confluences}
+          selected={form.confluences}
+          onChange={v => update('confluences', v)}
+        />
+        {settings.confluencesAgainst.length > 0 && (
+          <ConfluenceSelector
+            label="Confluences (AGAINST)"
+            available={settings.confluencesAgainst}
+            selected={form.confluencesAgainst}
+            onChange={v => update('confluencesAgainst', v)}
+          />
+        )}
+      </div>
+
+      {/* Custom Categories */}
+      {(settings.customCategories || []).length > 0 && (
+        <div className="grid grid-cols-2 gap-4">
+          {(settings.customCategories || []).map(cat => {
+            const value = (form.customFields?.[cat.id]) || [];
+            return (
+              <ConfluenceSelector
+                key={cat.id}
+                label={cat.name}
+                available={cat.options}
+                selected={value}
+                onChange={v => {
+                  setForm(prev => ({
+                    ...prev,
+                    customFields: { ...(prev.customFields || {}), [cat.id]: v },
+                  }));
+                }}
+                />
+              );
+          })}
+        </div>
+      )}
 
       {/* Emotions */}
       <div className="grid grid-cols-2 gap-4">

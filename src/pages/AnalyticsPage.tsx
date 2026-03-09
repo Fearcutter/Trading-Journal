@@ -1,5 +1,6 @@
 import { useTrades } from '../context/TradeContext';
 import { useAdvancedStats } from '../hooks/useAdvancedStats';
+import { usePLFormatter } from '../hooks/usePLFormatter';
 import DrawdownChart from '../components/analytics/DrawdownChart';
 import RollingWinRateChart from '../components/analytics/RollingWinRateChart';
 import DayOfWeekChart from '../components/analytics/DayOfWeekChart';
@@ -9,7 +10,8 @@ import MonteCarloChart from '../components/analytics/MonteCarloChart';
 
 export default function AnalyticsPage() {
   const { trades } = useTrades();
-  const stats = useAdvancedStats(trades);
+  const pl = usePLFormatter();
+  const stats = useAdvancedStats(trades, pl.plField);
 
   if (trades.length === 0) {
     return (
@@ -35,13 +37,13 @@ export default function AnalyticsPage() {
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
           <p className="text-xs text-slate-500 mb-1">Expectancy</p>
           <p className={`text-2xl font-bold ${stats.expectancy.expectancy >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-            ${stats.expectancy.expectancy.toFixed(2)}
+            {pl.formatPLValue(stats.expectancy.expectancy)}
           </p>
         </div>
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
           <p className="text-xs text-slate-500 mb-1">Max Drawdown</p>
           <p className="text-2xl font-bold text-rose-400">
-            ${stats.drawdown.maxDrawdown.toFixed(2)}
+            {pl.formatPLAbs(stats.drawdown.maxDrawdown)}
           </p>
         </div>
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">

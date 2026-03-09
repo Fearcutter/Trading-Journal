@@ -20,6 +20,7 @@ export interface Trade {
   riskReward: number;
   setupType: string;
   confluences: string[];
+  confluencesAgainst: string[];
   emotionBefore: EmotionBefore | '';
   emotionAfter: EmotionAfter | '';
   grade: string;
@@ -30,6 +31,11 @@ export interface Trade {
   tags: string[];
   mae?: number;
   mfe?: number;
+  drawback1R?: number;
+  drawback2R?: number;
+  returnedTo1R?: boolean;
+  customFields?: Record<string, string[]>;
+  accountIds?: string[];
   sessionId?: string;
   createdAt: string; // ISO datetime
   updatedAt: string; // ISO datetime
@@ -48,6 +54,7 @@ export interface TradeFormData {
   result: TradeResult;
   setupType: string;
   confluences: string[];
+  confluencesAgainst: string[];
   emotionBefore: EmotionBefore | '';
   emotionAfter: EmotionAfter | '';
   grade: string;
@@ -58,6 +65,11 @@ export interface TradeFormData {
   tags: string[];
   mae?: number | '';
   mfe?: number | '';
+  drawback1R?: number | '';
+  drawback2R?: number | '';
+  returnedTo1R?: boolean;
+  customFields?: Record<string, string[]>;
+  accountIds?: string[];
   pointsPL?: number;
   dollarPL?: number;
   riskReward?: number;

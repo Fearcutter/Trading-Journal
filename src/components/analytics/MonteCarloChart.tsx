@@ -1,4 +1,5 @@
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { usePLFormatter } from '../../hooks/usePLFormatter';
 
 interface Props {
   simulations: number[][];
@@ -6,6 +7,8 @@ interface Props {
 }
 
 export default function MonteCarloChart({ simulations, percentiles }: Props) {
+  const pl = usePLFormatter();
+
   if (simulations.length === 0) {
     return (
       <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
@@ -25,7 +28,7 @@ export default function MonteCarloChart({ simulations, percentiles }: Props) {
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
       <h3 className="text-sm font-medium text-slate-300 mb-1">Monte Carlo Simulation</h3>
-      <p className="text-xs text-slate-500 mb-3">Final P&L range: ${percentiles.p5.toFixed(0)} (5th) to ${percentiles.p95.toFixed(0)} (95th)</p>
+      <p className="text-xs text-slate-500 mb-3">Final P&L range: {pl.tooltipFormatter(percentiles.p5)} (5th) to {pl.tooltipFormatter(percentiles.p95)} (95th)</p>
       <ResponsiveContainer width="100%" height={300}>
         <AreaChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#334155" />

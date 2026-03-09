@@ -10,9 +10,11 @@ import type { ParsedTradeData } from '../../utils/tradingview-parser';
 interface PasteTradeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  sessionId?: string;
+  onParsed?: (data: ParsedTradeData) => void;
 }
 
-export default function PasteTradeModal({ open, onOpenChange }: PasteTradeModalProps) {
+export default function PasteTradeModal({ open, onOpenChange, sessionId, onParsed }: PasteTradeModalProps) {
   const navigate = useNavigate();
   const settings = useSettings();
   const [parsed, setParsed] = useState<ParsedTradeData | null>(null);
@@ -40,7 +42,7 @@ export default function PasteTradeModal({ open, onOpenChange }: PasteTradeModalP
               const htmlBlob = await item.getType('text/html');
               const html = await htmlBlob.text();
               console.log('[PasteTradeModal] HTML content:', html);
-              result = parseTradingViewHTML(html, settings.instruments);
+              result = parseTradingViewHTML(html, settings.instruments, settings.tradingTimezone);
               if (result) break;
             }
 
@@ -91,7 +93,13 @@ export default function PasteTradeModal({ open, onOpenChange }: PasteTradeModalP
   const handleContinue = () => {
     if (parsed) {
       onOpenChange(false);
-      navigate('/trades/new', { state: { parsedTrade: parsed } });
+      if (onParsed) {
+        onParsed(parsed);
+      } else if (sessionId) {
+        navigate(`/backtesting/${sessionId}`, { state: { parsedTrade: parsed } });
+      } else {
+        navigate('/live-trading', { state: { parsedTrade: parsed } });
+      }
       setParsed(null);
       setManualText('');
       setShowManual(false);
@@ -113,6 +121,9 @@ export default function PasteTradeModal({ open, onOpenChange }: PasteTradeModalP
       <div className="space-y-4">
         <p className="text-sm text-slate-400">
           Copy trade data from TradingView's Position Tool, then click the button below.
+          {sessionId && (
+            <span className="block mt-1 text-blue-400">This trade will be added to the current backtest session.</span>
+          )}
         </p>
 
         <Button onClick={handlePaste} disabled={loading} className="w-full">
@@ -180,6 +191,10 @@ export default function PasteTradeModal({ open, onOpenChange }: PasteTradeModalP
                   <span className="font-mono text-slate-200">{parsed.takeProfit}</span>
                 </div>
                 <div>
+                  <span className="text-slate-500">Exit Price:</span>{' '}
+                  <span className="font-mono text-slate-200">{parsed.exitPrice}</span>
+                </div>
+                <div>
                   <span className="text-slate-500">Points P&L:</span>{' '}
                   <span className={`font-mono ${parsed.pointsPL >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                     {parsed.pointsPL >= 0 ? '+' : ''}{parsed.pointsPL}
@@ -189,6 +204,18 @@ export default function PasteTradeModal({ open, onOpenChange }: PasteTradeModalP
                   <span className="text-slate-500">R:R:</span>{' '}
                   <span className="font-mono text-slate-200">{parsed.riskReward.toFixed(2)}</span>
                 </div>
+                {parsed.date && (
+                  <div>
+                    <span className="text-slate-500">Date:</span>{' '}
+                    <span className="font-mono text-slate-200">{parsed.date}</span>
+                  </div>
+                )}
+                {parsed.time && (
+                  <div>
+                    <span className="text-slate-500">Time:</span>{' '}
+                    <span className="font-mono text-slate-200">{parsed.time}</span>
+                  </div>
+                )}
               </div>
             </div>
             <Button onClick={handleContinue} className="w-full">

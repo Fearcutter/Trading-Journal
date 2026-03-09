@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import type { Trade } from '../../types/trade';
 import Badge from '../ui/Badge';
-import { formatCurrency, formatDate, formatTime, formatPoints } from '../../utils/formatters';
+import { formatDate, formatTime } from '../../utils/formatters';
+import { usePLFormatter, getTradeValue } from '../../hooks/usePLFormatter';
 import { X } from 'lucide-react';
 
 interface DayTradesPanelProps {
@@ -11,7 +12,8 @@ interface DayTradesPanelProps {
 }
 
 export default function DayTradesPanel({ date, trades, onClose }: DayTradesPanelProps) {
-  const totalPL = trades.reduce((sum, t) => sum + t.dollarPL, 0);
+  const pl = usePLFormatter();
+  const totalPL = trades.reduce((sum, t) => sum + getTradeValue(t, pl.plField), 0);
 
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
@@ -22,7 +24,7 @@ export default function DayTradesPanel({ date, trades, onClose }: DayTradesPanel
         </div>
         <div className="flex items-center gap-3">
           <span className={`font-mono font-medium ${totalPL > 0 ? 'text-emerald-400' : totalPL < 0 ? 'text-rose-400' : 'text-amber-400'}`}>
-            {totalPL > 0 ? '+' : ''}{formatCurrency(totalPL)}
+            {pl.formatPLValue(totalPL)}
           </span>
           <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-200 transition-colors">
             <X size={16} />
@@ -50,13 +52,13 @@ export default function DayTradesPanel({ date, trades, onClose }: DayTradesPanel
                     {trade.result.toUpperCase()}
                   </Badge>
                 </div>
-                <span className={`font-mono text-sm font-medium ${trade.dollarPL > 0 ? 'text-emerald-400' : trade.dollarPL < 0 ? 'text-rose-400' : 'text-amber-400'}`}>
-                  {trade.dollarPL > 0 ? '+' : ''}{formatCurrency(trade.dollarPL)}
+                <span className={`font-mono text-sm font-medium ${pl.getPL(trade) > 0 ? 'text-emerald-400' : pl.getPL(trade) < 0 ? 'text-rose-400' : 'text-amber-400'}`}>
+                  {pl.formatPLValue(pl.getPL(trade))}
                 </span>
               </div>
               <div className="flex items-center gap-3 text-xs text-slate-500">
                 {trade.time && <span>{formatTime(trade.time)}</span>}
-                <span>{formatPoints(trade.pointsPL)} pts</span>
+                <span>{pl.formatPLValue(pl.getPL(trade))}</span>
                 {trade.setupType && <span>{trade.setupType}</span>}
               </div>
             </Link>

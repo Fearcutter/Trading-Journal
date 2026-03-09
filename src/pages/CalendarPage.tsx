@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { useTrades } from '../context/TradeContext';
+import { useHabits } from '../context/HabitContext';
 import CalendarGrid from '../components/calendar/CalendarGrid';
 import DayTradesPanel from '../components/calendar/DayTradesPanel';
-import { formatCurrency } from '../utils/formatters';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import EmptyState from '../components/ui/EmptyState';
 import Button from '../components/ui/Button';
@@ -11,43 +11,53 @@ import { Link } from 'react-router-dom';
 import { PlusCircle } from 'lucide-react';
 
 export default function CalendarPage() {
-  const { trades } = useTrades();
+  const { trades: allTrades } = useTrades();
+  const { checkIns: habitCheckIns } = useHabits();
+  const liveTrades = useMemo(() => allTrades.filter(t => !t.sessionId), [allTrades]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const monthTrades = useMemo(() => {
     const start = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
     const end = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
-    return trades.filter(t => t.date >= start && t.date <= end);
-  }, [trades, currentMonth]);
+    return liveTrades.filter(t => t.date >= start && t.date <= end);
+  }, [liveTrades, currentMonth]);
 
   const monthStats = useMemo(() => {
-    const totalPL = monthTrades.reduce((sum, t) => sum + t.dollarPL, 0);
+    const totalR = monthTrades.reduce((sum, t) => {
+      const risk = Math.abs(t.entry - t.stopLoss);
+      if (risk === 0) return sum;
+      const pnl = t.direction === 'long' ? t.exitPrice - t.entry : t.entry - t.exitPrice;
+      return sum + pnl / risk;
+    }, 0);
     const wins = monthTrades.filter(t => t.result === 'win').length;
     const tradingDays = new Set(monthTrades.map(t => t.date)).size;
     const greenDays = Object.values(
       monthTrades.reduce<Record<string, number>>((acc, t) => {
-        acc[t.date] = (acc[t.date] || 0) + t.dollarPL;
+        const risk = Math.abs(t.entry - t.stopLoss);
+        if (risk === 0) return acc;
+        const pnl = t.direction === 'long' ? t.exitPrice - t.entry : t.entry - t.exitPrice;
+        acc[t.date] = (acc[t.date] || 0) + pnl / risk;
         return acc;
       }, {})
-    ).filter(pl => pl > 0).length;
+    ).filter(r => r > 0).length;
 
-    return { totalPL, wins, totalTrades: monthTrades.length, tradingDays, greenDays };
+    return { totalR, wins, totalTrades: monthTrades.length, tradingDays, greenDays };
   }, [monthTrades]);
 
   const selectedTrades = useMemo(() => {
     if (!selectedDate) return [];
-    return trades.filter(t => t.date === selectedDate).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-  }, [trades, selectedDate]);
+    return liveTrades.filter(t => t.date === selectedDate).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  }, [liveTrades, selectedDate]);
 
-  if (trades.length === 0) {
+  if (liveTrades.length === 0) {
     return (
       <EmptyState
         icon={<Calendar size={48} />}
         title="No trades yet"
         description="Your calendar heat map will appear here once you log trades."
         action={
-          <Link to="/trades/new">
+          <Link to="/live-trading">
             <Button><PlusCircle size={16} /> Add First Trade</Button>
           </Link>
         }
@@ -80,8 +90,8 @@ export default function CalendarPage() {
       <div className="flex gap-6 text-sm">
         <div>
           <span className="text-slate-500">P&L: </span>
-          <span className={`font-mono font-medium ${monthStats.totalPL > 0 ? 'text-emerald-400' : monthStats.totalPL < 0 ? 'text-rose-400' : 'text-slate-300'}`}>
-            {monthStats.totalPL > 0 ? '+' : ''}{formatCurrency(monthStats.totalPL)}
+          <span className={`font-mono font-medium ${monthStats.totalR > 0 ? 'text-emerald-400' : monthStats.totalR < 0 ? 'text-rose-400' : 'text-slate-300'}`}>
+            {monthStats.totalR > 0 ? '+' : ''}{monthStats.totalR % 1 === 0 ? monthStats.totalR.toFixed(0) : monthStats.totalR.toFixed(2)}R
           </span>
         </div>
         <div>
@@ -110,9 +120,10 @@ export default function CalendarPage() {
         <div className="flex-1">
           <CalendarGrid
             currentMonth={currentMonth}
-            trades={trades}
+            trades={liveTrades}
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
+            habitCheckIns={habitCheckIns}
           />
         </div>
         {selectedDate && (

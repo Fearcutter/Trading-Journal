@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { PlaybookEntry } from '../../types/playbook';
 import type { Trade } from '../../types/trade';
-import { formatCurrency } from '../../utils/formatters';
+import { usePLFormatter, getTradeValue } from '../../hooks/usePLFormatter';
 
 interface PlaybookCardProps {
   entry: PlaybookEntry;
@@ -10,18 +10,20 @@ interface PlaybookCardProps {
 }
 
 export default function PlaybookCard({ entry, trades, onClick }: PlaybookCardProps) {
+  const pl = usePLFormatter();
+
   const stats = useMemo(() => {
     if (!entry.setupType) return null;
     const matching = trades.filter(t => t.setupType === entry.setupType);
     if (matching.length === 0) return null;
     const wins = matching.filter(t => t.result === 'win').length;
-    const totalPL = matching.reduce((sum, t) => sum + t.dollarPL, 0);
+    const totalPL = matching.reduce((sum, t) => sum + getTradeValue(t, pl.plField), 0);
     return {
       totalTrades: matching.length,
       winRate: ((wins / matching.length) * 100).toFixed(0),
       avgPL: totalPL / matching.length,
     };
-  }, [entry.setupType, trades]);
+  }, [entry.setupType, trades, pl.plField]);
 
   return (
     <button
@@ -52,7 +54,7 @@ export default function PlaybookCard({ entry, trades, onClick }: PlaybookCardPro
           <div>
             <span className="text-slate-500">Avg P&L: </span>
             <span className={stats.avgPL >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-              {formatCurrency(stats.avgPL)}
+              {pl.formatPLValue(stats.avgPL)}
             </span>
           </div>
         </div>

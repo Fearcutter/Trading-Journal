@@ -8,7 +8,8 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import EmptyState from '../components/ui/EmptyState';
-import { formatCurrency, formatPercent } from '../utils/formatters';
+import { formatPercent } from '../utils/formatters';
+import { usePLFormatter, getTradeValue } from '../hooks/usePLFormatter';
 
 const COLOR_OPTIONS = [
   { name: 'blue', bg: 'bg-blue-500', ring: 'ring-blue-500' },
@@ -32,6 +33,7 @@ export default function BacktestingPage() {
   const { sessions, addSession, deleteSession } = useBacktest();
   const { trades } = useTrades();
   const settings = useSettings();
+  const pl = usePLFormatter();
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -47,11 +49,11 @@ export default function BacktestingPage() {
       if (trade.sessionId && map[trade.sessionId]) {
         map[trade.sessionId].count++;
         if (trade.result === 'win') map[trade.sessionId].wins++;
-        map[trade.sessionId].totalPL += trade.dollarPL;
+        map[trade.sessionId].totalPL += getTradeValue(trade, pl.plField);
       }
     }
     return map;
-  }, [sessions, trades]);
+  }, [sessions, trades, pl.plField]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,7 +157,7 @@ export default function BacktestingPage() {
                   <span>{stats.count} trade{stats.count !== 1 ? 's' : ''}</span>
                   <span>{formatPercent(winRate)} win</span>
                   <span className={stats.totalPL > 0 ? 'text-emerald-400' : stats.totalPL < 0 ? 'text-rose-400' : ''}>
-                    {stats.totalPL > 0 ? '+' : ''}{formatCurrency(stats.totalPL)}
+                    {pl.formatPLValue(stats.totalPL)}
                   </span>
                 </div>
               </Link>

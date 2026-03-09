@@ -82,6 +82,7 @@ export function sanitizeImport(data: unknown): { trades: Trade[]; errors: string
       riskReward: Number(t.riskReward),
       setupType: String(t.setupType || ''),
       confluences: Array.isArray(t.confluences) ? t.confluences.map(String) : [],
+      confluencesAgainst: Array.isArray(t.confluencesAgainst) ? t.confluencesAgainst.map(String) : [],
       emotionBefore: (t.emotionBefore as Trade['emotionBefore']) || '',
       emotionAfter: (t.emotionAfter as Trade['emotionAfter']) || '',
       grade: String(t.grade || ''),
@@ -90,6 +91,7 @@ export function sanitizeImport(data: unknown): { trades: Trade[]; errors: string
       setupScreenshot: String(t.setupScreenshot || ''),
       resultScreenshot: String(t.resultScreenshot || ''),
       tags: Array.isArray(t.tags) ? t.tags.map(String) : [],
+      customFields: (t.customFields && typeof t.customFields === 'object') ? t.customFields as Record<string, string[]> : {},
       createdAt: String(t.createdAt || new Date().toISOString()),
       updatedAt: String(t.updatedAt || new Date().toISOString()),
     });

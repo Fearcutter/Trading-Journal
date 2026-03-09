@@ -1,6 +1,6 @@
 const DB_NAME = 'trading-journal-db';
-const DB_VERSION = 1;
-const STORE_NAMES = ['trades', 'settings', 'backups'] as const;
+const DB_VERSION = 4;
+const STORE_NAMES = ['trades', 'settings', 'backups', 'journal', 'playbook', 'backtest-sessions', 'habits', 'apex-accounts'] as const;
 
 export type StoreName = typeof STORE_NAMES[number];
 
@@ -73,20 +73,3 @@ export async function idbGetAll<T>(storeName: StoreName): Promise<{ key: string;
   });
 }
 
-export async function migrateFromLocalStorage(): Promise<boolean> {
-  const key = 'trading-journal-trades';
-  const stored = localStorage.getItem(key);
-  if (!stored) return false;
-
-  try {
-    const trades = JSON.parse(stored);
-    if (Array.isArray(trades) && trades.length > 0) {
-      await idbSet('trades', 'trading-journal-trades', trades);
-      localStorage.removeItem(key);
-      return true;
-    }
-  } catch {
-    // Migration failed, keep localStorage data
-  }
-  return false;
-}

@@ -1,13 +1,18 @@
 import type { Instrument } from '../types/instrument';
+import { calculatePointsPL, computeResult } from './pnl-calculator';
+import { unixToTimezone } from './timezone';
 
 export interface ParsedTradeData {
   direction: 'long' | 'short';
   entry: number;
+  exitPrice: number;
   stopLoss: number;
   takeProfit: number;
   riskReward: number;
   pointsPL: number;
   result: 'win' | 'loss' | 'breakeven';
+  date?: string;  // yyyy-MM-dd
+  time?: string;  // HH:mm
 }
 
 /**
@@ -15,7 +20,7 @@ export interface ParsedTradeData {
  * TradingView copies a <span> with a `data-tradingview-clip` attribute
  * containing a JSON blob with all trade data.
  */
-export function parseTradingViewHTML(html: string, instruments?: Instrument[]): ParsedTradeData | null {
+export function parseTradingViewHTML(html: string, instruments?: Instrument[], timezone?: string): ParsedTradeData | null {
   if (!html || html.trim().length === 0) return null;
 
   try {
@@ -64,16 +69,30 @@ export function parseTradingViewHTML(html: string, instruments?: Instrument[]): 
       ? Math.round((profitLevel / stopLevel) * 100) / 100
       : 0;
 
-    // Compute stop/target prices from tick offsets if instrument is known
+    // Extract exit price from points[3] (the close line position)
+    const points = clip.sources?.[0]?.source?.points;
+    const exitPrice = points?.[3]?.price;
+    if (typeof exitPrice !== 'number' || exitPrice <= 0) return null;
+
+    // Extract trade date/time from entry point timestamp
+    let date: string | undefined;
+    let time: string | undefined;
+    const timeT = points?.[0]?.time_t;
+    if (typeof timeT === 'number' && timeT > 0) {
+      const tz = timezone || 'America/New_York';
+      const converted = unixToTimezone(timeT, tz);
+      date = converted.date;
+      time = converted.time;
+    }
+
+    // Derive SL/TP from tick offsets using instrument tickSize
     let stopLoss = 0;
     let takeProfit = 0;
-    let pointsPL = 0;
 
     if (instruments && stopLevel && profitLevel) {
-      // Extract base symbol: "CME_MINI:NQ1!" → "NQ"
       const symbolRaw = state?.symbol || '';
       const afterColon = symbolRaw.includes(':') ? symbolRaw.split(':')[1] : symbolRaw;
-      const baseSymbol = afterColon.replace(/\d+!?$/, '');
+      const baseSymbol = afterColon.replace(/[FGHJKMNQUVXZ]?\d+!?$/, '');
 
       const instrument = instruments.find(i => i.symbol === baseSymbol);
       if (instrument) {
@@ -85,18 +104,23 @@ export function parseTradingViewHTML(html: string, instruments?: Instrument[]): 
           stopLoss = entry + stopLevel * tickSize;
           takeProfit = entry - profitLevel * tickSize;
         }
-        pointsPL = profitLevel * tickSize;
       }
     }
+
+    const pointsPL = calculatePointsPL(entry, exitPrice, direction);
+    const result = computeResult(entry, exitPrice, direction, stopLoss || undefined, takeProfit || undefined);
 
     return {
       direction,
       entry: Math.round(entry * 100) / 100,
+      exitPrice: Math.round(exitPrice * 100) / 100,
       stopLoss: Math.round(stopLoss * 100) / 100,
       takeProfit: Math.round(takeProfit * 100) / 100,
       riskReward,
-      pointsPL: Math.round(pointsPL * 100) / 100,
-      result: 'breakeven',
+      pointsPL,
+      result,
+      date,
+      time,
     };
   } catch {
     return null;
@@ -209,9 +233,13 @@ export function parseTradingViewClipboard(text: string): ParsedTradeData | null 
       result = 'loss';
     }
 
+    // Derive exit price from pointsPL
+    const exitPrice = direction === 'long' ? entry + pointsPL : entry - pointsPL;
+
     return {
       direction,
       entry: Math.round(entry * 100) / 100,
+      exitPrice: Math.round(exitPrice * 100) / 100,
       stopLoss: Math.round(stopLoss * 100) / 100,
       takeProfit: Math.round(takeProfit * 100) / 100,
       riskReward: Math.round(riskReward * 100) / 100,

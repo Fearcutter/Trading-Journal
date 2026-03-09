@@ -4,9 +4,10 @@ interface ConfluenceSelectorProps {
   available: string[];
   selected: string[];
   onChange: (selected: string[]) => void;
+  label?: string;
 }
 
-export default function ConfluenceSelector({ available, selected, onChange }: ConfluenceSelectorProps) {
+export default function ConfluenceSelector({ available, selected, onChange, label = 'Confluences' }: ConfluenceSelectorProps) {
   const toggle = (confluence: string) => {
     if (selected.includes(confluence)) {
       onChange(selected.filter(c => c !== confluence));
@@ -17,7 +18,7 @@ export default function ConfluenceSelector({ available, selected, onChange }: Co
 
   return (
     <div className="space-y-1">
-      <label className="block text-sm font-medium text-slate-300">Confluences</label>
+      <label className="block text-sm font-medium text-slate-300">{label}</label>
       <div className="grid grid-cols-2 gap-2 p-3 bg-slate-800/50 border border-slate-600 rounded-lg max-h-48 overflow-y-auto">
         {available.map(c => (
           <Checkbox

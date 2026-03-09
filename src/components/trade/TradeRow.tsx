@@ -1,15 +1,25 @@
 import { Link } from 'react-router-dom';
 import type { Trade } from '../../types/trade';
 import Badge from '../ui/Badge';
-import { formatCurrency, formatDate, formatTime, formatPoints } from '../../utils/formatters';
+import { formatDate, formatTime, formatPoints } from '../../utils/formatters';
+import { usePLFormatter } from '../../hooks/usePLFormatter';
+
+export type HiddenColumns = {
+  points?: boolean;
+  pl?: boolean;
+  setup?: boolean;
+};
 
 interface TradeRowProps {
   trade: Trade;
   selected: boolean;
   onSelect: (id: string) => void;
+  hiddenColumns?: HiddenColumns;
 }
 
-export default function TradeRow({ trade, selected, onSelect }: TradeRowProps) {
+export default function TradeRow({ trade, selected, onSelect, hiddenColumns }: TradeRowProps) {
+  const pl = usePLFormatter();
+
   return (
     <tr className="border-b border-slate-700/50 hover:bg-slate-800/50 transition-colors">
       <td className="px-3 py-3">
@@ -32,30 +42,50 @@ export default function TradeRow({ trade, selected, onSelect }: TradeRowProps) {
           {trade.direction.toUpperCase()}
         </Badge>
       </td>
-      <td className="px-3 py-3 font-mono text-sm text-slate-300">{trade.entry.toFixed(2)}</td>
-      <td className="px-3 py-3 font-mono text-sm text-slate-300">{trade.exitPrice.toFixed(2)}</td>
+      <td className="px-3 py-3 text-sm text-slate-300">{trade.grade || '—'}</td>
       <td className="px-3 py-3">
-        <span className={`font-mono text-sm font-medium ${trade.pointsPL > 0 ? 'text-emerald-400' : trade.pointsPL < 0 ? 'text-rose-400' : 'text-amber-400'}`}>
-          {formatPoints(trade.pointsPL)}
-        </span>
+        {(() => {
+          const risk = Math.abs(trade.entry - trade.stopLoss);
+          if (!risk) return <span className="text-sm text-slate-300">—</span>;
+          const pnl = trade.direction === 'long' ? trade.exitPrice - trade.entry : trade.entry - trade.exitPrice;
+          const r = pnl / risk;
+          const rStr = r % 1 === 0 ? r.toFixed(0) : r.toFixed(2);
+          return <span className={`font-mono text-sm font-medium ${r > 0 ? 'text-emerald-400' : r < 0 ? 'text-rose-400' : 'text-amber-400'}`}>{r > 0 ? '+' : ''}{rStr}R</span>;
+        })()}
       </td>
-      <td className="px-3 py-3">
-        <span className={`font-mono text-sm font-medium ${trade.dollarPL > 0 ? 'text-emerald-400' : trade.dollarPL < 0 ? 'text-rose-400' : 'text-amber-400'}`}>
-          {trade.dollarPL > 0 ? '+' : ''}{formatCurrency(trade.dollarPL)}
-        </span>
-      </td>
+      {!hiddenColumns?.points && (
+        <td className="px-3 py-3">
+          <span className={`font-mono text-sm font-medium ${trade.pointsPL > 0 ? 'text-emerald-400' : trade.pointsPL < 0 ? 'text-rose-400' : 'text-amber-400'}`}>
+            {formatPoints(trade.pointsPL)}
+          </span>
+        </td>
+      )}
+      {!hiddenColumns?.pl && (
+        <td className="px-3 py-3">
+          <span className={`font-mono text-sm font-medium ${pl.getPL(trade) > 0 ? 'text-emerald-400' : pl.getPL(trade) < 0 ? 'text-rose-400' : 'text-amber-400'}`}>
+            {pl.formatPLValue(pl.getPL(trade))}
+          </span>
+        </td>
+      )}
       <td className="px-3 py-3">
         <Badge variant={trade.result === 'win' ? 'win' : trade.result === 'loss' ? 'loss' : 'breakeven'}>
           {trade.result.toUpperCase()}
         </Badge>
       </td>
-      <td className="px-3 py-3 text-sm text-slate-400">{trade.setupType || '—'}</td>
+      {!hiddenColumns?.setup && <td className="px-3 py-3 text-sm text-slate-400">{trade.setupType || '—'}</td>}
       <td className="px-3 py-3">
         <Link
           to={`/trades/${trade.id}`}
           className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
         >
           View
+        </Link>
+        <span className="text-slate-600 mx-1">·</span>
+        <Link
+          to={`/trades/${trade.id}?edit`}
+          className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+        >
+          Edit
         </Link>
       </td>
     </tr>

@@ -9,6 +9,7 @@ import {
   isToday,
 } from 'date-fns';
 import type { Trade } from '../../types/trade';
+import type { DailyHabitCheckIn } from '../../types/habit';
 import CalendarDay from './CalendarDay';
 
 interface CalendarGridProps {
@@ -16,11 +17,12 @@ interface CalendarGridProps {
   trades: Trade[];
   selectedDate: string | null;
   onSelectDate: (date: string) => void;
+  habitCheckIns?: DailyHabitCheckIn[];
 }
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export default function CalendarGrid({ currentMonth, trades, selectedDate, onSelectDate }: CalendarGridProps) {
+export default function CalendarGrid({ currentMonth, trades, selectedDate, onSelectDate, habitCheckIns = [] }: CalendarGridProps) {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const calStart = startOfWeek(monthStart);
@@ -33,6 +35,8 @@ export default function CalendarGrid({ currentMonth, trades, selectedDate, onSel
     if (!tradesByDate[t.date]) tradesByDate[t.date] = [];
     tradesByDate[t.date].push(t);
   }
+
+  const habitCheckInDates = new Set(habitCheckIns.map(c => c.date));
 
   return (
     <div>
@@ -50,18 +54,24 @@ export default function CalendarGrid({ currentMonth, trades, selectedDate, onSel
         {days.map(day => {
           const dateStr = format(day, 'yyyy-MM-dd');
           const dayTrades = tradesByDate[dateStr] || [];
-          const pl = dayTrades.reduce((sum, t) => sum + t.dollarPL, 0);
+          const rMultiple = dayTrades.reduce((sum, t) => {
+            const risk = Math.abs(t.entry - t.stopLoss);
+            if (risk === 0) return sum;
+            const pl = t.direction === 'long' ? t.exitPrice - t.entry : t.entry - t.exitPrice;
+            return sum + pl / risk;
+          }, 0);
 
           return (
             <CalendarDay
               key={dateStr}
               day={day.getDate()}
               date={dateStr}
-              pl={pl}
+              pl={rMultiple}
               tradeCount={dayTrades.length}
               isCurrentMonth={isSameMonth(day, currentMonth)}
               isToday={isToday(day)}
               isSelected={selectedDate === dateStr}
+              hasHabitCheckIn={habitCheckInDates.has(dateStr)}
               onClick={() => onSelectDate(dateStr)}
             />
           );

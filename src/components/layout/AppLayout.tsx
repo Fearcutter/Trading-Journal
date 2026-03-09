@@ -4,10 +4,11 @@ import TopBar from './TopBar';
 
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard',
-  '/trades': 'Trade Log',
-  '/trades/new': 'New Trade',
+  '/live-trading': 'Live Trading',
   '/calendar': 'Calendar',
-  '/confluences': 'Confluences',
+  '/confluences': 'Category Analytics',
+  '/category-analytics': 'Category Analytics',
+  '/apex-accounts': 'Funded Accounts',
   '/settings': 'Settings',
 };
 

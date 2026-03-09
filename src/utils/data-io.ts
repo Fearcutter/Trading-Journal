@@ -1,16 +1,23 @@
 import type { Trade } from '../types/trade';
+import type { HabitDefinition, DailyHabitCheckIn, EarnedBadge } from '../types/habit';
 
 interface ExportData {
   version: 1;
   exportDate: string;
   trades: Trade[];
+  habits?: {
+    definitions: HabitDefinition[];
+    checkIns: DailyHabitCheckIn[];
+    badges: EarnedBadge[];
+  };
 }
 
-export function exportToJSON(trades: Trade[]): string {
+export function exportToJSON(trades: Trade[], habitData?: { definitions: HabitDefinition[]; checkIns: DailyHabitCheckIn[]; badges: EarnedBadge[] }): string {
   const data: ExportData = {
     version: 1,
     exportDate: new Date().toISOString(),
     trades,
+    habits: habitData,
   };
   return JSON.stringify(data, null, 2);
 }
@@ -23,6 +30,18 @@ export function downloadJSON(json: string, filename: string) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+export function extractHabitData(data: unknown): { definitions: HabitDefinition[]; checkIns: DailyHabitCheckIn[]; badges: EarnedBadge[] } | null {
+  if (!data || typeof data !== 'object') return null;
+  const obj = data as Record<string, unknown>;
+  if (!obj.habits || typeof obj.habits !== 'object') return null;
+  const habits = obj.habits as Record<string, unknown>;
+  return {
+    definitions: Array.isArray(habits.definitions) ? habits.definitions as HabitDefinition[] : [],
+    checkIns: Array.isArray(habits.checkIns) ? habits.checkIns as DailyHabitCheckIn[] : [],
+    badges: Array.isArray(habits.badges) ? habits.badges as EarnedBadge[] : [],
+  };
 }
 
 export function validateImportData(data: unknown): { valid: boolean; trades: Trade[]; error?: string } {
@@ -69,6 +88,7 @@ export function validateImportData(data: unknown): { valid: boolean; trades: Tra
       riskReward: Number(t.riskReward) || 0,
       setupType: String(t.setupType || ''),
       confluences: Array.isArray(t.confluences) ? t.confluences.map(String) : [],
+      confluencesAgainst: Array.isArray(t.confluencesAgainst) ? t.confluencesAgainst.map(String) : [],
       emotionBefore: (t.emotionBefore as Trade['emotionBefore']) || '',
       emotionAfter: (t.emotionAfter as Trade['emotionAfter']) || '',
       grade: String(t.grade || ''),
@@ -77,6 +97,7 @@ export function validateImportData(data: unknown): { valid: boolean; trades: Tra
       setupScreenshot: String(t.setupScreenshot || ''),
       resultScreenshot: String(t.resultScreenshot || ''),
       tags: Array.isArray(t.tags) ? t.tags.map(String) : [],
+      customFields: (t.customFields && typeof t.customFields === 'object') ? t.customFields as Record<string, string[]> : {},
       createdAt: String(t.createdAt || new Date().toISOString()),
       updatedAt: String(t.updatedAt || new Date().toISOString()),
     });

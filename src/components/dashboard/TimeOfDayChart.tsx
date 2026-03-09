@@ -1,11 +1,14 @@
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ReferenceLine } from 'recharts';
 import Card from '../ui/Card';
+import { usePLFormatter } from '../../hooks/usePLFormatter';
 
 interface Props {
   data: { hour: number; pl: number; count: number }[];
 }
 
 export default function TimeOfDayChart({ data }: Props) {
+  const pl = usePLFormatter();
+
   const chartData = data.map(d => ({
     name: `${d.hour.toString().padStart(2, '0')}:00`,
     pl: d.pl,
@@ -18,11 +21,11 @@ export default function TimeOfDayChart({ data }: Props) {
       <ResponsiveContainer width="100%" height={250}>
         <BarChart data={chartData}>
           <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={false} />
-          <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} />
+          <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={pl.tickFormatter} />
           <Tooltip
             contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
             formatter={(value: number | undefined) => [
-              `$${(value ?? 0).toFixed(2)}`,
+              pl.tooltipFormatter(value ?? 0),
               'P&L',
             ]}
           />

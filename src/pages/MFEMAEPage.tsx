@@ -1,10 +1,12 @@
 import { useTrades } from '../context/TradeContext';
 import { useMFEMAEStats } from '../hooks/useMFEMAEStats';
+import { usePLFormatter } from '../hooks/usePLFormatter';
 import MFEMAEScatterPlot from '../components/analytics/MFEMAEScatterPlot';
 import ExitStrategyChart from '../components/analytics/ExitStrategyChart';
 
 export default function MFEMAEPage() {
   const { trades } = useTrades();
+  const pl = usePLFormatter();
   const stats = useMFEMAEStats(trades);
   const { averages, runnerAnalysis, runnerSurvival, gradeAnalysis, exitStrategies } = stats;
 
@@ -170,7 +172,7 @@ export default function MFEMAEPage() {
                         <td className="text-right py-2 px-3 font-mono">{g.totalTrades}</td>
                         <td className="text-right py-2 px-3 font-mono">{g.winRate.toFixed(1)}%</td>
                         <td className="text-right py-2 px-3 font-mono">{g.avgMFER.toFixed(2)}R</td>
-                        <td className={`text-right py-2 px-3 font-mono ${g.avgDollarPL >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>${g.avgDollarPL.toFixed(2)}</td>
+                        <td className={`text-right py-2 px-3 font-mono ${g.avgDollarPL >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{pl.formatPLValue(g.avgDollarPL)}</td>
                         <td className="text-right py-2 px-3 font-mono">{g.pctReaching2R.toFixed(1)}%</td>
                         <td className="text-right py-2 px-3 font-mono">{g.pctReaching3R.toFixed(1)}%</td>
                       </tr>

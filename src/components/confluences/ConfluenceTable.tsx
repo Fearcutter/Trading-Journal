@@ -1,16 +1,20 @@
 import type { ConfluenceStats } from '../../utils/confluence-analyzer';
-import { formatCurrency, formatPercent } from '../../utils/formatters';
+import { formatPercent } from '../../utils/formatters';
+import { usePLFormatter } from '../../hooks/usePLFormatter';
 import { AlertTriangle } from 'lucide-react';
 
 interface ConfluenceTableProps {
   data: ConfluenceStats[];
+  title?: string;
 }
 
-export default function ConfluenceTable({ data }: ConfluenceTableProps) {
+export default function ConfluenceTable({ data, title = 'Individual Confluence Performance' }: ConfluenceTableProps) {
+  const pl = usePLFormatter();
+
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
       <div className="px-4 py-3 border-b border-slate-700">
-        <h3 className="text-sm font-medium text-slate-300">Individual Confluence Performance</h3>
+        <h3 className="text-sm font-medium text-slate-300">{title}</h3>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -37,12 +41,12 @@ export default function ConfluenceTable({ data }: ConfluenceTableProps) {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <span className={`font-mono text-sm ${row.avgPL >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {row.avgPL >= 0 ? '+' : ''}{formatCurrency(row.avgPL)}
+                    {pl.formatPLValue(row.avgPL)}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
                   <span className={`font-mono text-sm font-medium ${row.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {row.totalPL >= 0 ? '+' : ''}{formatCurrency(row.totalPL)}
+                    {pl.formatPLValue(row.totalPL)}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-sm font-mono text-slate-300 text-right">

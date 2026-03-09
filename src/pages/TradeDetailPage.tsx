@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTrades } from '../context/TradeContext';
 import TradeDetail from '../components/trade/TradeDetail';
 import TradeForm from '../components/trade/TradeForm';
@@ -13,7 +13,8 @@ export default function TradeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { trades, updateTrade, deleteTrade } = useTrades();
-  const [editing, setEditing] = useState(false);
+  const [searchParams] = useSearchParams();
+  const [editing, setEditing] = useState(searchParams.has('edit'));
 
   const trade = trades.find(t => t.id === id);
 
@@ -23,7 +24,7 @@ export default function TradeDetailPage() {
         icon={<FileText size={48} />}
         title="Trade not found"
         description="This trade may have been deleted."
-        action={<Button variant="secondary" onClick={() => navigate('/trades')}>Back to Trade Log</Button>}
+        action={<Button variant="secondary" onClick={() => navigate(-1)}>Go Back</Button>}
       />
     );
   }
@@ -40,6 +41,9 @@ export default function TradeDetailPage() {
       riskReward: data.riskReward ?? 0,
       mae: data.mae === '' ? undefined : data.mae,
       mfe: data.mfe === '' ? undefined : data.mfe,
+      drawback1R: data.drawback1R === '' ? undefined : data.drawback1R,
+      drawback2R: data.drawback2R === '' ? undefined : data.drawback2R,
+      returnedTo1R: data.returnedTo1R,
     });
     setEditing(false);
     toast.success('Trade updated');
@@ -49,13 +53,13 @@ export default function TradeDetailPage() {
     if (!confirm('Delete this trade?')) return;
     deleteTrade(trade.id);
     toast.success('Trade deleted');
-    navigate('/trades');
+    navigate(-1);
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/trades')}>
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
           <ArrowLeft size={16} /> Back
         </Button>
         <div className="flex-1" />
@@ -91,6 +95,7 @@ export default function TradeDetailPage() {
             result: trade.result,
             setupType: trade.setupType,
             confluences: trade.confluences,
+            confluencesAgainst: trade.confluencesAgainst,
             emotionBefore: trade.emotionBefore,
             emotionAfter: trade.emotionAfter,
             grade: trade.grade,
@@ -101,6 +106,11 @@ export default function TradeDetailPage() {
             tags: trade.tags,
             mae: trade.mae,
             mfe: trade.mfe,
+            drawback1R: trade.drawback1R,
+            drawback2R: trade.drawback2R,
+            returnedTo1R: trade.returnedTo1R,
+            sessionId: trade.sessionId,
+            customFields: trade.customFields,
           }}
           onSubmit={handleUpdate}
           submitLabel="Update Trade"

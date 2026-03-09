@@ -1,4 +1,5 @@
-import { formatCurrency, formatPercent } from '../../utils/formatters';
+import { formatPercent } from '../../utils/formatters';
+import { usePLFormatter } from '../../hooks/usePLFormatter';
 
 interface CombinationData {
   combo: string[];
@@ -12,6 +13,8 @@ interface CombinationAnalysisProps {
 }
 
 export default function CombinationAnalysis({ data }: CombinationAnalysisProps) {
+  const pl = usePLFormatter();
+
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
       <div className="px-4 py-3 border-b border-slate-700">
@@ -48,7 +51,7 @@ export default function CombinationAnalysis({ data }: CombinationAnalysisProps) 
                 </td>
                 <td className="px-4 py-3 text-right">
                   <span className={`font-mono text-sm ${row.avgPL >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {row.avgPL >= 0 ? '+' : ''}{formatCurrency(row.avgPL)}
+                    {pl.formatPLValue(row.avgPL)}
                   </span>
                 </td>
               </tr>

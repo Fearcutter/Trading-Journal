@@ -1,6 +1,8 @@
 import type { Trade } from '../types/trade';
+import type { PLField } from './pl-helpers';
+import { getTradeValue } from './pl-helpers';
 
-export function calculateDrawdownSeries(trades: Trade[]) {
+export function calculateDrawdownSeries(trades: Trade[], plField: PLField = 'dollarPL') {
   const sorted = [...trades].sort((a, b) => {
     const d = a.date.localeCompare(b.date);
     return d !== 0 ? d : (a.time || '').localeCompare(b.time || '');
@@ -14,7 +16,7 @@ export function calculateDrawdownSeries(trades: Trade[]) {
   let drawdownStart = 0;
 
   const series = sorted.map((t, i) => {
-    cumPL += t.dollarPL;
+    cumPL += getTradeValue(t, plField);
     if (cumPL > peak) {
       peak = cumPL;
       drawdownStart = i;
@@ -57,7 +59,7 @@ export function calculateRollingWinRate(trades: Trade[], windows: number[] = [10
   });
 }
 
-export function calculatePerformanceByDayOfWeek(trades: Trade[]) {
+export function calculatePerformanceByDayOfWeek(trades: Trade[], plField: PLField = 'dollarPL') {
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const groups: Record<number, { trades: number; wins: number; totalPL: number }> = {};
 
@@ -66,7 +68,7 @@ export function calculatePerformanceByDayOfWeek(trades: Trade[]) {
     if (!groups[dayNum]) groups[dayNum] = { trades: 0, wins: 0, totalPL: 0 };
     groups[dayNum].trades++;
     if (t.result === 'win') groups[dayNum].wins++;
-    groups[dayNum].totalPL += t.dollarPL;
+    groups[dayNum].totalPL += getTradeValue(t, plField);
   }
 
   return Object.entries(groups)
@@ -82,7 +84,7 @@ export function calculatePerformanceByDayOfWeek(trades: Trade[]) {
     .sort((a, b) => a.dayNum - b.dayNum);
 }
 
-export function calculatePerformanceByInstrument(trades: Trade[]) {
+export function calculatePerformanceByInstrument(trades: Trade[], plField: PLField = 'dollarPL') {
   const groups: Record<string, { trades: number; wins: number; totalPL: number; grossWins: number; grossLosses: number }> = {};
 
   for (const t of trades) {
@@ -90,9 +92,9 @@ export function calculatePerformanceByInstrument(trades: Trade[]) {
     if (!groups[key]) groups[key] = { trades: 0, wins: 0, totalPL: 0, grossWins: 0, grossLosses: 0 };
     groups[key].trades++;
     if (t.result === 'win') groups[key].wins++;
-    groups[key].totalPL += t.dollarPL;
-    if (t.dollarPL > 0) groups[key].grossWins += t.dollarPL;
-    else groups[key].grossLosses += Math.abs(t.dollarPL);
+    groups[key].totalPL += getTradeValue(t, plField);
+    if (getTradeValue(t, plField) > 0) groups[key].grossWins += getTradeValue(t, plField);
+    else groups[key].grossLosses += Math.abs(getTradeValue(t, plField));
   }
 
   return Object.entries(groups)
@@ -108,7 +110,7 @@ export function calculatePerformanceByInstrument(trades: Trade[]) {
     .sort((a, b) => b.totalPL - a.totalPL);
 }
 
-export function calculateStreakAnalysis(trades: Trade[]) {
+export function calculateStreakAnalysis(trades: Trade[], plField: PLField = 'dollarPL') {
   const sorted = [...trades].sort((a, b) => {
     const d = a.date.localeCompare(b.date);
     return d !== 0 ? d : (a.time || '').localeCompare(b.time || '');
@@ -124,12 +126,12 @@ export function calculateStreakAnalysis(trades: Trade[]) {
     const type = t.result as 'win' | 'loss';
     if (type === currentType) {
       currentLength++;
-      currentPL += t.dollarPL;
+      currentPL += getTradeValue(t, plField);
     } else {
       if (currentType) streaks.push({ type: currentType, length: currentLength, pl: currentPL });
       currentType = type;
       currentLength = 1;
-      currentPL = t.dollarPL;
+      currentPL = getTradeValue(t, plField);
     }
   }
   if (currentType) streaks.push({ type: currentType, length: currentLength, pl: currentPL });
@@ -146,10 +148,10 @@ export function calculateStreakAnalysis(trades: Trade[]) {
   };
 }
 
-export function calculateSharpeRatio(trades: Trade[], riskFreeRate: number = 0): number {
+export function calculateSharpeRatio(trades: Trade[], riskFreeRate: number = 0, plField: PLField = 'dollarPL'): number {
   const dailyPL: Record<string, number> = {};
   for (const t of trades) {
-    dailyPL[t.date] = (dailyPL[t.date] || 0) + t.dollarPL;
+    dailyPL[t.date] = (dailyPL[t.date] || 0) + getTradeValue(t, plField);
   }
   const returns = Object.values(dailyPL);
   if (returns.length < 2) return 0;
@@ -163,13 +165,13 @@ export function calculateSharpeRatio(trades: Trade[], riskFreeRate: number = 0):
   return ((mean - dailyRiskFree) / stddev) * Math.sqrt(252);
 }
 
-export function calculateExpectancy(trades: Trade[]) {
+export function calculateExpectancy(trades: Trade[], plField: PLField = 'dollarPL') {
   const wins = trades.filter(t => t.result === 'win');
   const losses = trades.filter(t => t.result === 'loss');
   const winRate = trades.length > 0 ? wins.length / trades.length : 0;
   const lossRate = 1 - winRate;
-  const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.dollarPL, 0) / wins.length : 0;
-  const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.dollarPL, 0) / losses.length) : 0;
+  const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + getTradeValue(t, plField), 0) / wins.length : 0;
+  const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + getTradeValue(t, plField), 0) / losses.length) : 0;
 
   return {
     expectancy: (winRate * avgWin) - (lossRate * avgLoss),
@@ -179,8 +181,8 @@ export function calculateExpectancy(trades: Trade[]) {
   };
 }
 
-export function calculateMonteCarloSimulation(trades: Trade[], numSimulations: number = 1000, numTrades: number = 100) {
-  const pls = trades.map(t => t.dollarPL);
+export function calculateMonteCarloSimulation(trades: Trade[], numSimulations: number = 1000, numTrades: number = 100, plField: PLField = 'dollarPL') {
+  const pls = trades.map(t => getTradeValue(t, plField));
   if (pls.length === 0) return { percentiles: { p5: 0, p25: 0, p50: 0, p75: 0, p95: 0 }, simulations: [] };
 
   const simulations: number[][] = [];

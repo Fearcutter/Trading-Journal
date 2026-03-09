@@ -4,9 +4,10 @@ import PasteTradeModal from '../trade/PasteTradeModal';
 
 interface TopBarProps {
   title: string;
+  sessionId?: string;
 }
 
-export default function TopBar({ title }: TopBarProps) {
+export default function TopBar({ title, sessionId }: TopBarProps) {
   const [pasteModalOpen, setPasteModalOpen] = useState(false);
 
   return (
@@ -21,7 +22,7 @@ export default function TopBar({ title }: TopBarProps) {
           Paste Trade
         </button>
       </header>
-      <PasteTradeModal open={pasteModalOpen} onOpenChange={setPasteModalOpen} />
+      <PasteTradeModal open={pasteModalOpen} onOpenChange={setPasteModalOpen} sessionId={sessionId} />
     </>
   );
 }

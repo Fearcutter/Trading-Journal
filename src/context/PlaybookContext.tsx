@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { PlaybookEntry } from '../types/playbook';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useIndexedDB } from '../hooks/useIndexedDB';
 
 interface PlaybookContextValue {
   entries: PlaybookEntry[];
@@ -13,7 +13,7 @@ interface PlaybookContextValue {
 const PlaybookContext = createContext<PlaybookContextValue | null>(null);
 
 export function PlaybookProvider({ children }: { children: ReactNode }) {
-  const [entries, setEntries] = useLocalStorage<PlaybookEntry[]>('trading-journal-playbook', []);
+  const [entries, setEntries] = useIndexedDB<PlaybookEntry[]>('playbook', 'trading-journal-playbook', []);
 
   const addEntry = useCallback((data: Omit<PlaybookEntry, 'id' | 'createdAt' | 'updatedAt'>): PlaybookEntry => {
     const now = new Date().toISOString();

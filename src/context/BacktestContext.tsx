@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { BacktestSession } from '../types/backtest';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useIndexedDB } from '../hooks/useIndexedDB';
 
 interface BacktestContextValue {
   sessions: BacktestSession[];
@@ -14,7 +14,7 @@ interface BacktestContextValue {
 const BacktestContext = createContext<BacktestContextValue | null>(null);
 
 export function BacktestProvider({ children }: { children: ReactNode }) {
-  const [sessions, setSessions] = useLocalStorage<BacktestSession[]>('trading-journal-backtest-sessions', []);
+  const [sessions, setSessions] = useIndexedDB<BacktestSession[]>('backtest-sessions', 'trading-journal-backtest-sessions', []);
 
   const addSession = useCallback((name: string, description: string, instrument: string | undefined, color: string): BacktestSession => {
     const now = new Date().toISOString();

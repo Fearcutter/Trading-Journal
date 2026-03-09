@@ -1,4 +1,6 @@
 import type { Trade } from '../types/trade';
+import type { PLField } from './pl-helpers';
+import { getTradeValue } from './pl-helpers';
 
 export interface DashboardStats {
   totalPL: number;
@@ -13,7 +15,7 @@ export interface DashboardStats {
   worstTrade: Trade | null;
 }
 
-export function calculateDashboardStats(trades: Trade[]): DashboardStats {
+export function calculateDashboardStats(trades: Trade[], plField: PLField = 'dollarPL'): DashboardStats {
   if (trades.length === 0) {
     return {
       totalPL: 0,
@@ -31,9 +33,9 @@ export function calculateDashboardStats(trades: Trade[]): DashboardStats {
 
   const wins = trades.filter(t => t.result === 'win');
   const losses = trades.filter(t => t.result === 'loss');
-  const totalPL = trades.reduce((sum, t) => sum + t.dollarPL, 0);
-  const totalWins = wins.reduce((sum, t) => sum + t.dollarPL, 0);
-  const totalLosses = Math.abs(losses.reduce((sum, t) => sum + t.dollarPL, 0));
+  const totalPL = trades.reduce((sum, t) => sum + getTradeValue(t, plField), 0);
+  const totalWins = wins.reduce((sum, t) => sum + getTradeValue(t, plField), 0);
+  const totalLosses = Math.abs(losses.reduce((sum, t) => sum + getTradeValue(t, plField), 0));
 
   // Current streak (trades sorted most recent first)
   const sorted = [...trades].sort((a, b) => {
@@ -67,25 +69,25 @@ export function calculateDashboardStats(trades: Trade[]): DashboardStats {
       ? tradesWithRR.reduce((sum, t) => sum + t.riskReward, 0) / tradesWithRR.length
       : 0,
     currentStreak: { type: streakType, count: streakCount },
-    bestTrade: sorted.reduce<Trade | null>((best, t) => !best || t.dollarPL > best.dollarPL ? t : best, null),
-    worstTrade: sorted.reduce<Trade | null>((worst, t) => !worst || t.dollarPL < worst.dollarPL ? t : worst, null),
+    bestTrade: sorted.reduce<Trade | null>((best, t) => !best || getTradeValue(t, plField) > getTradeValue(best, plField) ? t : best, null),
+    worstTrade: sorted.reduce<Trade | null>((worst, t) => !worst || getTradeValue(t, plField) < getTradeValue(worst, plField) ? t : worst, null),
   };
 }
 
-export function calculatePLBySetup(trades: Trade[]): Record<string, number> {
+export function calculatePLBySetup(trades: Trade[], plField: PLField = 'dollarPL'): Record<string, number> {
   const result: Record<string, number> = {};
   for (const t of trades) {
     const key = t.setupType || 'Unspecified';
-    result[key] = (result[key] || 0) + t.dollarPL;
+    result[key] = (result[key] || 0) + getTradeValue(t, plField);
   }
   return result;
 }
 
-export function calculatePLByEmotion(trades: Trade[]): Record<string, number> {
+export function calculatePLByEmotion(trades: Trade[], plField: PLField = 'dollarPL'): Record<string, number> {
   const result: Record<string, number> = {};
   for (const t of trades) {
     const key = t.emotionBefore || 'Unspecified';
-    result[key] = (result[key] || 0) + t.dollarPL;
+    result[key] = (result[key] || 0) + getTradeValue(t, plField);
   }
   return result;
 }
@@ -107,13 +109,13 @@ export function calculateWinRateByConfluenceCount(trades: Trade[]): { count: num
     .sort((a, b) => a.count - b.count);
 }
 
-export function calculatePLByTimeOfDay(trades: Trade[]): { hour: number; pl: number; count: number }[] {
+export function calculatePLByTimeOfDay(trades: Trade[], plField: PLField = 'dollarPL'): { hour: number; pl: number; count: number }[] {
   const groups: Record<number, { pl: number; count: number }> = {};
   for (const t of trades) {
     if (!t.time) continue;
     const hour = parseInt(t.time.split(':')[0]);
     if (!groups[hour]) groups[hour] = { pl: 0, count: 0 };
-    groups[hour].pl += t.dollarPL;
+    groups[hour].pl += getTradeValue(t, plField);
     groups[hour].count++;
   }
   return Object.entries(groups)
@@ -121,22 +123,22 @@ export function calculatePLByTimeOfDay(trades: Trade[]): { hour: number; pl: num
     .sort((a, b) => a.hour - b.hour);
 }
 
-export function calculateCumulativePL(trades: Trade[]): { date: string; pl: number }[] {
+export function calculateCumulativePL(trades: Trade[], plField: PLField = 'dollarPL'): { date: string; pl: number }[] {
   const sorted = [...trades].sort((a, b) => {
     const d = a.date.localeCompare(b.date);
     return d !== 0 ? d : (a.time || '').localeCompare(b.time || '');
   });
   let cumulative = 0;
   return sorted.map(t => {
-    cumulative += t.dollarPL;
+    cumulative += getTradeValue(t, plField);
     return { date: t.date, pl: cumulative };
   });
 }
 
-export function calculateDailyPL(trades: Trade[]): { date: string; pl: number }[] {
+export function calculateDailyPL(trades: Trade[], plField: PLField = 'dollarPL'): { date: string; pl: number }[] {
   const daily: Record<string, number> = {};
   for (const t of trades) {
-    daily[t.date] = (daily[t.date] || 0) + t.dollarPL;
+    daily[t.date] = (daily[t.date] || 0) + getTradeValue(t, plField);
   }
   return Object.entries(daily)
     .map(([date, pl]) => ({ date, pl }))
