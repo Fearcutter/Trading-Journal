@@ -116,32 +116,19 @@ export default function UnifiedDailyForm({ date, existingCheckIn, existingJourna
         )}
       </div>
 
-      {/* Pre-Market Section */}
+      {/* Pre-Session Section */}
       <div className="space-y-3">
-        <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Pre-Market</h4>
+        <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Pre-Session</h4>
         <div className="space-y-1">
-          <label className="block text-sm font-medium text-slate-300">Pre-Market Plan</label>
+          <label className="block text-sm font-medium text-slate-300">Pre-Session Plan</label>
           <textarea
             value={preMarketPlan}
             onChange={e => setPreMarketPlan(e.target.value)}
             rows={3}
             className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-            placeholder="What's your plan for today?"
+            placeholder="How were you feeling before your session? What was your plan for today? Were you trying to achieve a different process focused goal today?"
           />
         </div>
-        <Select label="Market Conditions" value={marketConditions} onValueChange={setMarketConditions} options={MARKET_CONDITIONS} />
-        <TagInput label="Goals" tags={goals} onChange={setGoals} placeholder="Add a goal..." />
-      </div>
-
-      {/* Pre-Session Emotions */}
-      <div className="space-y-3">
-        <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Pre-Session</h4>
-        <EmotionSelector
-          label="How do you feel before trading?"
-          type="before"
-          value={emotionBefore}
-          onChange={v => setEmotionBefore(v as EmotionBefore | '')}
-        />
       </div>
 
       {/* Habits & Rules */}
