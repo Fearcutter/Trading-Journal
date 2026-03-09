@@ -8,15 +8,20 @@ export { getTradeRMultiple, getTradeValue } from '../utils/pl-helpers';
 import type { PLField } from '../utils/pl-helpers';
 import { getTradeValue } from '../utils/pl-helpers';
 
+function formatRNumber(n: number): string {
+  const abs = Math.abs(n);
+  return Number.isInteger(abs) ? abs.toString() : abs.toFixed(2);
+}
+
 function formatR(n: number): string {
-  const formatted = Math.abs(n).toFixed(2);
+  const formatted = formatRNumber(n);
   if (n > 0) return `+${formatted}R`;
   if (n < 0) return `-${formatted}R`;
   return `${formatted}R`;
 }
 
 function formatRAbs(n: number): string {
-  return `${Math.abs(n).toFixed(2)}R`;
+  return `${formatRNumber(n)}R`;
 }
 
 export function usePLFormatter() {

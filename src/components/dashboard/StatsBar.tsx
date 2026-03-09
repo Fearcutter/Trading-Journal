@@ -32,7 +32,7 @@ export default function StatsBar({ stats }: StatsBarProps) {
       />
       <StatCard
         label="Avg R:R"
-        value={stats.avgRR ? `1:${stats.avgRR.toFixed(2)}` : '—'}
+        value={stats.avgRR ? `1:${Number.isInteger(stats.avgRR) ? stats.avgRR : stats.avgRR.toFixed(2)}` : '—'}
         icon={<Target size={16} />}
       />
       <StatCard

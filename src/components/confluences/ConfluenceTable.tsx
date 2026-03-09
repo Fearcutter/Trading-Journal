@@ -50,7 +50,7 @@ export default function ConfluenceTable({ data, title = 'Individual Confluence P
                   </span>
                 </td>
                 <td className="px-4 py-3 text-sm font-mono text-slate-300 text-right">
-                  {row.avgRR > 0 ? `1:${row.avgRR.toFixed(2)}` : '—'}
+                  {row.avgRR > 0 ? `1:${Number.isInteger(row.avgRR) ? row.avgRR : row.avgRR.toFixed(2)}` : '—'}
                 </td>
                 <td className="px-4 py-3 text-center">
                   {!row.hasSufficientData && (
