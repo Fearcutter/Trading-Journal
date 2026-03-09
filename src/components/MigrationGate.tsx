@@ -156,6 +156,24 @@ export default function MigrationGate({ children }: { children: ReactNode }) {
       setProgress(done / total);
     }
 
+    // Migrate apex password hash
+    try {
+      const apexHash = await idbGet<string>('apex-accounts', 'apex-password-hash');
+      if (apexHash) {
+        const { data: existing } = await supabase
+          .from('user_settings')
+          .select('data')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        const current = (existing?.data ?? {}) as Record<string, unknown>;
+        await supabase
+          .from('user_settings')
+          .upsert({ user_id: user.id, data: { ...current, fundedAccountsPasswordHash: apexHash } }, { onConflict: 'user_id' });
+      }
+    } catch (e) {
+      console.error('Failed to migrate apex password:', e);
+    }
+
     localStorage.setItem(MIGRATION_KEY, 'true');
     setMigrating(false);
     setHasData(false);
