@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import type { TradeFormData, TradeDirection, TradeResult, EmotionBefore, EmotionAfter } from '../../types/trade';
 import { useSettings } from '../../context/SettingsContext';
 import { useApexAccounts } from '../../context/ApexAccountContext';
@@ -56,15 +56,7 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
   const settings = useSettings();
   const { accounts } = useApexAccounts();
   const activeAccounts = useMemo(() => accounts.filter(a => a.status === 'active'), [accounts]);
-  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('apex-last-selected-accounts');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Persist last selection
-  useEffect(() => {
-    localStorage.setItem('apex-last-selected-accounts', JSON.stringify(selectedAccountIds));
-  }, [selectedAccountIds]);
+  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
 
   const toggleAccountId = (id: string) => {
     setSelectedAccountIds(prev =>

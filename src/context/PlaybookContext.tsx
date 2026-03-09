@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { PlaybookEntry } from '../types/playbook';
-import { useIndexedDB } from '../hooks/useIndexedDB';
+import { useSupabaseList } from '../hooks/useSupabaseList';
 
 interface PlaybookContextValue {
   entries: PlaybookEntry[];
@@ -13,7 +13,7 @@ interface PlaybookContextValue {
 const PlaybookContext = createContext<PlaybookContextValue | null>(null);
 
 export function PlaybookProvider({ children }: { children: ReactNode }) {
-  const [entries, setEntries] = useIndexedDB<PlaybookEntry[]>('playbook', 'trading-journal-playbook', []);
+  const [entries, setEntries] = useSupabaseList<PlaybookEntry>('playbook_entries', { screenshotFields: ['exampleScreenshots'] });
 
   const addEntry = useCallback((data: Omit<PlaybookEntry, 'id' | 'createdAt' | 'updatedAt'>): PlaybookEntry => {
     const now = new Date().toISOString();

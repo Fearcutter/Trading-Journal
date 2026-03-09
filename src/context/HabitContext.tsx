@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode, useCallback, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { HabitDefinition, DailyHabitCheckIn, EarnedBadge } from '../types/habit';
-import { useIndexedDB } from '../hooks/useIndexedDB';
+import { useSupabaseList } from '../hooks/useSupabaseList';
 import { PRESET_HABITS, BADGE_DEFINITIONS } from '../constants/habits';
 import { evaluateBadges } from '../utils/habit-stats';
 import toast from 'react-hot-toast';
@@ -28,9 +28,9 @@ function initializeDefinitions(stored: HabitDefinition[]): HabitDefinition[] {
 }
 
 export function HabitProvider({ children }: { children: ReactNode }) {
-  const [storedDefs, setDefinitions] = useIndexedDB<HabitDefinition[]>('habits', 'habit-definitions', []);
-  const [checkIns, setCheckIns] = useIndexedDB<DailyHabitCheckIn[]>('habits', 'habit-checkins', []);
-  const [badges, setBadges] = useIndexedDB<EarnedBadge[]>('habits', 'habit-badges', []);
+  const [storedDefs, setDefinitions] = useSupabaseList<HabitDefinition>('habit_definitions');
+  const [checkIns, setCheckIns] = useSupabaseList<DailyHabitCheckIn>('habit_checkins');
+  const [badges, setBadges] = useSupabaseList<EarnedBadge>('habit_badges');
 
   const definitions = useMemo(() => initializeDefinitions(storedDefs), [storedDefs]);
 

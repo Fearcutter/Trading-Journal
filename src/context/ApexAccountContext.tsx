@@ -2,7 +2,7 @@ import { createContext, useContext, type ReactNode, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { ApexAccount, ApexAccountFormData } from '../types/apex-account';
 import { APEX_ACCOUNT_CONFIGS } from '../types/apex-account';
-import { useIndexedDB } from '../hooks/useIndexedDB';
+import { useSupabaseList } from '../hooks/useSupabaseList';
 
 interface ApexAccountContextValue {
   accounts: ApexAccount[];
@@ -16,7 +16,7 @@ interface ApexAccountContextValue {
 const ApexAccountContext = createContext<ApexAccountContextValue | null>(null);
 
 export function ApexAccountProvider({ children }: { children: ReactNode }) {
-  const [accounts, setAccounts, loading] = useIndexedDB<ApexAccount[]>('apex-accounts', 'apex-accounts-data', []);
+  const [accounts, setAccounts, loading] = useSupabaseList<ApexAccount>('apex_accounts');
 
   const addAccount = useCallback((data: ApexAccountFormData): ApexAccount => {
     const now = new Date().toISOString();

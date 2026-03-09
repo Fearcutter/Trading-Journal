@@ -61,6 +61,7 @@ export type BadgeType =
   | 'perfect-month';
 
 export interface EarnedBadge {
+  id: string;
   type: BadgeType;
   earnedAt: string;
   habitId?: string; // which habit triggered it, if applicable

@@ -12,7 +12,9 @@ import {
   Calculator,
   Landmark,
   Settings,
+  LogOut,
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -30,6 +32,8 @@ const navItems = [
 ];
 
 export default function Sidebar() {
+  const { signOut, user } = useAuth();
+
   return (
     <aside className="w-56 bg-slate-800 border-r border-slate-700 flex flex-col h-screen sticky top-0">
       <div className="h-14 flex items-center px-4 border-b border-slate-700">
@@ -54,6 +58,16 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
+      <div className="p-3 border-t border-slate-700">
+        <div className="px-3 py-1 mb-2 text-xs text-slate-500 truncate">{user?.email}</div>
+        <button
+          onClick={signOut}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-50 hover:bg-slate-700/50 transition-colors w-full"
+        >
+          <LogOut size={18} />
+          Sign Out
+        </button>
+      </div>
     </aside>
   );
 }

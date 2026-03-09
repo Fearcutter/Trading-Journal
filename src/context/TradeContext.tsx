@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Trade, TradeFormData } from '../types/trade';
-import { useIndexedDB } from '../hooks/useIndexedDB';
+import { useSupabaseList } from '../hooks/useSupabaseList';
 
 interface TradeContextValue {
   trades: Trade[];
@@ -17,7 +17,7 @@ interface TradeContextValue {
 const TradeContext = createContext<TradeContextValue | null>(null);
 
 export function TradeProvider({ children }: { children: ReactNode }) {
-  const [trades, setTrades, loading] = useIndexedDB<Trade[]>('trades', 'trading-journal-trades', []);
+  const [trades, setTrades, loading] = useSupabaseList<Trade>('trades', { screenshotFields: ['setupScreenshot', 'resultScreenshot'] });
 
   const addTrade = useCallback((data: TradeFormData): Trade => {
     const now = new Date().toISOString();

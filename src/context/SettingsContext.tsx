@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode, useCallback } from 'react';
 import type { Instrument } from '../types/instrument';
 import type { Settings, CustomCategory } from '../types/settings';
-import { useIndexedDB } from '../hooks/useIndexedDB';
+import { useSupabaseSingleton } from '../hooks/useSupabaseSingleton';
 import { DEFAULT_INSTRUMENTS } from '../constants/instruments';
 import { DEFAULT_CONFLUENCES, DEFAULT_CONFLUENCES_AGAINST } from '../constants/confluences';
 import { DEFAULT_SETUP_TYPES } from '../constants/setupTypes';
@@ -103,7 +103,7 @@ function migrateSettings(settings: Settings): Settings {
 }
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [rawSettings, setSettings] = useIndexedDB<Settings>('settings', 'trading-journal-settings', DEFAULT_SETTINGS);
+  const [rawSettings, setSettings] = useSupabaseSingleton<Settings>(DEFAULT_SETTINGS);
   const settings = migrateSettings(rawSettings);
 
   const addConfluence = useCallback((name: string) => {

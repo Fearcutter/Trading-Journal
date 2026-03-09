@@ -1,4 +1,5 @@
 import { format, subDays, differenceInCalendarDays, parseISO, startOfDay } from 'date-fns';
+import { v4 as uuidv4 } from 'uuid';
 import type { DailyHabitCheckIn, HabitDefinition, HabitStreak, EarnedBadge, BadgeType } from '../types/habit';
 
 export function computeStreaks(checkIns: DailyHabitCheckIn[], definitions: HabitDefinition[]): HabitStreak[] {
@@ -108,19 +109,19 @@ export function evaluateBadges(
 
   for (const [threshold, badgeType] of streakBadges) {
     if (overallStreak >= threshold && !existingTypes.has(badgeType)) {
-      newBadges.push({ type: badgeType, earnedAt: now });
+      newBadges.push({ id: uuidv4(), type: badgeType, earnedAt: now });
       existingTypes.add(badgeType);
     }
   }
 
   // Perfect week: 7 consecutive days with all habits
   if (overallStreak >= 7 && !existingTypes.has('perfect-week')) {
-    newBadges.push({ type: 'perfect-week', earnedAt: now });
+    newBadges.push({ id: uuidv4(), type: 'perfect-week', earnedAt: now });
   }
 
   // Perfect month: 30 consecutive days with all habits
   if (overallStreak >= 30 && !existingTypes.has('perfect-month')) {
-    newBadges.push({ type: 'perfect-month', earnedAt: now });
+    newBadges.push({ id: uuidv4(), type: 'perfect-month', earnedAt: now });
   }
 
   return newBadges;

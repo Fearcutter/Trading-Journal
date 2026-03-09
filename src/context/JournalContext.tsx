@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { DailyJournalEntry } from '../types/journal';
-import { useIndexedDB } from '../hooks/useIndexedDB';
+import { useSupabaseList } from '../hooks/useSupabaseList';
 
 interface JournalContextValue {
   entries: DailyJournalEntry[];
@@ -14,7 +14,7 @@ interface JournalContextValue {
 const JournalContext = createContext<JournalContextValue | null>(null);
 
 export function JournalProvider({ children }: { children: ReactNode }) {
-  const [entries, setEntries] = useIndexedDB<DailyJournalEntry[]>('journal', 'trading-journal-journal', []);
+  const [entries, setEntries] = useSupabaseList<DailyJournalEntry>('journal_entries');
 
   const addEntry = useCallback((data: Omit<DailyJournalEntry, 'id' | 'createdAt' | 'updatedAt'>): DailyJournalEntry => {
     const now = new Date().toISOString();
