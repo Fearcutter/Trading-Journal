@@ -64,6 +64,7 @@ const DEFAULT_SETTINGS: Settings = {
   customCategories: [],
   customHabitCategories: [],
   tradingTimezone: 'America/New_York',
+  categorySectionOrder: ['confluences', 'confluencesAgainst'],
 };
 
 function migrateSettings(settings: Settings): Settings {
@@ -98,6 +99,24 @@ function migrateSettings(settings: Settings): Settings {
   // Ensure tradingTimezone exists
   if (!migrated.tradingTimezone) {
     migrated = { ...migrated, tradingTimezone: 'America/New_York' };
+  }
+  // Ensure categorySectionOrder exists and is in sync
+  if (!migrated.categorySectionOrder) {
+    migrated = { ...migrated, categorySectionOrder: ['confluences', 'confluencesAgainst'] };
+  }
+  // Add any custom categories not yet in the order
+  const orderSet = new Set(migrated.categorySectionOrder);
+  const missingCats = (migrated.customCategories || [])
+    .filter(c => !orderSet.has(c.id))
+    .map(c => c.id);
+  if (missingCats.length > 0) {
+    migrated = { ...migrated, categorySectionOrder: [...migrated.categorySectionOrder, ...missingCats] };
+  }
+  // Remove entries for deleted custom categories
+  const validIds = new Set(['confluences', 'confluencesAgainst', ...(migrated.customCategories || []).map(c => c.id)]);
+  const filtered = migrated.categorySectionOrder.filter(id => validIds.has(id));
+  if (filtered.length !== migrated.categorySectionOrder.length) {
+    migrated = { ...migrated, categorySectionOrder: filtered };
   }
   return migrated;
 }

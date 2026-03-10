@@ -8,7 +8,7 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
-import { Plus, X, Download, Upload, Trash2, HardDrive, AlertTriangle, GripVertical, Tags } from 'lucide-react';
+import { Plus, X, Download, Upload, Trash2, HardDrive, AlertTriangle, GripVertical } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 import type { CustomCategory } from '../types/settings';
@@ -117,11 +117,64 @@ function ListManager({ title, items, onAdd, onRemove, onReorder }: {
   );
 }
 
-function CustomCategoriesManager({ settings }: { settings: ReturnType<typeof useSettings> }) {
-  const [newName, setNewName] = useState('');
+function SortableSectionCard({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
-  const handleCreate = () => {
-    const trimmed = newName.trim();
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <Card>
+        <div className="flex gap-2">
+          <button
+            {...attributes}
+            {...listeners}
+            className="p-0.5 text-slate-600 hover:text-slate-400 cursor-grab active:cursor-grabbing mt-0.5 shrink-0"
+          >
+            <GripVertical size={16} />
+          </button>
+          <div className="flex-1 min-w-0">
+            {children}
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function CategorySectionsManager({ settings }: { settings: ReturnType<typeof useSettings> }) {
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
+  const [newCategoryName, setNewCategoryName] = useState('');
+
+  const sectionOrder = settings.categorySectionOrder;
+
+  const getSectionLabel = (id: string) => {
+    if (id === 'confluences') return 'Confluences (FOR)';
+    if (id === 'confluencesAgainst') return 'Confluences (AGAINST)';
+    const cat = (settings.customCategories || []).find(c => c.id === id);
+    return cat?.name ?? id;
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveSectionId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveSectionId(null);
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = sectionOrder.indexOf(active.id as string);
+      const newIndex = sectionOrder.indexOf(over.id as string);
+      settings.updateSettings({ categorySectionOrder: arrayMove(sectionOrder, oldIndex, newIndex) });
+    }
+  };
+
+  const handleCreateCategory = () => {
+    const trimmed = newCategoryName.trim();
     if (!trimmed) return;
     if ((settings.customCategories || []).some(c => c.name.toLowerCase() === trimmed.toLowerCase())) {
       toast.error('Category already exists');
@@ -133,60 +186,99 @@ function CustomCategoriesManager({ settings }: { settings: ReturnType<typeof use
       options: [],
     };
     settings.addCustomCategory(category);
-    setNewName('');
+    setNewCategoryName('');
     toast.success(`Created category "${trimmed}"`);
   };
 
-  return (
-    <Card>
-      <div className="flex items-center gap-2 mb-4">
-        <Tags size={16} className="text-slate-400" />
-        <h3 className="text-sm font-medium text-slate-300">Custom Categories</h3>
-      </div>
+  const renderSectionContent = (id: string) => {
+    if (id === 'confluences') {
+      return (
+        <ListManager
+          title="Confluences (FOR)"
+          items={settings.confluences}
+          onAdd={settings.addConfluence}
+          onRemove={settings.removeConfluence}
+          onReorder={settings.reorderConfluences}
+        />
+      );
+    }
+    if (id === 'confluencesAgainst') {
+      return (
+        <ListManager
+          title="Confluences (AGAINST)"
+          items={settings.confluencesAgainst}
+          onAdd={settings.addConfluenceAgainst}
+          onRemove={settings.removeConfluenceAgainst}
+          onReorder={settings.reorderConfluencesAgainst}
+        />
+      );
+    }
+    const cat = (settings.customCategories || []).find(c => c.id === id);
+    if (!cat) return null;
+    return (
+      <>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-medium text-slate-300">{cat.name}</h3>
+          <button
+            onClick={() => {
+              settings.removeCustomCategory(cat.id);
+              toast.success(`Deleted category "${cat.name}"`);
+            }}
+            className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+        <ListManager
+          title="Options"
+          items={cat.options}
+          onAdd={(option) => settings.addCustomCategoryOption(cat.id, option)}
+          onRemove={(option) => settings.removeCustomCategoryOption(cat.id, option)}
+          onReorder={(options) => settings.reorderCustomCategoryOptions(cat.id, options)}
+        />
+      </>
+    );
+  };
 
-      {/* Create new category */}
-      <div className="flex gap-2 mb-4">
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
         <input
-          value={newName}
-          onChange={e => setNewName(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleCreate()}
-          placeholder="Category name..."
+          value={newCategoryName}
+          onChange={e => setNewCategoryName(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleCreateCategory()}
+          placeholder="New category name..."
           className="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <Button size="sm" onClick={handleCreate} disabled={!newName.trim()}>
-          <Plus size={14} /> Create
+        <Button size="sm" onClick={handleCreateCategory} disabled={!newCategoryName.trim()}>
+          <Plus size={14} /> Add Category
         </Button>
       </div>
-
-      {/* Existing categories */}
-      {(settings.customCategories || []).length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(settings.customCategories || []).map(cat => (
-            <div key={cat.id} className="border border-slate-700 rounded-lg p-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-slate-200">{cat.name}</span>
-                <button
-                  onClick={() => {
-                    settings.removeCustomCategory(cat.id);
-                    toast.success(`Deleted category "${cat.name}"`);
-                  }}
-                  className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-              <ListManager
-                title="Options"
-                items={cat.options}
-                onAdd={(option) => settings.addCustomCategoryOption(cat.id, option)}
-                onRemove={(option) => settings.removeCustomCategoryOption(cat.id, option)}
-                onReorder={(options) => settings.reorderCustomCategoryOptions(cat.id, options)}
-              />
+      <DndContext
+        collisionDetection={closestCenter}
+        modifiers={[restrictToVerticalAxis]}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={sectionOrder} strategy={verticalListSortingStrategy}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {sectionOrder.map(id => (
+              <SortableSectionCard key={id} id={id}>
+                {renderSectionContent(id)}
+              </SortableSectionCard>
+            ))}
+          </div>
+        </SortableContext>
+        <DragOverlay>
+          {activeSectionId ? (
+            <div className="flex items-center gap-2 py-2 px-4 rounded-lg bg-slate-700 shadow-lg border border-slate-500">
+              <GripVertical size={16} className="text-slate-400" />
+              <span className="text-sm font-medium text-slate-200">{getSectionLabel(activeSectionId)}</span>
             </div>
-          ))}
-        </div>
-      )}
-    </Card>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+    </div>
   );
 }
 
@@ -317,22 +409,8 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* Confluences, Setups & Grades */}
+      {/* Setup Types & Grades */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <ListManager
-          title="Confluences (FOR)"
-          items={settings.confluences}
-          onAdd={settings.addConfluence}
-          onRemove={settings.removeConfluence}
-          onReorder={settings.reorderConfluences}
-        />
-        <ListManager
-          title="Confluences (AGAINST)"
-          items={settings.confluencesAgainst}
-          onAdd={settings.addConfluenceAgainst}
-          onRemove={settings.removeConfluenceAgainst}
-          onReorder={settings.reorderConfluencesAgainst}
-        />
         <ListManager
           title="Setup Types"
           items={settings.setupTypes}
@@ -349,8 +427,8 @@ export default function SettingsPage() {
         />
       </div>
 
-      {/* Custom Categories */}
-      <CustomCategoriesManager settings={settings} />
+      {/* Categories & Confluences — reorderable sections */}
+      <CategorySectionsManager settings={settings} />
 
       {/* Instruments */}
       <Card>

@@ -23,4 +23,5 @@ export interface Settings {
   customCategories: CustomCategory[];
   customHabitCategories: { key: string; label: string }[];
   tradingTimezone: string;
+  categorySectionOrder: string[];
 }

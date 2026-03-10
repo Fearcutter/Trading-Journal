@@ -284,46 +284,51 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
         <Select label="Grade" value={form.grade} onValueChange={v => update('grade', v)} options={gradeOptions} />
       </div>
 
-      {/* Confluences */}
+      {/* Confluences & Categories — ordered by settings */}
       <div className="grid grid-cols-2 gap-4">
-        <ConfluenceSelector
-          label="Confluences (FOR)"
-          available={settings.confluences}
-          selected={form.confluences}
-          onChange={v => update('confluences', v)}
-        />
-        {settings.confluencesAgainst.length > 0 && (
-          <ConfluenceSelector
-            label="Confluences (AGAINST)"
-            available={settings.confluencesAgainst}
-            selected={form.confluencesAgainst}
-            onChange={v => update('confluencesAgainst', v)}
-          />
-        )}
-      </div>
-
-      {/* Custom Categories */}
-      {(settings.customCategories || []).length > 0 && (
-        <div className="grid grid-cols-2 gap-4">
-          {(settings.customCategories || []).map(cat => {
-            const value = (form.customFields?.[cat.id]) || [];
+        {(settings.categorySectionOrder || ['confluences', 'confluencesAgainst']).map(sectionId => {
+          if (sectionId === 'confluences') {
             return (
               <ConfluenceSelector
-                key={cat.id}
-                label={cat.name}
-                available={cat.options}
-                selected={value}
-                onChange={v => {
-                  setForm(prev => ({
-                    ...prev,
-                    customFields: { ...(prev.customFields || {}), [cat.id]: v },
-                  }));
-                }}
-                />
-              );
-          })}
-        </div>
-      )}
+                key="confluences"
+                label="Confluences (FOR)"
+                available={settings.confluences}
+                selected={form.confluences}
+                onChange={v => update('confluences', v)}
+              />
+            );
+          }
+          if (sectionId === 'confluencesAgainst') {
+            if (settings.confluencesAgainst.length === 0) return null;
+            return (
+              <ConfluenceSelector
+                key="confluencesAgainst"
+                label="Confluences (AGAINST)"
+                available={settings.confluencesAgainst}
+                selected={form.confluencesAgainst}
+                onChange={v => update('confluencesAgainst', v)}
+              />
+            );
+          }
+          const cat = (settings.customCategories || []).find(c => c.id === sectionId);
+          if (!cat) return null;
+          const value = (form.customFields?.[cat.id]) || [];
+          return (
+            <ConfluenceSelector
+              key={cat.id}
+              label={cat.name}
+              available={cat.options}
+              selected={value}
+              onChange={v => {
+                setForm(prev => ({
+                  ...prev,
+                  customFields: { ...(prev.customFields || {}), [cat.id]: v },
+                }));
+              }}
+            />
+          );
+        })}
+      </div>
 
       {/* Emotions */}
       <div className="grid grid-cols-2 gap-4">
