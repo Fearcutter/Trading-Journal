@@ -201,14 +201,16 @@ export default function PasteTradeModal({ open, onOpenChange, sessionId, onParse
                 </div>
                 <div>
                   <span className="text-slate-500">Exit Price:</span>{' '}
-                  <span className="font-mono text-slate-200">{parsed.exitPrice}</span>
+                  <span className="font-mono text-slate-200">{parsed.exitPrice || '—'}</span>
                 </div>
+                {parsed.exitPrice > 0 && (
                 <div>
                   <span className="text-slate-500">Points P&L:</span>{' '}
                   <span className={`font-mono ${parsed.pointsPL >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                     {parsed.pointsPL >= 0 ? '+' : ''}{parsed.pointsPL}
                   </span>
                 </div>
+                )}
                 <div>
                   <span className="text-slate-500">R:R:</span>{' '}
                   <span className="font-mono text-slate-200">{parsed.riskReward.toFixed(2)}</span>

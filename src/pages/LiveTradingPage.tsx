@@ -364,10 +364,10 @@ function TradeLogTab({ liveTrades, onTradeSubmit }: {
       <PasteTradeModal open={pasteModalOpen} onOpenChange={setPasteModalOpen} onParsed={(data) => {
         setPasteInitialData({
           direction: data.direction,
-          entry: data.entry != null ? Number(data.entry) : '',
-          stopLoss: data.stopLoss != null ? Number(data.stopLoss) : '',
-          takeProfit: data.takeProfit != null ? Number(data.takeProfit) : '',
-          exitPrice: data.exitPrice != null ? Number(data.exitPrice) : '',
+          entry: data.entry || '',
+          stopLoss: data.stopLoss || '',
+          takeProfit: data.takeProfit || '',
+          exitPrice: data.exitPrice || '',
           result: data.result,
           date: data.date || '',
           time: data.time || '',
