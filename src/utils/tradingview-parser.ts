@@ -63,14 +63,17 @@ export function parseTradingViewHTML(html: string, instruments?: Instrument[], t
 
     // Compute R:R from profitLevel / stopLevel (tick-based offsets)
     const state = clip.sources?.[0]?.source?.state;
-    const stopLevel = state?.stopLevel;
-    const profitLevel = state?.profitLevel;
+    console.log('[TV Parser] state:', JSON.stringify(state, null, 2));
+
+    const stopLevel = state?.stopLevel ?? state?.riskLevel ?? state?.sl;
+    const profitLevel = state?.profitLevel ?? state?.rewardLevel ?? state?.tp;
     const riskReward = (stopLevel && profitLevel && stopLevel > 0)
       ? Math.round((profitLevel / stopLevel) * 100) / 100
       : 0;
 
     // Extract exit price from points[3] (the close line position)
     const points = clip.sources?.[0]?.source?.points;
+    console.log('[TV Parser] points:', JSON.stringify(points, null, 2));
     const exitPrice = points?.[3]?.price;
     if (typeof exitPrice !== 'number' || exitPrice <= 0) return null;
 
@@ -85,35 +88,44 @@ export function parseTradingViewHTML(html: string, instruments?: Instrument[], t
       time = converted.time;
     }
 
-    // Derive SL/TP — try tick-based calculation first, then fall back to points
+    // Derive SL/TP from state
     let stopLoss = 0;
     let takeProfit = 0;
 
-    if (instruments && stopLevel && profitLevel) {
+    // Try absolute price properties first (e.g. stopPrice, profitPrice, targetPrice)
+    const stateStopPrice = state?.stopPrice ?? state?.slPrice;
+    const stateProfitPrice = state?.profitPrice ?? state?.tpPrice ?? state?.targetPrice;
+    if (typeof stateStopPrice === 'number' && stateStopPrice > 0) {
+      stopLoss = stateStopPrice;
+    }
+    if (typeof stateProfitPrice === 'number' && stateProfitPrice > 0) {
+      takeProfit = stateProfitPrice;
+    }
+
+    // Try tick-based calculation if absolute prices weren't found
+    if ((!stopLoss || !takeProfit) && instruments && stopLevel && profitLevel) {
       const symbolRaw = state?.symbol || '';
       const afterColon = symbolRaw.includes(':') ? symbolRaw.split(':')[1] : symbolRaw;
       const baseSymbol = afterColon.replace(/[FGHJKMNQUVXZ]?\d+!?$/, '');
 
       const instrument = instruments.find(i => i.symbol === baseSymbol);
+      console.log('[TV Parser] symbol lookup:', symbolRaw, '→', baseSymbol, '→', instrument?.symbol ?? 'NOT FOUND');
       if (instrument) {
         const { tickSize } = instrument;
-        if (direction === 'long') {
-          stopLoss = entry - stopLevel * tickSize;
-          takeProfit = entry + profitLevel * tickSize;
-        } else {
-          stopLoss = entry + stopLevel * tickSize;
-          takeProfit = entry - profitLevel * tickSize;
+        if (!stopLoss) {
+          stopLoss = direction === 'long'
+            ? entry - stopLevel * tickSize
+            : entry + stopLevel * tickSize;
+        }
+        if (!takeProfit) {
+          takeProfit = direction === 'long'
+            ? entry + profitLevel * tickSize
+            : entry - profitLevel * tickSize;
         }
       }
     }
 
-    // Fallback: read SL/TP directly from points[1] and points[2] if tick-based calc failed
-    if (!stopLoss && points?.[1]?.price && typeof points[1].price === 'number') {
-      stopLoss = points[1].price;
-    }
-    if (!takeProfit && points?.[2]?.price && typeof points[2].price === 'number') {
-      takeProfit = points[2].price;
-    }
+    console.log('[TV Parser] Derived SL:', stopLoss, 'TP:', takeProfit, 'stopLevel:', stopLevel, 'profitLevel:', profitLevel);
 
     const pointsPL = calculatePointsPL(entry, exitPrice, direction);
     const result = computeResult(entry, exitPrice, direction, stopLoss || undefined, takeProfit || undefined);
