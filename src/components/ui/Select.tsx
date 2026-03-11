@@ -40,11 +40,11 @@ export default function Select({ label, value, onValueChange, options, placehold
           <ChevronDown size={16} className="text-slate-400" />
         </button>
         {open && (
-          <ul className="absolute z-50 mt-1 w-full bg-slate-800 border border-slate-600 rounded-lg shadow-xl overflow-hidden p-1">
+          <ul className="absolute z-50 mt-1 min-w-full w-max bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto p-1">
             {options.map(opt => (
               <li key={opt.value === '' ? '__empty__' : opt.value}
                 onClick={() => { onValueChange(opt.value); setOpen(false); }}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 rounded-md cursor-pointer hover:bg-slate-700">
+                className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 rounded-md cursor-pointer hover:bg-slate-700 whitespace-nowrap">
                 <span className="w-3.5 flex-shrink-0">
                   {opt.value === value && <Check size={14} className="text-blue-400" />}
                 </span>
