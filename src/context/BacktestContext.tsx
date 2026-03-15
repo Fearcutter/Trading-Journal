@@ -5,6 +5,7 @@ import { useSupabaseList } from '../hooks/useSupabaseList';
 
 interface BacktestContextValue {
   sessions: BacktestSession[];
+  loading: boolean;
   addSession: (name: string, description: string, instrument: string | undefined, color: string) => BacktestSession;
   updateSession: (id: string, updates: Partial<BacktestSession>) => void;
   deleteSession: (id: string) => void;
@@ -14,7 +15,7 @@ interface BacktestContextValue {
 const BacktestContext = createContext<BacktestContextValue | null>(null);
 
 export function BacktestProvider({ children }: { children: ReactNode }) {
-  const [sessions, setSessions] = useSupabaseList<BacktestSession>('backtest_sessions');
+  const [sessions, setSessions, loading] = useSupabaseList<BacktestSession>('backtest_sessions');
 
   const addSession = useCallback((name: string, description: string, instrument: string | undefined, color: string): BacktestSession => {
     const now = new Date().toISOString();
@@ -48,7 +49,7 @@ export function BacktestProvider({ children }: { children: ReactNode }) {
   }, [sessions]);
 
   return (
-    <BacktestContext.Provider value={{ sessions, addSession, updateSession, deleteSession, getSession }}>
+    <BacktestContext.Provider value={{ sessions, loading, addSession, updateSession, deleteSession, getSession }}>
       {children}
     </BacktestContext.Provider>
   );

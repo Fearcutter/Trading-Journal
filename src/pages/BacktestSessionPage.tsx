@@ -42,7 +42,7 @@ const TABS: { key: Tab; label: string; icon: typeof BarChart3 }[] = [
 
 export default function BacktestSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
-  const { getSession, updateSession } = useBacktest();
+  const { getSession, updateSession, loading } = useBacktest();
   const { trades, addTrade } = useTrades();
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -64,6 +64,13 @@ export default function BacktestSessionPage() {
   const dashboard = useDashboardStats(sessionTrades, plField);
   const advanced = useAdvancedStats(sessionTrades, plField);
 
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState('');
+
+  if (loading) {
+    return null;
+  }
+
   if (!session) {
     return (
       <div className="space-y-4">
@@ -79,9 +86,6 @@ export default function BacktestSessionPage() {
       </div>
     );
   }
-
-  const [editingName, setEditingName] = useState(false);
-  const [nameValue, setNameValue] = useState('');
 
   const startEditing = () => {
     setNameValue(session!.name);
