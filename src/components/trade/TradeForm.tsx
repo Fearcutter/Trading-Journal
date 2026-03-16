@@ -56,7 +56,7 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
   const settings = useSettings();
   const { accounts } = useApexAccounts();
   const activeAccounts = useMemo(() => accounts.filter(a => a.status === 'active'), [accounts]);
-  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
+  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>(initialData?.accountIds ?? []);
 
   const toggleAccountId = (id: string) => {
     setSelectedAccountIds(prev =>

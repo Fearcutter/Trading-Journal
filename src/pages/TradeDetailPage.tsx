@@ -44,6 +44,7 @@ export default function TradeDetailPage() {
       drawback1R: data.drawback1R === '' ? undefined : data.drawback1R,
       drawback2R: data.drawback2R === '' ? undefined : data.drawback2R,
       returnedTo1R: data.returnedTo1R,
+      accountIds: data.accountIds,
     });
     setEditing(false);
     toast.success('Trade updated');
@@ -111,6 +112,7 @@ export default function TradeDetailPage() {
             returnedTo1R: trade.returnedTo1R,
             sessionId: trade.sessionId,
             customFields: trade.customFields,
+            accountIds: trade.accountIds,
           }}
           onSubmit={handleUpdate}
           submitLabel="Update Trade"
