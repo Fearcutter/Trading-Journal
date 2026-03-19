@@ -5,7 +5,7 @@ import { useSupabaseList } from '../hooks/useSupabaseList';
 
 /** Map legacy `returnedTo1R` → `returnedToBE` for existing Supabase records */
 function normalizeTrade(trade: Trade): Trade {
-  const raw = trade as Record<string, unknown>;
+  const raw = trade as unknown as Record<string, unknown>;
   if ('returnedTo1R' in raw && !('returnedToBE' in raw)) {
     const { returnedTo1R, ...rest } = raw;
     return { ...rest, returnedToBE: returnedTo1R } as Trade;
