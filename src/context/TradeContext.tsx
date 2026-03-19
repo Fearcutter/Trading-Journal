@@ -1,7 +1,17 @@
-import { createContext, useContext, type ReactNode, useCallback } from 'react';
+import { createContext, useContext, type ReactNode, useCallback, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Trade, TradeFormData } from '../types/trade';
 import { useSupabaseList } from '../hooks/useSupabaseList';
+
+/** Map legacy `returnedTo1R` → `returnedToBE` for existing Supabase records */
+function normalizeTrade(trade: Trade): Trade {
+  const raw = trade as Record<string, unknown>;
+  if ('returnedTo1R' in raw && !('returnedToBE' in raw)) {
+    const { returnedTo1R, ...rest } = raw;
+    return { ...rest, returnedToBE: returnedTo1R } as Trade;
+  }
+  return trade;
+}
 
 interface TradeContextValue {
   trades: Trade[];
@@ -17,7 +27,8 @@ interface TradeContextValue {
 const TradeContext = createContext<TradeContextValue | null>(null);
 
 export function TradeProvider({ children }: { children: ReactNode }) {
-  const [trades, setTrades, loading] = useSupabaseList<Trade>('trades', { screenshotFields: ['setupScreenshot', 'resultScreenshot'] });
+  const [rawTrades, setTrades, loading] = useSupabaseList<Trade>('trades', { screenshotFields: ['setupScreenshot', 'resultScreenshot'] });
+  const trades = useMemo(() => rawTrades.map(normalizeTrade), [rawTrades]);
 
   const addTrade = useCallback((data: TradeFormData): Trade => {
     const now = new Date().toISOString();

@@ -33,7 +33,7 @@ export interface Trade {
   mfe?: number;
   drawback1R?: number;
   drawback2R?: number;
-  returnedTo1R?: boolean;
+  returnedToBE?: boolean;
   customFields?: Record<string, string[]>;
   accountIds?: string[];
   sessionId?: string;
@@ -67,7 +67,7 @@ export interface TradeFormData {
   mfe?: number | '';
   drawback1R?: number | '';
   drawback2R?: number | '';
-  returnedTo1R?: boolean;
+  returnedToBE?: boolean;
   customFields?: Record<string, string[]>;
   accountIds?: string[];
   pointsPL?: number;

@@ -48,7 +48,7 @@ function getDefaultFormData(settings: { defaultInstrument: string; defaultContra
     mfe: '',
     drawback1R: '',
     drawback2R: '',
-    returnedTo1R: undefined,
+    returnedToBE: undefined,
   };
 }
 
@@ -116,7 +116,7 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
       drawback1R: form.drawback1R === '' ? undefined : Number(form.drawback1R),
       drawback2R: form.drawback2R === '' ? undefined : Number(form.drawback2R),
       customFields: form.customFields || {},
-      returnedTo1R: form.returnedTo1R,
+      returnedToBE: form.returnedToBE,
       accountIds: selectedAccountIds.length > 0 ? selectedAccountIds : undefined,
       sessionId: form.sessionId,
     });
@@ -212,13 +212,13 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
         <Input label="Drawback from 1R (pts)" type="number" step="any" mono value={form.drawback1R} onChange={e => update('drawback1R', e.target.value === '' ? '' : Number(e.target.value))} placeholder="Max pullback after reaching 1R" />
         <Input label="Drawback from 2R (pts)" type="number" step="any" mono value={form.drawback2R} onChange={e => update('drawback2R', e.target.value === '' ? '' : Number(e.target.value))} placeholder="Max pullback after reaching 2R" />
         <div className="space-y-1">
-          <label className="block text-sm font-medium text-slate-300">Returned to 1R?</label>
+          <label className="block text-sm font-medium text-slate-300">Returned to BE?</label>
           <div className="inline-flex rounded-lg border border-slate-600 overflow-hidden mt-1">
             <button
               type="button"
-              onClick={() => update('returnedTo1R', undefined)}
+              onClick={() => update('returnedToBE', undefined)}
               className={`px-3 py-2 text-sm font-medium transition-colors ${
-                form.returnedTo1R === undefined
+                form.returnedToBE === undefined
                   ? 'bg-slate-600 text-white'
                   : 'bg-slate-800 text-slate-400 hover:text-slate-200'
               }`}
@@ -227,9 +227,9 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
             </button>
             <button
               type="button"
-              onClick={() => update('returnedTo1R', true)}
+              onClick={() => update('returnedToBE', true)}
               className={`px-3 py-2 text-sm font-medium transition-colors ${
-                form.returnedTo1R === true
+                form.returnedToBE === true
                   ? 'bg-emerald-600 text-white'
                   : 'bg-slate-800 text-slate-400 hover:text-slate-200'
               }`}
@@ -238,9 +238,9 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
             </button>
             <button
               type="button"
-              onClick={() => update('returnedTo1R', false)}
+              onClick={() => update('returnedToBE', false)}
               className={`px-3 py-2 text-sm font-medium transition-colors ${
-                form.returnedTo1R === false
+                form.returnedToBE === false
                   ? 'bg-rose-600 text-white'
                   : 'bg-slate-800 text-slate-400 hover:text-slate-200'
               }`}

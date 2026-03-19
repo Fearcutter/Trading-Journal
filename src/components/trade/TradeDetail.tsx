@@ -85,7 +85,7 @@ export default function TradeDetail({ trade }: TradeDetailProps) {
       </Card>
 
       {/* Runner Drawback */}
-      {(trade.drawback1R != null || trade.drawback2R != null || trade.returnedTo1R != null) && (
+      {(trade.drawback1R != null || trade.drawback2R != null || trade.returnedToBE != null) && (
         <Card>
           <h3 className="text-sm font-medium text-slate-300 mb-3">Runner Drawback</h3>
           <div className="grid grid-cols-3 gap-4">
@@ -102,9 +102,9 @@ export default function TradeDetail({ trade }: TradeDetailProps) {
               </p>
             </div>
             <div>
-              <p className="text-xs text-slate-500">Returned to 1R?</p>
-              <p className={`text-sm font-medium ${trade.returnedTo1R === true ? 'text-emerald-400' : trade.returnedTo1R === false ? 'text-rose-400' : 'text-slate-500'}`}>
-                {trade.returnedTo1R === true ? 'Yes' : trade.returnedTo1R === false ? 'No' : '—'}
+              <p className="text-xs text-slate-500">Returned to BE?</p>
+              <p className={`text-sm font-medium ${trade.returnedToBE === true ? 'text-emerald-400' : trade.returnedToBE === false ? 'text-rose-400' : 'text-slate-500'}`}>
+                {trade.returnedToBE === true ? 'Yes' : trade.returnedToBE === false ? 'No' : '—'}
               </p>
             </div>
           </div>

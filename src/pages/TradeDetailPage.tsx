@@ -43,7 +43,7 @@ export default function TradeDetailPage() {
       mfe: data.mfe === '' ? undefined : data.mfe,
       drawback1R: data.drawback1R === '' ? undefined : data.drawback1R,
       drawback2R: data.drawback2R === '' ? undefined : data.drawback2R,
-      returnedTo1R: data.returnedTo1R,
+      returnedToBE: data.returnedToBE,
       accountIds: data.accountIds,
     });
     setEditing(false);
@@ -109,7 +109,7 @@ export default function TradeDetailPage() {
             mfe: trade.mfe,
             drawback1R: trade.drawback1R,
             drawback2R: trade.drawback2R,
-            returnedTo1R: trade.returnedTo1R,
+            returnedToBE: trade.returnedToBE,
             sessionId: trade.sessionId,
             customFields: trade.customFields,
             accountIds: trade.accountIds,
