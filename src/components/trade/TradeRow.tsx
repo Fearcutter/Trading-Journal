@@ -15,13 +15,14 @@ interface TradeRowProps {
   selected: boolean;
   onSelect: (id: string) => void;
   hiddenColumns?: HiddenColumns;
+  skipped?: boolean;
 }
 
-export default function TradeRow({ trade, selected, onSelect, hiddenColumns }: TradeRowProps) {
+export default function TradeRow({ trade, selected, onSelect, hiddenColumns, skipped }: TradeRowProps) {
   const pl = usePLFormatter();
 
   return (
-    <tr className="border-b border-slate-700/50 hover:bg-slate-800/50 transition-colors">
+    <tr className={`border-b border-slate-700/50 hover:bg-slate-800/50 transition-colors ${skipped ? 'opacity-50' : ''}`}>
       <td className="px-3 py-3">
         <input
           type="checkbox"
@@ -31,7 +32,10 @@ export default function TradeRow({ trade, selected, onSelect, hiddenColumns }: T
         />
       </td>
       <td className="px-3 py-3 text-sm text-slate-300">
-        <div>{formatDate(trade.date)}</div>
+        <div className="flex items-center gap-1.5">
+          {formatDate(trade.date)}
+          {skipped && <span className="text-[10px] font-medium text-amber-400 bg-amber-400/10 px-1 py-px rounded">Skipped</span>}
+        </div>
         {trade.time && <div className="text-xs text-slate-500">{formatTime(trade.time)}</div>}
       </td>
       <td className="px-3 py-3">

@@ -21,6 +21,12 @@ import EmptyState from '../components/ui/EmptyState';
 import type { TradeFormData } from '../types/trade';
 import { formatPercent } from '../utils/formatters';
 import { usePLFormatter } from '../hooks/usePLFormatter';
+import { useTradingPlanMode } from '../hooks/useTradingPlanMode';
+import { useTradingPlanStats, type TradingPlanComparison } from '../hooks/useTradingPlanStats';
+import TradingPlanToggle from '../components/trading-plan/TradingPlanToggle';
+import ComparisonDashboard from '../components/trading-plan/ComparisonDashboard';
+import MissedTradesBreakdown from '../components/trading-plan/MissedTradesBreakdown';
+import BestVsFirstComparison from '../components/trading-plan/BestVsFirstComparison';
 import { exportTradesToCSV, downloadCSV } from '../utils/csv-export';
 
 const SESSION_DOT_COLORS: Record<string, string> = {
@@ -61,8 +67,11 @@ export default function BacktestSessionPage() {
   );
 
   const { plField } = usePLFormatter();
-  const dashboard = useDashboardStats(sessionTrades, plField);
-  const advanced = useAdvancedStats(sessionTrades, plField);
+  const { planState, setEnabled, setTradesPerDay } = useTradingPlanMode(sessionId!);
+  const planComparison = useTradingPlanStats(sessionTrades, planState, plField);
+  const activeTrades = planState.enabled && planComparison ? planComparison.planTrades : sessionTrades;
+  const dashboard = useDashboardStats(activeTrades, plField);
+  const advanced = useAdvancedStats(activeTrades, plField);
 
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState('');
@@ -137,6 +146,7 @@ export default function BacktestSessionPage() {
         {session.description && (
           <p className="text-sm text-slate-400 mt-1 ml-6">{session.description}</p>
         )}
+        <TradingPlanToggle planState={planState} onToggle={setEnabled} onChangeN={setTradesPerDay} />
       </div>
 
       {/* Tab bar */}
@@ -158,20 +168,21 @@ export default function BacktestSessionPage() {
       </div>
 
       {/* Tab content */}
-      {activeTab === 'dashboard' && <DashboardTab dashboard={dashboard} tradeCount={sessionTrades.length} />}
+      {activeTab === 'dashboard' && <DashboardTab dashboard={dashboard} tradeCount={activeTrades.length} planComparison={planComparison} />}
       {activeTab === 'tradelog' && (
         <TradeLogTab
           trades={sessionTrades}
           sessionId={sessionId!}
           onTradeSubmit={handleTradeSubmit}
+          skippedTradeIds={planComparison?.skippedTradeIds}
         />
       )}
-      {activeTab === 'analytics' && <AnalyticsTab advanced={advanced} tradeCount={sessionTrades.length} />}
+      {activeTab === 'analytics' && <AnalyticsTab advanced={advanced} tradeCount={activeTrades.length} planComparison={planComparison} />}
     </div>
   );
 }
 
-function DashboardTab({ dashboard, tradeCount }: { dashboard: ReturnType<typeof useDashboardStats>; tradeCount: number }) {
+function DashboardTab({ dashboard, tradeCount, planComparison }: { dashboard: ReturnType<typeof useDashboardStats>; tradeCount: number; planComparison?: TradingPlanComparison | null }) {
   const pl = usePLFormatter();
 
   if (tradeCount === 0) {
@@ -182,6 +193,12 @@ function DashboardTab({ dashboard, tradeCount }: { dashboard: ReturnType<typeof 
 
   return (
     <div className="space-y-4">
+      {planComparison && (
+        <>
+          <ComparisonDashboard comparison={planComparison} />
+          <MissedTradesBreakdown comparison={planComparison} />
+        </>
+      )}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <StatMini label="Total Trades" value={String(stats.totalTrades)} />
         <StatMini label="Win Rate" value={formatPercent(stats.winRate)} />
@@ -218,10 +235,11 @@ function StatMini({ label, value, color }: { label: string; value: string; color
   );
 }
 
-function TradeLogTab({ trades, sessionId, onTradeSubmit }: {
+function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
   trades: ReturnType<typeof useTrades>['trades'];
   sessionId: string;
   onTradeSubmit: (data: TradeFormData) => void;
+  skippedTradeIds?: Set<string>;
 }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [pasteModalOpen, setPasteModalOpen] = useState(false);
@@ -385,6 +403,7 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit }: {
                       selected={selectedIds.has(trade.id)}
                       onSelect={toggleSelect}
                       hiddenColumns={hiddenColumns}
+                      skipped={skippedTradeIds?.has(trade.id)}
                     />
                   ))}
                 </tbody>
@@ -419,7 +438,7 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit }: {
   );
 }
 
-function AnalyticsTab({ advanced, tradeCount }: { advanced: ReturnType<typeof useAdvancedStats>; tradeCount: number }) {
+function AnalyticsTab({ advanced, tradeCount, planComparison }: { advanced: ReturnType<typeof useAdvancedStats>; tradeCount: number; planComparison?: TradingPlanComparison | null }) {
   const pl = usePLFormatter();
 
   if (tradeCount < 2) {
@@ -430,6 +449,7 @@ function AnalyticsTab({ advanced, tradeCount }: { advanced: ReturnType<typeof us
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {planComparison && <BestVsFirstComparison comparison={planComparison} />}
       {/* Rolling Win Rate */}
       <Card>
         <h3 className="text-sm font-medium text-slate-300 mb-4">Rolling Win Rate (10-trade)</h3>

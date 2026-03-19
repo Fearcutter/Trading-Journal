@@ -7,6 +7,7 @@ import DayOfWeekChart from '../components/analytics/DayOfWeekChart';
 import InstrumentComparisonChart from '../components/analytics/InstrumentComparisonChart';
 import StreakChart from '../components/analytics/StreakChart';
 import MonteCarloChart from '../components/analytics/MonteCarloChart';
+import PlanComplianceWidget from '../components/trading-plan/PlanComplianceWidget';
 
 export default function AnalyticsPage() {
   const { trades } = useTrades();
@@ -62,6 +63,7 @@ export default function AnalyticsPage() {
         <InstrumentComparisonChart data={stats.performanceByInstrument} />
         <StreakChart data={stats.streaks.streaks} />
         <MonteCarloChart simulations={stats.monteCarlo.simulations} percentiles={stats.monteCarlo.percentiles} />
+        <PlanComplianceWidget trades={trades} />
       </div>
     </div>
   );
