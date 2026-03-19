@@ -1,4 +1,5 @@
 import type { Trade } from '../types/trade';
+import { getTradeValue, type PLField } from './pl-helpers';
 
 function getStopDistance(trade: Trade): number {
   return Math.abs(trade.entry - trade.stopLoss);
@@ -40,14 +41,11 @@ export function calculateRunnerAnalysis(trades: Trade[]) {
 
   return thresholds.map(threshold => {
     const reaching = withData.filter(t => t.mfe! >= threshold * getStopDistance(t));
-    const wins = reaching.filter(t => t.result === 'win');
     return {
       threshold,
       thresholdLabel: `${threshold}R`,
       tradesReaching: reaching.length,
       percentReaching: withData.length > 0 ? (reaching.length / withData.length) * 100 : 0,
-      wins: wins.length,
-      winRate: reaching.length > 0 ? (wins.length / reaching.length) * 100 : 0,
     };
   });
 }
@@ -58,31 +56,30 @@ export function calculateRunnerSurvival(trades: Trade[]) {
   const runnersFrom1R = withData.filter(t => t.mfe! >= getStopDistance(t));
   const exitRs = runnersFrom1R.map(t => {
     const sd = getStopDistance(t);
-    const exitR = sd > 0 ? Math.abs(t.exitPrice - t.entry) / sd * (t.dollarPL >= 0 ? 1 : -1) : 0;
+    const pts = t.direction === 'long' ? t.exitPrice - t.entry : t.entry - t.exitPrice;
+    const exitR = sd > 0 ? pts / sd : 0;
     return { trade: t, exitR, mfeR: sd > 0 ? t.mfe! / sd : 0 };
   });
 
   const survivedToClose = exitRs.filter(e => e.exitR >= 1).length;
   const stoppedAtBE = exitRs.filter(e => Math.abs(e.exitR) < 0.1).length;
-  const drawbackFrom1R = exitRs.map(e => e.mfeR - e.exitR);
-  const avgDrawbackFrom1R = drawbackFrom1R.length > 0 ? drawbackFrom1R.reduce((s, v) => s + v, 0) / drawbackFrom1R.length : 0;
+  const with1RDrawback = runnersFrom1R.filter(t => t.drawback1R != null && getStopDistance(t) > 0);
+  const avgDrawbackFrom1R = with1RDrawback.length > 0
+    ? with1RDrawback.reduce((s, t) => s + t.drawback1R! / getStopDistance(t), 0) / with1RDrawback.length
+    : 0;
 
   const runnersFrom2R = withData.filter(t => t.mfe! >= 2 * getStopDistance(t));
-  const exitRs2R = runnersFrom2R.map(t => {
-    const sd = getStopDistance(t);
-    const exitR = sd > 0 ? Math.abs(t.exitPrice - t.entry) / sd * (t.dollarPL >= 0 ? 1 : -1) : 0;
-    const mfeR = sd > 0 ? t.mfe! / sd : 0;
-    return mfeR - exitR;
-  });
-  const avgDrawbackFrom2R = exitRs2R.length > 0 ? exitRs2R.reduce((s, v) => s + v, 0) / exitRs2R.length : 0;
+  const with2RDrawback = runnersFrom2R.filter(t => t.drawback2R != null && getStopDistance(t) > 0);
+  const avgDrawbackFrom2R = with2RDrawback.length > 0
+    ? with2RDrawback.reduce((s, t) => s + t.drawback2R! / getStopDistance(t), 0) / with2RDrawback.length
+    : 0;
 
-  const extraDollars = runnersFrom1R.map(t => {
+  const extraR = runnersFrom1R.map(t => {
     const sd = getStopDistance(t);
-    const baselineProfit = sd; // 1R profit in points
-    const actualProfit = t.dollarPL > 0 ? Math.abs(t.exitPrice - t.entry) : 0;
-    return actualProfit - baselineProfit;
+    const mfeR = sd > 0 ? t.mfe! / sd : 0;
+    return mfeR - 1; // how far beyond 1R the runner traveled
   });
-  const avgExtraDollarPerRunner = extraDollars.length > 0 ? extraDollars.reduce((s, v) => s + v, 0) / extraDollars.length : 0;
+  const avgExtraRPerRunner = extraR.length > 0 ? extraR.reduce((s, v) => s + v, 0) / extraR.length : 0;
 
   return {
     runnersFromTarget: runnersFrom1R.length,
@@ -90,11 +87,11 @@ export function calculateRunnerSurvival(trades: Trade[]) {
     stoppedAtBreakeven: stoppedAtBE,
     avgDrawbackFrom1R,
     avgDrawbackFrom2R,
-    avgExtraDollarPerRunner,
+    avgExtraRPerRunner,
   };
 }
 
-export function calculateGradeAnalysis(trades: Trade[]) {
+export function calculateGradeAnalysis(trades: Trade[], plField: PLField) {
   const groups: Record<string, Trade[]> = {};
   for (const t of trades) {
     const grade = t.grade || 'Ungraded';
@@ -112,6 +109,7 @@ export function calculateGradeAnalysis(trades: Trade[]) {
     });
     const reaching2R = withMFE.filter(t => t.mfe! >= 2 * getStopDistance(t)).length;
     const reaching3R = withMFE.filter(t => t.mfe! >= 3 * getStopDistance(t)).length;
+    const avgPL = gTrades.length > 0 ? gTrades.reduce((s, t) => s + getTradeValue(t, plField), 0) / gTrades.length : 0;
 
     return {
       grade,
@@ -120,11 +118,11 @@ export function calculateGradeAnalysis(trades: Trade[]) {
       winRate: gTrades.length > 0 ? (wins.length / gTrades.length) * 100 : 0,
       avgMFE: mfes.length > 0 ? mfes.reduce((s, v) => s + v, 0) / mfes.length : 0,
       avgMFER: mfeRs.length > 0 ? mfeRs.reduce((s, v) => s + v, 0) / mfeRs.length : 0,
-      avgDollarPL: gTrades.length > 0 ? gTrades.reduce((s, t) => s + t.dollarPL, 0) / gTrades.length : 0,
+      avgPL,
       pctReaching2R: withMFE.length > 0 ? (reaching2R / withMFE.length) * 100 : 0,
       pctReaching3R: withMFE.length > 0 ? (reaching3R / withMFE.length) * 100 : 0,
     };
-  }).sort((a, b) => b.avgDollarPL - a.avgDollarPL);
+  }).sort((a, b) => b.avgPL - a.avgPL);
 }
 
 export function calculateExitStrategyComparison(trades: Trade[]) {

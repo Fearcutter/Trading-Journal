@@ -1,10 +1,12 @@
 import { useTrades } from '../context/TradeContext';
 import { useMFEMAEStats } from '../hooks/useMFEMAEStats';
+import { usePLFormatter } from '../hooks/usePLFormatter';
 import MFEMAEPanel from '../components/analytics/MFEMAEPanel';
 
 export default function MFEMAEPage() {
   const { trades } = useTrades();
-  const stats = useMFEMAEStats(trades);
+  const { plField } = usePLFormatter();
+  const stats = useMFEMAEStats(trades, plField);
 
   if (trades.length === 0) {
     return (

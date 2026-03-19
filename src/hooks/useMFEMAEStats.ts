@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { Trade } from '../types/trade';
+import type { PLField } from '../utils/pl-helpers';
 import {
   calculateMFEMAEAverages,
   calculateRunnerAnalysis,
@@ -8,12 +9,12 @@ import {
   calculateExitStrategyComparison,
 } from '../utils/mfe-mae-analyzer';
 
-export function useMFEMAEStats(trades: Trade[]) {
+export function useMFEMAEStats(trades: Trade[], plField: PLField) {
   return useMemo(() => ({
     averages: calculateMFEMAEAverages(trades),
     runnerAnalysis: calculateRunnerAnalysis(trades),
     runnerSurvival: calculateRunnerSurvival(trades),
-    gradeAnalysis: calculateGradeAnalysis(trades),
+    gradeAnalysis: calculateGradeAnalysis(trades, plField),
     exitStrategies: calculateExitStrategyComparison(trades),
-  }), [trades]);
+  }), [trades, plField]);
 }

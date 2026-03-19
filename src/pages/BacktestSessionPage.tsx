@@ -75,7 +75,7 @@ export default function BacktestSessionPage() {
   const activeTrades = planState.enabled && planComparison ? planComparison.planTrades : sessionTrades;
   const dashboard = useDashboardStats(activeTrades, plField);
   const advanced = useAdvancedStats(activeTrades, plField);
-  const mfeStats = useMFEMAEStats(activeTrades);
+  const mfeStats = useMFEMAEStats(activeTrades, plField);
 
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState('');

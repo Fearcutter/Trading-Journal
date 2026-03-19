@@ -61,7 +61,7 @@ export default function LiveTradingPage() {
   const activeTrades = planState.enabled && planComparison ? planComparison.planTrades : liveTrades;
   const dashboard = useDashboardStats(activeTrades, plField);
   const advanced = useAdvancedStats(activeTrades, plField);
-  const mfeStats = useMFEMAEStats(activeTrades);
+  const mfeStats = useMFEMAEStats(activeTrades, plField);
 
   const handleTradeSubmit = (data: TradeFormData) => {
     const trade = addTrade(data);

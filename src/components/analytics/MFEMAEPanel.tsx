@@ -90,8 +90,6 @@ export default function MFEMAEPanel({ trades, stats }: MFEMAEPanelProps) {
                     <th className="text-left py-2 px-3 text-slate-400 font-medium">Threshold</th>
                     <th className="text-right py-2 px-3 text-slate-400 font-medium">Trades Reaching</th>
                     <th className="text-right py-2 px-3 text-slate-400 font-medium">% Reaching</th>
-                    <th className="text-right py-2 px-3 text-slate-400 font-medium">Wins</th>
-                    <th className="text-right py-2 px-3 text-slate-400 font-medium">Win Rate</th>
                   </tr>
                 </thead>
                 <tbody className="text-slate-300">
@@ -100,8 +98,6 @@ export default function MFEMAEPanel({ trades, stats }: MFEMAEPanelProps) {
                       <td className="py-2 px-3 font-medium">{r.thresholdLabel}</td>
                       <td className="text-right py-2 px-3 font-mono">{r.tradesReaching}</td>
                       <td className="text-right py-2 px-3 font-mono">{r.percentReaching.toFixed(1)}%</td>
-                      <td className="text-right py-2 px-3 font-mono">{r.wins}</td>
-                      <td className="text-right py-2 px-3 font-mono">{r.winRate.toFixed(1)}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -134,8 +130,8 @@ export default function MFEMAEPanel({ trades, stats }: MFEMAEPanelProps) {
                 <p className="text-lg font-bold text-rose-400">{runnerSurvival.avgDrawbackFrom2R.toFixed(2)}R</p>
               </div>
               <div>
-                <p className="text-xs text-slate-500">Avg extra pts per runner</p>
-                <p className="text-lg font-bold text-emerald-400">{runnerSurvival.avgExtraDollarPerRunner.toFixed(2)}</p>
+                <p className="text-xs text-slate-500">Avg extra R per runner</p>
+                <p className={`text-lg font-bold ${runnerSurvival.avgExtraRPerRunner >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{runnerSurvival.avgExtraRPerRunner.toFixed(2)}R</p>
               </div>
             </div>
           </div>
@@ -164,7 +160,7 @@ export default function MFEMAEPanel({ trades, stats }: MFEMAEPanelProps) {
                         <td className="text-right py-2 px-3 font-mono">{g.totalTrades}</td>
                         <td className="text-right py-2 px-3 font-mono">{g.winRate.toFixed(1)}%</td>
                         <td className="text-right py-2 px-3 font-mono">{g.avgMFER.toFixed(2)}R</td>
-                        <td className={`text-right py-2 px-3 font-mono ${g.avgDollarPL >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{pl.formatPLValue(g.avgDollarPL)}</td>
+                        <td className={`text-right py-2 px-3 font-mono ${g.avgPL >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{pl.formatPLValue(g.avgPL)}</td>
                         <td className="text-right py-2 px-3 font-mono">{g.pctReaching2R.toFixed(1)}%</td>
                         <td className="text-right py-2 px-3 font-mono">{g.pctReaching3R.toFixed(1)}%</td>
                       </tr>
