@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import type { Trade } from '../../types/trade';
-import type { PLField } from '../../utils/pl-helpers';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { usePLFormatter } from '../../hooks/usePLFormatter';
 import { calculatePlanCompliance } from '../../utils/trading-plan-filter';
