@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, FlaskConical, BarChart3, BookOpen, LineChart as LineChartIcon, PlusCircle, ClipboardPaste, ChevronUp, Download, Trash2, Search, Settings2, Pencil, Check, X } from 'lucide-react';
+import { ArrowLeft, FlaskConical, BarChart3, BookOpen, LineChart as LineChartIcon, Target, PlusCircle, ClipboardPaste, ChevronUp, Download, Trash2, Search, Settings2, Pencil, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, BarChart, Bar, Cell } from 'recharts';
 import { useBacktest } from '../context/BacktestContext';
@@ -28,6 +28,8 @@ import ComparisonDashboard from '../components/trading-plan/ComparisonDashboard'
 import MissedTradesBreakdown from '../components/trading-plan/MissedTradesBreakdown';
 import BestVsFirstComparison from '../components/trading-plan/BestVsFirstComparison';
 import { exportTradesToCSV, downloadCSV } from '../utils/csv-export';
+import { useMFEMAEStats } from '../hooks/useMFEMAEStats';
+import MFEMAEPanel from '../components/analytics/MFEMAEPanel';
 
 const SESSION_DOT_COLORS: Record<string, string> = {
   blue: 'bg-blue-500',
@@ -38,12 +40,13 @@ const SESSION_DOT_COLORS: Record<string, string> = {
   cyan: 'bg-cyan-500',
 };
 
-type Tab = 'dashboard' | 'tradelog' | 'analytics';
+type Tab = 'dashboard' | 'tradelog' | 'analytics' | 'mfe-mae';
 
 const TABS: { key: Tab; label: string; icon: typeof BarChart3 }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: BarChart3 },
   { key: 'tradelog', label: 'Trade Log', icon: BookOpen },
   { key: 'analytics', label: 'Analytics', icon: LineChartIcon },
+  { key: 'mfe-mae', label: 'MFE / MAE', icon: Target },
 ];
 
 export default function BacktestSessionPage() {
@@ -72,6 +75,7 @@ export default function BacktestSessionPage() {
   const activeTrades = planState.enabled && planComparison ? planComparison.planTrades : sessionTrades;
   const dashboard = useDashboardStats(activeTrades, plField);
   const advanced = useAdvancedStats(activeTrades, plField);
+  const mfeStats = useMFEMAEStats(activeTrades);
 
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState('');
@@ -178,6 +182,11 @@ export default function BacktestSessionPage() {
         />
       )}
       {activeTab === 'analytics' && <AnalyticsTab advanced={advanced} tradeCount={activeTrades.length} planComparison={planComparison} />}
+      {activeTab === 'mfe-mae' && (
+        activeTrades.length === 0
+          ? <EmptyState icon={<Target size={48} />} title="No trades yet" description="Add trades to this session to see MFE/MAE analysis." />
+          : <MFEMAEPanel trades={activeTrades} stats={mfeStats} />
+      )}
     </div>
   );
 }

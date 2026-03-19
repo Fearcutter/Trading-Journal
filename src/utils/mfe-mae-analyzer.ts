@@ -131,9 +131,9 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
   const withData = trades.filter(t => t.mfe != null && getStopDistance(t) > 0);
   if (withData.length === 0) return [];
 
-  function computeExpected(calcFn: (t: Trade) => number) {
+  function computeTotal(calcFn: (t: Trade) => number) {
     const results = withData.map(calcFn);
-    return results.reduce((s, v) => s + v, 0) / results.length;
+    return results.reduce((s, v) => s + v, 0);
   }
 
   const strategies = [
@@ -143,7 +143,7 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const sd = getStopDistance(t);
         const mfeR = t.mfe! / sd;
-        return mfeR >= 1 ? sd : -sd; // hit target or stopped out
+        return mfeR >= 1 ? 1 : -1;
       },
     },
     {
@@ -152,9 +152,9 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const sd = getStopDistance(t);
         const mfeR = t.mfe! / sd;
-        if (mfeR < 1) return -sd;
-        const half1 = sd; // 1R
-        const half2 = Math.min(t.mfe!, 1.5 * sd);
+        if (mfeR < 1) return -1;
+        const half1 = 1; // 1R
+        const half2 = Math.min(mfeR, 1.5);
         return (half1 + half2) / 2;
       },
     },
@@ -164,9 +164,9 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const sd = getStopDistance(t);
         const mfeR = t.mfe! / sd;
-        if (mfeR < 1) return -sd;
-        const half1 = sd;
-        const half2 = Math.min(t.mfe!, 2 * sd);
+        if (mfeR < 1) return -1;
+        const half1 = 1;
+        const half2 = Math.min(mfeR, 2);
         return (half1 + half2) / 2;
       },
     },
@@ -176,9 +176,9 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const sd = getStopDistance(t);
         const mfeR = t.mfe! / sd;
-        if (mfeR < 1) return -sd;
-        const half1 = sd;
-        const half2 = Math.min(t.mfe!, 2.5 * sd);
+        if (mfeR < 1) return -1;
+        const half1 = 1;
+        const half2 = Math.min(mfeR, 2.5);
         return (half1 + half2) / 2;
       },
     },
@@ -188,9 +188,9 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const sd = getStopDistance(t);
         const mfeR = t.mfe! / sd;
-        if (mfeR < 1) return -sd;
-        const half1 = sd;
-        const half2 = Math.min(t.mfe!, 3 * sd);
+        if (mfeR < 1) return -1;
+        const half1 = 1;
+        const half2 = Math.min(mfeR, 3);
         return (half1 + half2) / 2;
       },
     },
@@ -200,7 +200,7 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const sd = getStopDistance(t);
         const mfeR = t.mfe! / sd;
-        return mfeR >= 2 ? 2 * sd : -sd;
+        return mfeR >= 2 ? 2 : -1;
       },
     },
     {
@@ -209,7 +209,7 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const sd = getStopDistance(t);
         const mfeR = t.mfe! / sd;
-        return mfeR >= 2.5 ? 2.5 * sd : -sd;
+        return mfeR >= 2.5 ? 2.5 : -1;
       },
     },
     {
@@ -218,18 +218,22 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const sd = getStopDistance(t);
         const mfeR = t.mfe! / sd;
-        return mfeR >= 3 ? 3 * sd : -sd;
+        return mfeR >= 3 ? 3 : -1;
       },
     },
   ];
 
-  const baseline = computeExpected(strategies[0].calc);
+  const baselineTotal = computeTotal(strategies[0].calc);
 
-  return strategies.map(s => ({
-    strategy: s.strategy,
-    description: s.description,
-    expectedDollar: computeExpected(s.calc),
-    diffFromBaseline: computeExpected(s.calc) - baseline,
-    tradesUsed: withData.length,
-  }));
+  return strategies.map(s => {
+    const totalR = computeTotal(s.calc);
+    return {
+      strategy: s.strategy,
+      description: s.description,
+      expectedDollar: totalR,
+      avgR: withData.length > 0 ? totalR / withData.length : 0,
+      diffFromBaseline: totalR - baselineTotal,
+      tradesUsed: withData.length,
+    };
+  });
 }
