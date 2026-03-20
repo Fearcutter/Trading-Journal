@@ -126,12 +126,21 @@ export function calculateGradeAnalysis(trades: Trade[], plField: PLField) {
 }
 
 export function calculateExitStrategyComparison(trades: Trade[]) {
-  const withData = trades.filter(t => t.mfe != null && getStopDistance(t) > 0);
-  if (withData.length === 0) return [];
+  const validTrades = trades.filter(t => getStopDistance(t) > 0);
+  if (validTrades.length === 0) return [];
+
+  // Actual exit R for each trade — used when no MFE data or MFE didn't reach target
+  function actualR(t: Trade): number {
+    const sd = getStopDistance(t);
+    return sd > 0 ? t.pointsPL / sd : 0;
+  }
 
   function computeTotal(calcFn: (t: Trade) => number) {
-    const results = withData.map(calcFn);
-    return results.reduce((s, v) => s + v, 0);
+    return validTrades.reduce((s, t) => {
+      // No MFE data — can't simulate, use actual result
+      if (t.mfe == null) return s + actualR(t);
+      return s + calcFn(t);
+    }, 0);
   }
 
   const strategies = [
@@ -141,7 +150,7 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const sd = getStopDistance(t);
         const mfeR = t.mfe! / sd;
-        return mfeR >= 1 ? 1 : -1;
+        return mfeR >= 1 ? 1 : actualR(t);
       },
     },
     {
@@ -150,8 +159,8 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const sd = getStopDistance(t);
         const mfeR = t.mfe! / sd;
-        if (mfeR < 1) return -1;
-        const half1 = 1; // 1R
+        if (mfeR < 1) return actualR(t);
+        const half1 = 1;
         const half2 = Math.min(mfeR, 1.5);
         return (half1 + half2) / 2;
       },
@@ -162,7 +171,7 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const sd = getStopDistance(t);
         const mfeR = t.mfe! / sd;
-        if (mfeR < 1) return -1;
+        if (mfeR < 1) return actualR(t);
         const half1 = 1;
         const half2 = Math.min(mfeR, 2);
         return (half1 + half2) / 2;
@@ -174,7 +183,7 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const sd = getStopDistance(t);
         const mfeR = t.mfe! / sd;
-        if (mfeR < 1) return -1;
+        if (mfeR < 1) return actualR(t);
         const half1 = 1;
         const half2 = Math.min(mfeR, 2.5);
         return (half1 + half2) / 2;
@@ -186,7 +195,7 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const sd = getStopDistance(t);
         const mfeR = t.mfe! / sd;
-        if (mfeR < 1) return -1;
+        if (mfeR < 1) return actualR(t);
         const half1 = 1;
         const half2 = Math.min(mfeR, 3);
         return (half1 + half2) / 2;
@@ -198,7 +207,7 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const sd = getStopDistance(t);
         const mfeR = t.mfe! / sd;
-        return mfeR >= 2 ? 2 : -1;
+        return mfeR >= 2 ? 2 : actualR(t);
       },
     },
     {
@@ -207,7 +216,7 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const sd = getStopDistance(t);
         const mfeR = t.mfe! / sd;
-        return mfeR >= 2.5 ? 2.5 : -1;
+        return mfeR >= 2.5 ? 2.5 : actualR(t);
       },
     },
     {
@@ -216,7 +225,7 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const sd = getStopDistance(t);
         const mfeR = t.mfe! / sd;
-        return mfeR >= 3 ? 3 : -1;
+        return mfeR >= 3 ? 3 : actualR(t);
       },
     },
   ];
@@ -229,9 +238,9 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       strategy: s.strategy,
       description: s.description,
       expectedDollar: totalR,
-      avgR: withData.length > 0 ? totalR / withData.length : 0,
+      avgR: validTrades.length > 0 ? totalR / validTrades.length : 0,
       diffFromBaseline: totalR - baselineTotal,
-      tradesUsed: withData.length,
+      tradesUsed: validTrades.length,
     };
   });
 }

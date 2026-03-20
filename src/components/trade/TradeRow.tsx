@@ -8,6 +8,8 @@ export type HiddenColumns = {
   points?: boolean;
   pl?: boolean;
   setup?: boolean;
+  reached2R?: boolean;
+  reached3R?: boolean;
 };
 
 interface TradeRowProps {
@@ -57,6 +59,28 @@ export default function TradeRow({ trade, selected, onSelect, hiddenColumns, ski
           return <span className={`font-mono text-sm font-medium ${r > 0 ? 'text-emerald-400' : r < 0 ? 'text-rose-400' : 'text-amber-400'}`}>{r > 0 ? '+' : ''}{rStr}R</span>;
         })()}
       </td>
+      {!hiddenColumns?.reached2R && (
+        <td className="px-3 py-3 text-sm text-center">
+          {(() => {
+            const stopDistance = Math.abs(trade.entry - trade.stopLoss);
+            if (!stopDistance || trade.mfe == null) return <span className="text-slate-500">—</span>;
+            return trade.mfe >= 2 * stopDistance
+              ? <span className="font-mono font-medium text-emerald-400">+2R</span>
+              : <span className="text-slate-500">—</span>;
+          })()}
+        </td>
+      )}
+      {!hiddenColumns?.reached3R && (
+        <td className="px-3 py-3 text-sm text-center">
+          {(() => {
+            const stopDistance = Math.abs(trade.entry - trade.stopLoss);
+            if (!stopDistance || trade.mfe == null) return <span className="text-slate-500">—</span>;
+            return trade.mfe >= 3 * stopDistance
+              ? <span className="font-mono font-medium text-emerald-400">+3R</span>
+              : <span className="text-slate-500">—</span>;
+          })()}
+        </td>
+      )}
       {!hiddenColumns?.points && (
         <td className="px-3 py-3">
           <span className={`font-mono text-sm font-medium ${trade.pointsPL > 0 ? 'text-emerald-400' : trade.pointsPL < 0 ? 'text-rose-400' : 'text-amber-400'}`}>

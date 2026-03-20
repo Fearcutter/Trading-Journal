@@ -18,7 +18,7 @@ import PasteTradeModal from '../components/trade/PasteTradeModal';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import EmptyState from '../components/ui/EmptyState';
-import type { TradeFormData } from '../types/trade';
+import type { Trade, TradeFormData } from '../types/trade';
 import { formatPercent } from '../utils/formatters';
 import { usePLFormatter } from '../hooks/usePLFormatter';
 import { useTradingPlanMode } from '../hooks/useTradingPlanMode';
@@ -113,7 +113,7 @@ export default function LiveTradingPage() {
           skippedTradeIds={planComparison?.skippedTradeIds}
         />
       )}
-      {activeTab === 'analytics' && <AnalyticsTab advanced={advanced} tradeCount={activeTrades.length} planComparison={planComparison} />}
+      {activeTab === 'analytics' && <AnalyticsTab advanced={advanced} trades={activeTrades} tradeCount={activeTrades.length} planComparison={planComparison} />}
       {activeTab === 'mfe-mae' && (
         activeTrades.length === 0
           ? <EmptyState icon={<Target size={48} />} title="No live trades yet" description="Add trades to see MFE/MAE analysis." />
@@ -298,6 +298,14 @@ function TradeLogTab({ liveTrades, onTradeSubmit, skippedTradeIds }: {
                 <input type="checkbox" checked={!hiddenColumns.setup} onChange={() => setHiddenColumns(h => ({ ...h, setup: !h.setup }))} className="rounded border-slate-600 bg-slate-800" />
                 Setup
               </label>
+              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-slate-100 px-1">
+                <input type="checkbox" checked={!hiddenColumns.reached2R} onChange={() => setHiddenColumns(h => ({ ...h, reached2R: !h.reached2R }))} className="rounded border-slate-600 bg-slate-800" />
+                2R
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-slate-100 px-1">
+                <input type="checkbox" checked={!hiddenColumns.reached3R} onChange={() => setHiddenColumns(h => ({ ...h, reached3R: !h.reached3R }))} className="rounded border-slate-600 bg-slate-800" />
+                3R
+              </label>
             </div>
           )}
         </div>
@@ -357,6 +365,8 @@ function TradeLogTab({ liveTrades, onTradeSubmit, skippedTradeIds }: {
                     <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Dir.</th>
                     <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Grade</th>
                     <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">R</th>
+                    {!hiddenColumns.reached2R && <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider text-center">2R</th>}
+                    {!hiddenColumns.reached3R && <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider text-center">3R</th>}
                     {!hiddenColumns.points && <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Points</th>}
                     {!hiddenColumns.pl && <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">P&L</th>}
                     <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Result</th>
@@ -407,8 +417,28 @@ function TradeLogTab({ liveTrades, onTradeSubmit, skippedTradeIds }: {
   );
 }
 
-function AnalyticsTab({ advanced, tradeCount, planComparison }: { advanced: ReturnType<typeof useAdvancedStats>; tradeCount: number; planComparison?: TradingPlanComparison | null }) {
+function AnalyticsTab({ advanced, trades, tradeCount, planComparison }: { advanced: ReturnType<typeof useAdvancedStats>; trades: Trade[]; tradeCount: number; planComparison?: TradingPlanComparison | null }) {
   const pl = usePLFormatter();
+
+  const mfeReachData = useMemo(() => {
+    const thresholds = [1, 1.5, 2, 2.5, 3];
+    const tradesWithMFE = trades.filter(t => t.mfe != null && Math.abs(t.entry - t.stopLoss) > 0);
+    if (tradesWithMFE.length === 0) return null;
+    return {
+      total: tradesWithMFE.length,
+      rows: thresholds.map(r => {
+        const reached = tradesWithMFE.filter(t => {
+          const stop = Math.abs(t.entry - t.stopLoss);
+          return t.mfe! >= r * stop;
+        });
+        return {
+          threshold: `${r}R`,
+          reached: reached.length,
+          winRate: (reached.length / tradesWithMFE.length) * 100,
+        };
+      }),
+    };
+  }, [trades]);
 
   if (tradeCount < 2) {
     return <EmptyState icon={<LineChartIcon size={48} />} title="Need more trades for analytics" description="Add at least 2 trades to see analytics." />;
@@ -455,6 +485,34 @@ function AnalyticsTab({ advanced, tradeCount, planComparison }: { advanced: Retu
           </BarChart>
         </ResponsiveContainer>
       </Card>
+
+      {mfeReachData && (
+        <Card className="md:col-span-2">
+          <h3 className="text-sm font-medium text-slate-300 mb-4">MFE Reach Analysis <span className="text-slate-500 font-normal">({mfeReachData.total} trades)</span></h3>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-700">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Threshold</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">Reached</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">Win Rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mfeReachData.rows.map(row => (
+                  <tr key={row.threshold} className="border-b border-slate-700/50">
+                    <td className="px-3 py-2 text-sm font-mono font-medium text-slate-200">{row.threshold}</td>
+                    <td className="px-3 py-2 text-sm text-center text-slate-300">{row.reached}</td>
+                    <td className="px-3 py-2 text-sm text-center">
+                      <span className="font-mono font-medium text-slate-200">{row.winRate.toFixed(1)}%</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
       <Card className="md:col-span-2">
         <h3 className="text-sm font-medium text-slate-300 mb-4">Streak Analysis</h3>
