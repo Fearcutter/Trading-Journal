@@ -253,8 +253,24 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
   const [showAddForm, setShowAddForm] = useState(false);
   const [pasteModalOpen, setPasteModalOpen] = useState(false);
   const [pasteInitialData, setPasteInitialData] = useState<Partial<TradeFormData> | undefined>();
-  const [filters, setFilters] = useState<TradeFilters>(defaultFilters);
-  const [search, setSearch] = useState('');
+  const storageKey = `tradeLogFilters:${sessionId}`;
+  const [filters, _setFilters] = useState<TradeFilters>(() => {
+    try { const s = sessionStorage.getItem(storageKey); return s ? JSON.parse(s).filters ?? defaultFilters : defaultFilters; } catch { return defaultFilters; }
+  });
+  const [search, _setSearch] = useState(() => {
+    try { const s = sessionStorage.getItem(storageKey); return s ? JSON.parse(s).search ?? '' : ''; } catch { return ''; }
+  });
+  const setFilters = (update: TradeFilters | ((prev: TradeFilters) => TradeFilters)) => {
+    _setFilters(prev => {
+      const next = typeof update === 'function' ? update(prev) : update;
+      try { const s = JSON.parse(sessionStorage.getItem(storageKey) || '{}'); sessionStorage.setItem(storageKey, JSON.stringify({ ...s, filters: next })); } catch {}
+      return next;
+    });
+  };
+  const setSearch = (v: string) => {
+    _setSearch(v);
+    try { const s = JSON.parse(sessionStorage.getItem(storageKey) || '{}'); sessionStorage.setItem(storageKey, JSON.stringify({ ...s, search: v })); } catch {}
+  };
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [hiddenColumns, setHiddenColumns] = useState<HiddenColumns>({ points: true, pl: true, setup: true });
   const [showColumnMenu, setShowColumnMenu] = useState(false);
