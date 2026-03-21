@@ -467,14 +467,22 @@ function AnalyticsTab({ advanced, trades, tradeCount, planComparison }: { advanc
     return {
       total: tradesWithMFE.length,
       rows: thresholds.map(r => {
-        const reached = tradesWithMFE.filter(t => {
+        const wins = tradesWithMFE.filter(t => {
           const stop = Math.abs(t.entry - t.stopLoss);
           return t.mfe! >= r * stop;
         });
+        const losses = tradesWithMFE.filter(t => {
+          const stop = Math.abs(t.entry - t.stopLoss);
+          return t.mfe! < stop; // never reached 1R — true loss
+        });
         return {
           threshold: `${r}R`,
-          reached: reached.length,
-          winRate: (reached.length / tradesWithMFE.length) * 100,
+          wins: wins.length,
+          losses: losses.length,
+          be: tradesWithMFE.length - wins.length - losses.length,
+          netR: (wins.length * r) - losses.length,
+          rawWinRate: (wins.length / tradesWithMFE.length) * 100,
+          trueWinRate: wins.length + losses.length > 0 ? (wins.length / (wins.length + losses.length)) * 100 : 0,
         };
       }),
     };
@@ -536,17 +544,29 @@ function AnalyticsTab({ advanced, trades, tradeCount, planComparison }: { advanc
               <thead>
                 <tr className="border-b border-slate-700">
                   <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Threshold</th>
-                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">Reached</th>
-                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">Win Rate</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">W</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">BE</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">L</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">Net R</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">Raw WR</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">True WR</th>
                 </tr>
               </thead>
               <tbody>
                 {mfeReachData.rows.map(row => (
                   <tr key={row.threshold} className="border-b border-slate-700/50">
                     <td className="px-3 py-2 text-sm font-mono font-medium text-slate-200">{row.threshold}</td>
-                    <td className="px-3 py-2 text-sm text-center text-slate-300">{row.reached}</td>
+                    <td className="px-3 py-2 text-sm text-center text-emerald-400">{row.wins}</td>
+                    <td className="px-3 py-2 text-sm text-center text-amber-400">{row.be}</td>
+                    <td className="px-3 py-2 text-sm text-center text-rose-400">{row.losses}</td>
                     <td className="px-3 py-2 text-sm text-center">
-                      <span className="font-mono font-medium text-slate-200">{row.winRate.toFixed(1)}%</span>
+                      <span className={`font-mono font-medium ${row.netR > 0 ? 'text-emerald-400' : row.netR < 0 ? 'text-rose-400' : 'text-slate-200'}`}>{row.netR > 0 ? '+' : ''}{row.netR % 1 === 0 ? row.netR.toFixed(0) : row.netR.toFixed(1)}R</span>
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center">
+                      <span className="font-mono font-medium text-slate-200">{row.rawWinRate.toFixed(1)}%</span>
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center">
+                      <span className="font-mono font-medium text-slate-200">{row.trueWinRate.toFixed(1)}%</span>
                     </td>
                   </tr>
                 ))}
