@@ -66,6 +66,18 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
           ...settings.setupTypes.map(s => ({ value: s, label: s })),
         ]}
       />
+      <Select
+        label="R Multiple"
+        value={filters.rMultiple}
+        onValueChange={v => update('rMultiple', v as TradeFilters['rMultiple'])}
+        options={[
+          { value: '', label: 'All' },
+          { value: 'reached3R', label: '3R+' },
+          { value: 'reached2R', label: '2R' },
+          { value: 'be', label: 'BE (1R)' },
+          { value: 'loss', label: 'Loss (<1R)' },
+        ]}
+      />
       {hasFilters && (
         <button
           onClick={() => onChange(defaultFilters)}

@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import type { Trade, TradeDirection, TradeResult } from '../types/trade';
 
+export type RMultipleFilter = '' | 'reached2R' | 'reached3R' | 'be' | 'loss';
+
 export interface TradeFilters {
   dateFrom: string;
   dateTo: string;
@@ -8,6 +10,7 @@ export interface TradeFilters {
   direction: TradeDirection | '';
   result: TradeResult | '';
   setupType: string;
+  rMultiple: RMultipleFilter;
   search: string;
   sessionId?: string;
 }
@@ -19,6 +22,7 @@ export const defaultFilters: TradeFilters = {
   direction: '',
   result: '',
   setupType: '',
+  rMultiple: '',
   search: '',
 };
 
@@ -40,6 +44,18 @@ export function useFilteredTrades(trades: Trade[], filters: TradeFilters): Trade
       if (filters.direction && trade.direction !== filters.direction) return false;
       if (filters.result && trade.result !== filters.result) return false;
       if (filters.setupType && trade.setupType !== filters.setupType) return false;
+      if (filters.rMultiple) {
+        const stopDistance = Math.abs(trade.entry - trade.stopLoss);
+        if (!stopDistance || trade.mfe == null) {
+          if (filters.rMultiple !== 'loss') return false;
+        } else {
+          const mfeR = trade.mfe / stopDistance;
+          if (filters.rMultiple === 'reached3R' && mfeR < 3) return false;
+          if (filters.rMultiple === 'reached2R' && (mfeR < 2 || mfeR >= 3)) return false;
+          if (filters.rMultiple === 'be' && (mfeR < 1 || mfeR >= 2)) return false;
+          if (filters.rMultiple === 'loss' && mfeR >= 1) return false;
+        }
+      }
       if (filters.search) {
         const q = filters.search.toLowerCase();
         const searchable = [
