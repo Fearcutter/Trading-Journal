@@ -46,8 +46,8 @@ export default function TradeDetailPage() {
       returnedToBE: data.returnedToBE,
       accountIds: data.accountIds,
     });
-    setEditing(false);
     toast.success('Trade updated');
+    navigate(-1);
   };
 
   const handleDelete = () => {
