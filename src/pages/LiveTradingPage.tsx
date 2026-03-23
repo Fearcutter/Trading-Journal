@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { BarChart3, BookOpen, LineChart as LineChartIcon, Target, PlusCircle, ClipboardPaste, ChevronUp, TrendingUp, Download, Trash2, Search, Settings2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, BarChart, Bar, Cell } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 import { useTrades } from '../context/TradeContext';
 import { useApexAccounts } from '../context/ApexAccountContext';
 import { useSettings } from '../context/SettingsContext';
@@ -434,8 +434,6 @@ function TradeLogTab({ liveTrades, onTradeSubmit, skippedTradeIds }: {
 }
 
 function AnalyticsTab({ advanced, trades, tradeCount, planComparison }: { advanced: ReturnType<typeof useAdvancedStats>; trades: Trade[]; tradeCount: number; planComparison?: TradingPlanComparison | null }) {
-  const pl = usePLFormatter();
-
   const mfeReachData = useMemo(() => {
     const thresholds = [1, 1.5, 2, 2.5, 3];
     const tradesWithMFE = trades.filter(t => t.mfe != null && Math.abs(t.entry - t.stopLoss) > 0);
@@ -468,47 +466,11 @@ function AnalyticsTab({ advanced, trades, tradeCount, planComparison }: { advanc
     return <EmptyState icon={<LineChartIcon size={48} />} title="Need more trades for analytics" description="Add at least 2 trades to see analytics." />;
   }
 
-  const { performanceByInstrument, streaks, rollingWinRate } = advanced;
+  const { streaks } = advanced;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {planComparison && <BestVsFirstComparison comparison={planComparison} />}
-      <Card>
-        <h3 className="text-sm font-medium text-slate-300 mb-4">Rolling Win Rate (10-trade)</h3>
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={rollingWinRate}>
-            <XAxis dataKey="tradeIndex" tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={false} />
-            <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={v => `${v}%`} domain={[0, 100]} />
-            <Tooltip
-              contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
-              labelStyle={{ color: '#94a3b8' }}
-              formatter={(value: number | undefined) => [`${(value ?? 0).toFixed(1)}%`, 'Win Rate']}
-            />
-            <ReferenceLine y={50} stroke="#334155" strokeDasharray="3 3" />
-            <Line type="monotone" dataKey="winRate10" stroke="#818cf8" strokeWidth={2} dot={false} connectNulls />
-          </LineChart>
-        </ResponsiveContainer>
-      </Card>
-
-      <Card>
-        <h3 className="text-sm font-medium text-slate-300 mb-4">P&L by Instrument</h3>
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={performanceByInstrument}>
-            <XAxis dataKey="instrument" tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={false} />
-            <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={pl.tickFormatter} />
-            <Tooltip
-              contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
-              labelStyle={{ color: '#94a3b8' }}
-              formatter={(value: number | undefined) => [pl.tooltipFormatter(value ?? 0), 'P&L']}
-            />
-            <Bar dataKey="totalPL" radius={[4, 4, 0, 0]}>
-              {performanceByInstrument.map((entry, i) => (
-                <Cell key={i} fill={entry.totalPL >= 0 ? '#34d399' : '#fb7185'} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </Card>
 
       {mfeReachData && (
         <Card className="md:col-span-2">
