@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, FlaskConical, BarChart3, BookOpen, LineChart as LineChartIcon, Target, PlusCircle, ClipboardPaste, ChevronUp, Download, Trash2, Search, Settings2, Pencil, Check, X } from 'lucide-react';
+import { ArrowLeft, FlaskConical, BarChart3, BookOpen, LineChart as LineChartIcon, Target, Layers, PlusCircle, ClipboardPaste, ChevronUp, Download, Trash2, Search, Settings2, Pencil, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 import { useBacktest } from '../context/BacktestContext';
@@ -30,6 +30,7 @@ import BestVsFirstComparison from '../components/trading-plan/BestVsFirstCompari
 import { exportTradesToCSV, downloadCSV } from '../utils/csv-export';
 import { useMFEMAEStats } from '../hooks/useMFEMAEStats';
 import MFEMAEPanel from '../components/analytics/MFEMAEPanel';
+import ConfluencesTab from '../components/confluences/ConfluencesTab';
 
 const SESSION_DOT_COLORS: Record<string, string> = {
   blue: 'bg-blue-500',
@@ -40,12 +41,13 @@ const SESSION_DOT_COLORS: Record<string, string> = {
   cyan: 'bg-cyan-500',
 };
 
-type Tab = 'dashboard' | 'tradelog' | 'analytics' | 'mfe-mae';
+type Tab = 'dashboard' | 'tradelog' | 'analytics' | 'confluences' | 'mfe-mae';
 
 const TABS: { key: Tab; label: string; icon: typeof BarChart3 }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: BarChart3 },
   { key: 'tradelog', label: 'Trade Log', icon: BookOpen },
   { key: 'analytics', label: 'Analytics', icon: LineChartIcon },
+  { key: 'confluences', label: 'Confluences', icon: Layers },
   { key: 'mfe-mae', label: 'MFE / MAE', icon: Target },
 ];
 
@@ -182,6 +184,7 @@ export default function BacktestSessionPage() {
         />
       )}
       {activeTab === 'analytics' && <AnalyticsTab advanced={advanced} trades={activeTrades} tradeCount={activeTrades.length} planComparison={planComparison} />}
+      {activeTab === 'confluences' && <ConfluencesTab trades={activeTrades} />}
       {activeTab === 'mfe-mae' && (
         activeTrades.length === 0
           ? <EmptyState icon={<Target size={48} />} title="No trades yet" description="Add trades to this session to see MFE/MAE analysis." />

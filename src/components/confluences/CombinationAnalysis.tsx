@@ -10,16 +10,18 @@ interface CombinationData {
 
 interface CombinationAnalysisProps {
   data: CombinationData[];
+  title?: string;
+  subtitle?: string;
 }
 
-export default function CombinationAnalysis({ data }: CombinationAnalysisProps) {
+export default function CombinationAnalysis({ data, title = 'Confluence Pair Analysis', subtitle = 'Combinations with 3+ occurrences' }: CombinationAnalysisProps) {
   const pl = usePLFormatter();
 
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
       <div className="px-4 py-3 border-b border-slate-700">
-        <h3 className="text-sm font-medium text-slate-300">Confluence Pair Analysis</h3>
-        <p className="text-xs text-slate-500 mt-0.5">Combinations with 3+ occurrences</p>
+        <h3 className="text-sm font-medium text-slate-300">{title}</h3>
+        <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full">

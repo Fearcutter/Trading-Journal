@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { BarChart3, BookOpen, LineChart as LineChartIcon, Target, PlusCircle, ClipboardPaste, ChevronUp, TrendingUp, Download, Trash2, Search, Settings2 } from 'lucide-react';
+import { BarChart3, BookOpen, LineChart as LineChartIcon, Target, Layers, PlusCircle, ClipboardPaste, ChevronUp, TrendingUp, Download, Trash2, Search, Settings2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 import { useTrades } from '../context/TradeContext';
@@ -30,13 +30,15 @@ import BestVsFirstComparison from '../components/trading-plan/BestVsFirstCompari
 import { exportTradesToCSV, downloadCSV } from '../utils/csv-export';
 import { useMFEMAEStats } from '../hooks/useMFEMAEStats';
 import MFEMAEPanel from '../components/analytics/MFEMAEPanel';
+import ConfluencesTab from '../components/confluences/ConfluencesTab';
 
-type Tab = 'dashboard' | 'tradelog' | 'analytics' | 'mfe-mae';
+type Tab = 'dashboard' | 'tradelog' | 'analytics' | 'confluences' | 'mfe-mae';
 
 const TABS: { key: Tab; label: string; icon: typeof BarChart3 }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: BarChart3 },
   { key: 'tradelog', label: 'Trade Log', icon: BookOpen },
   { key: 'analytics', label: 'Analytics', icon: LineChartIcon },
+  { key: 'confluences', label: 'Confluences', icon: Layers },
   { key: 'mfe-mae', label: 'MFE / MAE', icon: Target },
 ];
 
@@ -114,6 +116,7 @@ export default function LiveTradingPage() {
         />
       )}
       {activeTab === 'analytics' && <AnalyticsTab advanced={advanced} trades={activeTrades} tradeCount={activeTrades.length} planComparison={planComparison} />}
+      {activeTab === 'confluences' && <ConfluencesTab trades={activeTrades} />}
       {activeTab === 'mfe-mae' && (
         activeTrades.length === 0
           ? <EmptyState icon={<Target size={48} />} title="No live trades yet" description="Add trades to see MFE/MAE analysis." />

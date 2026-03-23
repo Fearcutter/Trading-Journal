@@ -1,35 +1,30 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useTrades } from '../context/TradeContext';
-import { useSettings } from '../context/SettingsContext';
-import { analyzeConfluences, analyzeConfluenceCombinations, analyzeCategoryField, analyzeCategoryCombinations, categoryExtractors } from '../utils/confluence-analyzer';
-import { usePLFormatter } from '../hooks/usePLFormatter';
-import ConfluenceTable from '../components/confluences/ConfluenceTable';
-import CombinationAnalysis from '../components/confluences/CombinationAnalysis';
-import EmptyState from '../components/ui/EmptyState';
-import Button from '../components/ui/Button';
-import { Layers, PlusCircle } from 'lucide-react';
+import { useSettings } from '../../context/SettingsContext';
+import { analyzeConfluences, analyzeConfluenceCombinations, analyzeCategoryField, analyzeCategoryCombinations, categoryExtractors } from '../../utils/confluence-analyzer';
+import { usePLFormatter } from '../../hooks/usePLFormatter';
+import ConfluenceTable from './ConfluenceTable';
+import CombinationAnalysis from './CombinationAnalysis';
+import EmptyState from '../ui/EmptyState';
+import { Layers } from 'lucide-react';
+import type { Trade } from '../../types/trade';
 
 type CategoryOption = {
   id: string;
   label: string;
   isMulti: boolean;
-  extractor: (t: import('../types/trade').Trade) => string[];
+  extractor: (t: Trade) => string[];
 };
 
-export default function ConfluencesPage() {
-  const { trades } = useTrades();
+export default function ConfluencesTab({ trades }: { trades: Trade[] }) {
   const settings = useSettings();
   const { plField } = usePLFormatter();
   const [selectedCategory, setSelectedCategory] = useState('');
 
-  // Original confluence analytics
   const confluenceStats = useMemo(() => analyzeConfluences(trades, plField, 'confluences'), [trades, plField]);
   const confluenceAgainstStats = useMemo(() => analyzeConfluences(trades, plField, 'confluencesAgainst'), [trades, plField]);
   const combos3 = useMemo(() => analyzeConfluenceCombinations(trades, plField, 3), [trades, plField]);
   const combos2 = useMemo(() => analyzeConfluenceCombinations(trades, plField, 2).filter(c => c.count < 3), [trades, plField]);
 
-  // Additional category options (excluding confluences which are shown above)
   const categoryOptions: CategoryOption[] = useMemo(() => {
     const builtIn: CategoryOption[] = [
       { id: 'setupType', label: 'Setup Types', isMulti: false, extractor: categoryExtractors.setupType },
@@ -61,19 +56,13 @@ export default function ConfluencesPage() {
       <EmptyState
         icon={<Layers size={48} />}
         title="No trades yet"
-        description="Category analytics will appear here once you add trades."
-        action={
-          <Link to="/live-trading">
-            <Button><PlusCircle size={16} /> Add First Trade</Button>
-          </Link>
-        }
+        description="Add trades to see confluence and category analytics."
       />
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Original Confluences Section */}
       <ConfluenceTable data={confluenceStats} title="Confluences (FOR) Performance" />
       {confluenceAgainstStats.length > 0 && (
         <ConfluenceTable data={confluenceAgainstStats} title="Confluences (AGAINST) Performance" />
@@ -81,7 +70,6 @@ export default function ConfluencesPage() {
       <CombinationAnalysis data={combos3} />
       <CombinationAnalysis data={combos2} title="Confluence Pair Analysis (Emerging)" subtitle="Combinations with 2 occurrences" />
 
-      {/* Additional Category Analytics */}
       {categoryOptions.length > 0 && (
         <>
           <div className="border-t border-slate-700 pt-6">

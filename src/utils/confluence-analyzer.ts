@@ -44,7 +44,7 @@ export function analyzeConfluences(trades: Trade[], plField: PLField = 'dollarPL
 }
 
 export function analyzeConfluenceCombinations(
-  trades: Trade[], plField: PLField = 'dollarPL'
+  trades: Trade[], plField: PLField = 'dollarPL', minCount: number = 3
 ): { combo: string[]; winRate: number; count: number; avgPL: number }[] {
   const comboMap: Record<string, { wins: number; total: number; totalPL: number }> = {};
 
@@ -65,7 +65,7 @@ export function analyzeConfluenceCombinations(
   }
 
   return Object.entries(comboMap)
-    .filter(([, data]) => data.total >= 3) // Minimum 3 trades for combo
+    .filter(([, data]) => data.total >= minCount)
     .map(([key, data]) => ({
       combo: key.split('|||'),
       winRate: (data.wins / data.total) * 100,
@@ -111,7 +111,8 @@ export function analyzeCategoryField(
 export function analyzeCategoryCombinations(
   trades: Trade[],
   plField: PLField = 'dollarPL',
-  extractor: (t: Trade) => string[]
+  extractor: (t: Trade) => string[],
+  minCount: number = 3
 ): { combo: string[]; winRate: number; count: number; avgPL: number }[] {
   const comboMap: Record<string, { wins: number; total: number; totalPL: number }> = {};
 
@@ -131,7 +132,7 @@ export function analyzeCategoryCombinations(
   }
 
   return Object.entries(comboMap)
-    .filter(([, data]) => data.total >= 3)
+    .filter(([, data]) => data.total >= minCount)
     .map(([key, data]) => ({
       combo: key.split('|||'),
       winRate: (data.wins / data.total) * 100,
