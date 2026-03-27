@@ -126,21 +126,19 @@ export function calculateGradeAnalysis(trades: Trade[], plField: PLField) {
 }
 
 export function calculateExitStrategyComparison(trades: Trade[]) {
-  const validTrades = trades.filter(t => getStopDistance(t) > 0);
+  const validTrades = trades.filter(t => t.mfe != null && getStopDistance(t) > 0);
   if (validTrades.length === 0) return [];
 
-  // Actual exit R for each trade — used when no MFE data or MFE didn't reach target
-  function actualR(t: Trade): number {
-    const sd = getStopDistance(t);
-    return sd > 0 ? t.pointsPL / sd : 0;
+  // Binary model matching Analytics tab:
+  // Hit target = +XR, never reached 1R = -1R (stopped out), in between = 0R (BE)
+  function binaryR(mfeR: number, target: number): number {
+    if (mfeR >= target) return target;
+    if (mfeR < 1) return -1;
+    return 0;
   }
 
   function computeTotal(calcFn: (t: Trade) => number) {
-    return validTrades.reduce((s, t) => {
-      // No MFE data — can't simulate, use actual result
-      if (t.mfe == null) return s + actualR(t);
-      return s + calcFn(t);
-    }, 0);
+    return validTrades.reduce((s, t) => s + calcFn(t), 0);
   }
 
   const strategies = [
@@ -148,85 +146,60 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       strategy: 'All-in at 1R',
       description: 'All contracts exit at 1R target',
       calc: (t: Trade) => {
-        const sd = getStopDistance(t);
-        const mfeR = t.mfe! / sd;
-        return mfeR >= 1 ? 1 : actualR(t);
+        const mfeR = t.mfe! / getStopDistance(t);
+        return mfeR >= 1 ? 1 : -1;
       },
     },
     {
       strategy: '1 off at 1R, runner to 1.5R',
-      description: 'Half exits at 1R, half at min(MFE, 1.5R)',
+      description: 'Half exits at 1R, half targets 1.5R',
       calc: (t: Trade) => {
-        const sd = getStopDistance(t);
-        const mfeR = t.mfe! / sd;
-        if (mfeR < 1) return actualR(t);
-        const half1 = 1;
-        const half2 = Math.min(mfeR, 1.5);
-        return (half1 + half2) / 2;
+        const mfeR = t.mfe! / getStopDistance(t);
+        if (mfeR < 1) return -1;
+        return (1 + binaryR(mfeR, 1.5)) / 2;
       },
     },
     {
       strategy: '1 off at 1R, runner to 2R',
-      description: 'Half exits at 1R, half at min(MFE, 2R)',
+      description: 'Half exits at 1R, half targets 2R',
       calc: (t: Trade) => {
-        const sd = getStopDistance(t);
-        const mfeR = t.mfe! / sd;
-        if (mfeR < 1) return actualR(t);
-        const half1 = 1;
-        const half2 = Math.min(mfeR, 2);
-        return (half1 + half2) / 2;
+        const mfeR = t.mfe! / getStopDistance(t);
+        if (mfeR < 1) return -1;
+        return (1 + binaryR(mfeR, 2)) / 2;
       },
     },
     {
       strategy: '1 off at 1R, runner to 2.5R',
-      description: 'Half exits at 1R, half at min(MFE, 2.5R)',
+      description: 'Half exits at 1R, half targets 2.5R',
       calc: (t: Trade) => {
-        const sd = getStopDistance(t);
-        const mfeR = t.mfe! / sd;
-        if (mfeR < 1) return actualR(t);
-        const half1 = 1;
-        const half2 = Math.min(mfeR, 2.5);
-        return (half1 + half2) / 2;
+        const mfeR = t.mfe! / getStopDistance(t);
+        if (mfeR < 1) return -1;
+        return (1 + binaryR(mfeR, 2.5)) / 2;
       },
     },
     {
       strategy: '1 off at 1R, runner to 3R',
-      description: 'Half exits at 1R, half at min(MFE, 3R)',
+      description: 'Half exits at 1R, half targets 3R',
       calc: (t: Trade) => {
-        const sd = getStopDistance(t);
-        const mfeR = t.mfe! / sd;
-        if (mfeR < 1) return actualR(t);
-        const half1 = 1;
-        const half2 = Math.min(mfeR, 3);
-        return (half1 + half2) / 2;
+        const mfeR = t.mfe! / getStopDistance(t);
+        if (mfeR < 1) return -1;
+        return (1 + binaryR(mfeR, 3)) / 2;
       },
     },
     {
       strategy: 'All-in at 2R',
       description: 'All contracts exit at 2R target',
-      calc: (t: Trade) => {
-        const sd = getStopDistance(t);
-        const mfeR = t.mfe! / sd;
-        return mfeR >= 2 ? 2 : actualR(t);
-      },
+      calc: (t: Trade) => binaryR(t.mfe! / getStopDistance(t), 2),
     },
     {
       strategy: 'All-in at 2.5R',
       description: 'All contracts exit at 2.5R target',
-      calc: (t: Trade) => {
-        const sd = getStopDistance(t);
-        const mfeR = t.mfe! / sd;
-        return mfeR >= 2.5 ? 2.5 : actualR(t);
-      },
+      calc: (t: Trade) => binaryR(t.mfe! / getStopDistance(t), 2.5),
     },
     {
       strategy: 'All-in at 3R',
       description: 'All contracts exit at 3R target',
-      calc: (t: Trade) => {
-        const sd = getStopDistance(t);
-        const mfeR = t.mfe! / sd;
-        return mfeR >= 3 ? 3 : actualR(t);
-      },
+      calc: (t: Trade) => binaryR(t.mfe! / getStopDistance(t), 3),
     },
   ];
 
