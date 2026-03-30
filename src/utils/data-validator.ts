@@ -92,6 +92,13 @@ export function sanitizeImport(data: unknown): { trades: Trade[]; errors: string
       resultScreenshot: String(t.resultScreenshot || ''),
       tags: Array.isArray(t.tags) ? t.tags.map(String) : [],
       customFields: (t.customFields && typeof t.customFields === 'object') ? t.customFields as Record<string, string[]> : {},
+      mae: typeof t.mae === 'number' ? t.mae : undefined,
+      mfe: typeof t.mfe === 'number' ? t.mfe : undefined,
+      drawback1R: typeof t.drawback1R === 'number' ? t.drawback1R : undefined,
+      drawback2R: typeof t.drawback2R === 'number' ? t.drawback2R : undefined,
+      returnedToBE: typeof t.returnedToBE === 'boolean' ? t.returnedToBE : undefined,
+      accountIds: Array.isArray(t.accountIds) ? t.accountIds.map(String) : undefined,
+      sessionId: typeof t.sessionId === 'string' ? t.sessionId : undefined,
       createdAt: String(t.createdAt || new Date().toISOString()),
       updatedAt: String(t.updatedAt || new Date().toISOString()),
     });
