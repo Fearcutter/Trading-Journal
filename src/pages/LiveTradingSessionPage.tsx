@@ -253,7 +253,7 @@ function DashboardTab({ dashboard, tradeCount, planComparison }: { dashboard: Re
                 key={bucket}
                 onClick={() => toggleRLine(bucket)}
                 className={`px-2 py-0.5 rounded text-xs font-medium border transition-opacity ${visibleRLines[bucket] ? 'opacity-100' : 'opacity-30'}`}
-                style={{ borderColor: R_COLORS[bucket], color: R_COLORS[bucket] }}
+                style={{ borderColor: R_COLORS[bucket as keyof typeof R_COLORS], color: R_COLORS[bucket as keyof typeof R_COLORS] }}
               >
                 {label}
               </button>
@@ -267,7 +267,7 @@ function DashboardTab({ dashboard, tradeCount, planComparison }: { dashboard: Re
             <Tooltip
               contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
               labelStyle={{ color: '#94a3b8' }}
-              formatter={(value: number, name: string) => [pl.tooltipFormatter(value ?? 0), name]}
+              formatter={(value: number | undefined, name: string | undefined) => [pl.tooltipFormatter(value ?? 0), name ?? '']}
             />
             <ReferenceLine y={0} stroke="#334155" />
             {visibleRLines.loss && <Line type="monotone" dataKey="loss" name="Loss" stroke={R_COLORS.loss} strokeWidth={2} dot={false} />}
