@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { TrendingUp, Trash2, Plus, X, FolderInput } from 'lucide-react';
 import { useLiveSession } from '../context/LiveSessionContext';
+import { useBacktest } from '../context/BacktestContext';
 import { useTrades } from '../context/TradeContext';
 import { useSettings } from '../context/SettingsContext';
 import Button from '../components/ui/Button';
@@ -31,6 +32,7 @@ const SESSION_DOT_COLORS: Record<string, string> = {
 
 export default function LiveTradingPage() {
   const { sessions, addSession, deleteSession } = useLiveSession();
+  const { sessions: backtestSessions } = useBacktest();
   const { trades, updateTrade } = useTrades();
   const settings = useSettings();
   const pl = usePLFormatter();
@@ -59,10 +61,17 @@ export default function LiveTradingPage() {
     return map;
   }, [sessions, trades, pl.plField]);
 
-  // Unsessioned live trades (no sessionId, and not in any backtest session)
+  const knownSessionIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const s of sessions) ids.add(s.id);
+    for (const s of backtestSessions) ids.add(s.id);
+    return ids;
+  }, [sessions, backtestSessions]);
+
+  // Unsorted: no sessionId, or sessionId pointing to a deleted session
   const unsortedCount = useMemo(
-    () => trades.filter(t => !t.sessionId).length,
-    [trades]
+    () => trades.filter(t => !t.sessionId || !knownSessionIds.has(t.sessionId)).length,
+    [trades, knownSessionIds]
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -84,7 +93,7 @@ export default function LiveTradingPage() {
   const handleMigrate = () => {
     if (!migrateName.trim()) return;
     const session = addSession(migrateName.trim(), '', undefined, migrateColor);
-    const unsorted = trades.filter(t => !t.sessionId);
+    const unsorted = trades.filter(t => !t.sessionId || !knownSessionIds.has(t.sessionId));
     for (const trade of unsorted) {
       updateTrade(trade.id, { sessionId: session.id });
     }
