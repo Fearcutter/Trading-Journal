@@ -1,20 +1,22 @@
 import { useState, useMemo } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, FlaskConical, BarChart3, BookOpen, LineChart as LineChartIcon, Target, Layers, PlusCircle, ClipboardPaste, ChevronUp, Download, Trash2, Search, Settings2, Pencil, Check, X } from 'lucide-react';
+import { ArrowLeft, TrendingUp, BarChart3, BookOpen, LineChart as LineChartIcon, Target, Layers, PlusCircle, ClipboardPaste, ChevronUp, Download, Trash2, Search, Settings2, Pencil, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
-import { useBacktest } from '../context/BacktestContext';
+import { useLiveSession } from '../context/LiveSessionContext';
 import { useTrades } from '../context/TradeContext';
+import { useApexAccounts } from '../context/ApexAccountContext';
 import { useSettings } from '../context/SettingsContext';
+import { computeCurrentCycle, checkEligibility } from '../utils/apex-payout';
 import { useDashboardStats } from '../hooks/useDashboardStats';
 import { useAdvancedStats } from '../hooks/useAdvancedStats';
-import TradeForm from '../components/trade/TradeForm';
-import PasteTradeModal from '../components/trade/PasteTradeModal';
 import { useFilteredTrades, defaultFilters } from '../hooks/useFilteredTrades';
 import type { TradeFilters } from '../hooks/useFilteredTrades';
 import FilterBar from '../components/filters/FilterBar';
+import TradeForm from '../components/trade/TradeForm';
 import TradeRow from '../components/trade/TradeRow';
 import type { HiddenColumns } from '../components/trade/TradeRow';
+import PasteTradeModal from '../components/trade/PasteTradeModal';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import EmptyState from '../components/ui/EmptyState';
@@ -51,10 +53,11 @@ const TABS: { key: Tab; label: string; icon: typeof BarChart3 }[] = [
   { key: 'mfe-mae', label: 'MFE / MAE', icon: Target },
 ];
 
-export default function BacktestSessionPage() {
+export default function LiveTradingSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
-  const { getSession, updateSession, loading } = useBacktest();
+  const { getSession, updateSession, loading } = useLiveSession();
   const { trades, addTrade } = useTrades();
+  const { accounts } = useApexAccounts();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get('tab') as Tab) || 'dashboard';
@@ -82,50 +85,62 @@ export default function BacktestSessionPage() {
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState('');
 
-  if (loading) {
-    return null;
-  }
+  if (loading) return null;
 
   if (!session) {
     return (
       <div className="space-y-4">
-        <Link to="/backtesting" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors">
-          <ArrowLeft size={16} /> Backtesting
+        <Link to="/live-trading" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors">
+          <ArrowLeft size={16} /> Live Trading
         </Link>
         <EmptyState
-          icon={<FlaskConical size={48} />}
+          icon={<TrendingUp size={48} />}
           title="Session not found"
-          description="This backtest session doesn't exist or has been deleted."
-          action={<Link to="/backtesting" className="text-blue-400 hover:text-blue-300 text-sm">Back to Backtesting</Link>}
+          description="This live trading session doesn't exist or has been deleted."
+          action={<Link to="/live-trading" className="text-blue-400 hover:text-blue-300 text-sm">Back to Live Trading</Link>}
         />
       </div>
     );
   }
 
   const startEditing = () => {
-    setNameValue(session!.name);
+    setNameValue(session.name);
     setEditingName(true);
   };
 
   const saveName = () => {
     const trimmed = nameValue.trim();
-    if (trimmed && trimmed !== session!.name) {
+    if (trimmed && trimmed !== session.name) {
       updateSession(sessionId!, { name: trimmed });
     }
     setEditingName(false);
   };
 
   const handleTradeSubmit = (data: TradeFormData) => {
-    addTrade(data);
+    const trade = addTrade({ ...data, sessionId: sessionId! });
     toast.success('Trade saved to session!');
+
+    if (trade.accountIds?.length) {
+      const updatedTrades = [trade, ...trades];
+      for (const accId of trade.accountIds) {
+        const account = accounts.find(a => a.id === accId && a.status === 'active');
+        if (!account) continue;
+        const cycle = computeCurrentCycle(account, updatedTrades);
+        const result = checkEligibility(cycle, account);
+        if (result.eligible) {
+          const sizeLabel = account.accountSize >= 1000 ? `${account.accountSize / 1000}K` : account.accountSize;
+          toast.success(`${sizeLabel} ${account.label} is ready for payout!`, { duration: 5000 });
+        }
+      }
+    }
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <Link to="/backtesting" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors mb-3">
-          <ArrowLeft size={16} /> Backtesting
+        <Link to="/live-trading" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors mb-3">
+          <ArrowLeft size={16} /> Live Trading
         </Link>
         <div className="flex items-center gap-3">
           <span className={`w-3 h-3 rounded-full ${SESSION_DOT_COLORS[session.color] || 'bg-blue-500'}`} />
@@ -177,7 +192,7 @@ export default function BacktestSessionPage() {
       {activeTab === 'dashboard' && <DashboardTab dashboard={dashboard} tradeCount={activeTrades.length} planComparison={planComparison} />}
       {activeTab === 'tradelog' && (
         <TradeLogTab
-          trades={sessionTrades}
+          sessionTrades={sessionTrades}
           sessionId={sessionId!}
           onTradeSubmit={handleTradeSubmit}
           skippedTradeIds={planComparison?.skippedTradeIds}
@@ -198,7 +213,7 @@ function DashboardTab({ dashboard, tradeCount, planComparison }: { dashboard: Re
   const pl = usePLFormatter();
 
   if (tradeCount === 0) {
-    return <EmptyState icon={<BarChart3 size={48} />} title="No trades yet" description="Add trades to this session to see statistics." />;
+    return <EmptyState icon={<BarChart3 size={48} />} title="No trades yet" description="Add trades to see statistics." />;
   }
 
   const { stats, cumulativePL, plByRMultiple, cumulativePLByRMultiple } = dashboard;
@@ -294,8 +309,8 @@ function StatMini({ label, value, color }: { label: string; value: string; color
   );
 }
 
-function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
-  trades: ReturnType<typeof useTrades>['trades'];
+function TradeLogTab({ sessionTrades, sessionId, onTradeSubmit, skippedTradeIds }: {
+  sessionTrades: ReturnType<typeof useTrades>['trades'];
   sessionId: string;
   onTradeSubmit: (data: TradeFormData) => void;
   skippedTradeIds?: Set<string>;
@@ -303,7 +318,7 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
   const [showAddForm, setShowAddForm] = useState(false);
   const [pasteModalOpen, setPasteModalOpen] = useState(false);
   const [pasteInitialData, setPasteInitialData] = useState<Partial<TradeFormData> | undefined>();
-  const storageKey = `tradeLogFilters:${sessionId}`;
+  const storageKey = `tradeLogFilters:live-session:${sessionId}`;
   const [filters, _setFilters] = useState<TradeFilters>(() => {
     try { const s = sessionStorage.getItem(storageKey); return s ? JSON.parse(s).filters ?? defaultFilters : defaultFilters; } catch { return defaultFilters; }
   });
@@ -325,10 +340,10 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
   const [hiddenColumns, setHiddenColumns] = useState<HiddenColumns>({ points: true, pl: true, setup: true });
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const { deleteTrades } = useTrades();
-  const settingsCtx = useSettings();
+  const settings = useSettings();
 
   const activeFilters = { ...filters, search };
-  const filtered = useFilteredTrades(trades, activeFilters);
+  const filtered = useFilteredTrades(sessionTrades, activeFilters);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -340,11 +355,8 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === filtered.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filtered.map(t => t.id)));
-    }
+    if (selectedIds.size === filtered.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filtered.map(t => t.id)));
   };
 
   const handleBulkDelete = () => {
@@ -356,14 +368,13 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
   };
 
   const handleExportCSV = () => {
-    const csv = exportTradesToCSV(filtered, settingsCtx.customCategories || []);
-    downloadCSV(csv, `backtest-trades-${new Date().toISOString().split('T')[0]}.csv`);
+    const csv = exportTradesToCSV(filtered, settings.customCategories || []);
+    downloadCSV(csv, `trades-${new Date().toISOString().split('T')[0]}.csv`);
     toast.success('CSV exported');
   };
 
   return (
     <div className="space-y-4">
-      {/* Action buttons */}
       <div className="flex gap-2">
         <button
           onClick={() => setShowAddForm(!showAddForm)}
@@ -391,26 +402,12 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
           </Button>
           {showColumnMenu && (
             <div className="absolute right-0 top-full mt-1 z-20 bg-slate-800 border border-slate-600 rounded-lg p-2 shadow-lg space-y-1 min-w-[140px]">
-              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-slate-100 px-1">
-                <input type="checkbox" checked={!hiddenColumns.points} onChange={() => setHiddenColumns(h => ({ ...h, points: !h.points }))} className="rounded border-slate-600 bg-slate-800" />
-                Points
-              </label>
-              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-slate-100 px-1">
-                <input type="checkbox" checked={!hiddenColumns.pl} onChange={() => setHiddenColumns(h => ({ ...h, pl: !h.pl }))} className="rounded border-slate-600 bg-slate-800" />
-                P&L
-              </label>
-              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-slate-100 px-1">
-                <input type="checkbox" checked={!hiddenColumns.setup} onChange={() => setHiddenColumns(h => ({ ...h, setup: !h.setup }))} className="rounded border-slate-600 bg-slate-800" />
-                Setup
-              </label>
-              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-slate-100 px-1">
-                <input type="checkbox" checked={!hiddenColumns.reached2R} onChange={() => setHiddenColumns(h => ({ ...h, reached2R: !h.reached2R }))} className="rounded border-slate-600 bg-slate-800" />
-                2R
-              </label>
-              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-slate-100 px-1">
-                <input type="checkbox" checked={!hiddenColumns.reached3R} onChange={() => setHiddenColumns(h => ({ ...h, reached3R: !h.reached3R }))} className="rounded border-slate-600 bg-slate-800" />
-                3R
-              </label>
+              {(['points', 'pl', 'setup', 'reached2R', 'reached3R'] as const).map(col => (
+                <label key={col} className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-slate-100 px-1">
+                  <input type="checkbox" checked={!hiddenColumns[col]} onChange={() => setHiddenColumns(h => ({ ...h, [col]: !h[col] }))} className="rounded border-slate-600 bg-slate-800" />
+                  {col === 'reached2R' ? '2R' : col === 'reached3R' ? '3R' : col.charAt(0).toUpperCase() + col.slice(1)}
+                </label>
+              ))}
             </div>
           )}
         </div>
@@ -419,24 +416,22 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
         </Button>
       </div>
 
-      {/* Inline trade form */}
       {showAddForm && (
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
           <TradeForm
             key={JSON.stringify(pasteInitialData)}
-            sessionId={sessionId}
             initialData={pasteInitialData}
+            sessionId={sessionId}
             onSubmit={(data) => {
               onTradeSubmit(data);
               setShowAddForm(false);
               setPasteInitialData(undefined);
             }}
-            submitLabel="Save to Session"
+            submitLabel="Save Trade"
           />
         </div>
       )}
 
-      {/* Filter bar + search */}
       <FilterBar filters={filters} onChange={setFilters} />
       <div className="relative max-w-xs">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -448,8 +443,7 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
         />
       </div>
 
-      {/* Trade table */}
-      {trades.length === 0 ? (
+      {sessionTrades.length === 0 ? (
         <EmptyState icon={<BookOpen size={48} />} title="No trades in this session" description="Click 'Add Trade' or 'Paste Trade' to get started." />
       ) : (
         <>
@@ -459,12 +453,7 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
                 <thead>
                   <tr className="border-b border-slate-700 text-left">
                     <th className="px-3 py-3">
-                      <input
-                        type="checkbox"
-                        checked={filtered.length > 0 && selectedIds.size === filtered.length}
-                        onChange={toggleSelectAll}
-                        className="rounded border-slate-600 bg-slate-800"
-                      />
+                      <input type="checkbox" checked={filtered.length > 0 && selectedIds.size === filtered.length} onChange={toggleSelectAll} className="rounded border-slate-600 bg-slate-800" />
                     </th>
                     <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Date</th>
                     <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Instr.</th>
@@ -495,18 +484,16 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
               </table>
             </div>
             {filtered.length === 0 && (
-              <div className="py-12 text-center text-sm text-slate-500">
-                No trades match your filters.
-              </div>
+              <div className="py-12 text-center text-sm text-slate-500">No trades match your filters.</div>
             )}
           </div>
           <p className="text-xs text-slate-500">
-            Showing {filtered.length} of {trades.length} trade{trades.length !== 1 ? 's' : ''}
+            Showing {filtered.length} of {sessionTrades.length} trade{sessionTrades.length !== 1 ? 's' : ''}
           </p>
         </>
       )}
 
-      <PasteTradeModal open={pasteModalOpen} onOpenChange={setPasteModalOpen} sessionId={sessionId} onParsed={(data) => {
+      <PasteTradeModal open={pasteModalOpen} onOpenChange={setPasteModalOpen} onParsed={(data) => {
         setPasteInitialData({
           direction: data.direction,
           entry: data.entry || '',
@@ -531,14 +518,8 @@ function AnalyticsTab({ advanced, trades, tradeCount, planComparison }: { advanc
     return {
       total: tradesWithMFE.length,
       rows: thresholds.map(r => {
-        const wins = tradesWithMFE.filter(t => {
-          const stop = Math.abs(t.entry - t.stopLoss);
-          return t.mfe! >= r * stop;
-        });
-        const losses = tradesWithMFE.filter(t => {
-          const stop = Math.abs(t.entry - t.stopLoss);
-          return t.mfe! < stop; // never reached 1R — true loss
-        });
+        const wins = tradesWithMFE.filter(t => t.mfe! >= r * Math.abs(t.entry - t.stopLoss));
+        const losses = tradesWithMFE.filter(t => t.mfe! < Math.abs(t.entry - t.stopLoss));
         return {
           threshold: `${r}R`,
           wins: wins.length,
@@ -553,7 +534,7 @@ function AnalyticsTab({ advanced, trades, tradeCount, planComparison }: { advanc
   }, [trades]);
 
   if (tradeCount < 2) {
-    return <EmptyState icon={<LineChartIcon size={48} />} title="Need more trades for analytics" description="Add at least 2 trades to this session to see analytics." />;
+    return <EmptyState icon={<LineChartIcon size={48} />} title="Need more trades for analytics" description="Add at least 2 trades to see analytics." />;
   }
 
   const { streaks } = advanced;
@@ -561,7 +542,6 @@ function AnalyticsTab({ advanced, trades, tradeCount, planComparison }: { advanc
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {planComparison && <BestVsFirstComparison comparison={planComparison} />}
-
       {mfeReachData && (
         <Card className="md:col-span-2">
           <h3 className="text-sm font-medium text-slate-300 mb-4">MFE Reach Analysis <span className="text-slate-500 font-normal">({mfeReachData.total} trades)</span></h3>
@@ -588,12 +568,8 @@ function AnalyticsTab({ advanced, trades, tradeCount, planComparison }: { advanc
                     <td className="px-3 py-2 text-sm text-center">
                       <span className={`font-mono font-medium ${row.netR > 0 ? 'text-emerald-400' : row.netR < 0 ? 'text-rose-400' : 'text-slate-200'}`}>{row.netR > 0 ? '+' : ''}{row.netR % 1 === 0 ? row.netR.toFixed(0) : row.netR.toFixed(1)}R</span>
                     </td>
-                    <td className="px-3 py-2 text-sm text-center">
-                      <span className="font-mono font-medium text-slate-200">{row.rawWinRate.toFixed(1)}%</span>
-                    </td>
-                    <td className="px-3 py-2 text-sm text-center">
-                      <span className="font-mono font-medium text-slate-200">{row.trueWinRate.toFixed(1)}%</span>
-                    </td>
+                    <td className="px-3 py-2 text-sm text-center font-mono font-medium text-slate-200">{row.rawWinRate.toFixed(1)}%</td>
+                    <td className="px-3 py-2 text-sm text-center font-mono font-medium text-slate-200">{row.trueWinRate.toFixed(1)}%</td>
                   </tr>
                 ))}
               </tbody>
@@ -601,27 +577,13 @@ function AnalyticsTab({ advanced, trades, tradeCount, planComparison }: { advanc
           </div>
         </Card>
       )}
-
-      {/* Streak Analysis */}
       <Card className="md:col-span-2">
         <h3 className="text-sm font-medium text-slate-300 mb-4">Streak Analysis</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
-            <p className="text-xs text-slate-500">Longest Win Streak</p>
-            <p className="text-lg font-bold text-emerald-400">{streaks.longestWin}</p>
-          </div>
-          <div>
-            <p className="text-xs text-slate-500">Longest Loss Streak</p>
-            <p className="text-lg font-bold text-rose-400">{streaks.longestLoss}</p>
-          </div>
-          <div>
-            <p className="text-xs text-slate-500">Avg Win Streak</p>
-            <p className="text-lg font-bold text-slate-50">{streaks.avgWinStreak.toFixed(1)}</p>
-          </div>
-          <div>
-            <p className="text-xs text-slate-500">Avg Loss Streak</p>
-            <p className="text-lg font-bold text-slate-50">{streaks.avgLossStreak.toFixed(1)}</p>
-          </div>
+          <div><p className="text-xs text-slate-500">Longest Win Streak</p><p className="text-lg font-bold text-emerald-400">{streaks.longestWin}</p></div>
+          <div><p className="text-xs text-slate-500">Longest Loss Streak</p><p className="text-lg font-bold text-rose-400">{streaks.longestLoss}</p></div>
+          <div><p className="text-xs text-slate-500">Avg Win Streak</p><p className="text-lg font-bold text-slate-50">{streaks.avgWinStreak.toFixed(1)}</p></div>
+          <div><p className="text-xs text-slate-500">Avg Loss Streak</p><p className="text-lg font-bold text-slate-50">{streaks.avgLossStreak.toFixed(1)}</p></div>
         </div>
       </Card>
     </div>

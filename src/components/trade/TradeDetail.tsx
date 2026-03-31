@@ -211,19 +211,33 @@ export default function TradeDetail({ trade }: TradeDetailProps) {
       )}
 
       {/* Screenshots */}
-      {(trade.setupScreenshot || trade.resultScreenshot) && (
-        <div className="grid grid-cols-2 gap-4">
-          {trade.setupScreenshot && (
-            <Card>
-              <h3 className="text-sm font-medium text-slate-300 mb-2">Setup Screenshot</h3>
-              <img src={trade.setupScreenshot} alt="Setup" className="w-full rounded-lg cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setLightboxSrc(trade.setupScreenshot!)} />
-            </Card>
+      {(trade.setupScreenshot || trade.resultScreenshot || trade.additionalScreenshots?.length) && (
+        <div className="space-y-4">
+          {(trade.setupScreenshot || trade.resultScreenshot) && (
+            <div className="grid grid-cols-2 gap-4">
+              {trade.setupScreenshot && (
+                <Card>
+                  <h3 className="text-sm font-medium text-slate-300 mb-2">Setup Screenshot</h3>
+                  <img src={trade.setupScreenshot} alt="Setup" className="w-full rounded-lg cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setLightboxSrc(trade.setupScreenshot)} />
+                </Card>
+              )}
+              {trade.resultScreenshot && (
+                <Card>
+                  <h3 className="text-sm font-medium text-slate-300 mb-2">Result Screenshot</h3>
+                  <img src={trade.resultScreenshot} alt="Result" className="w-full rounded-lg cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setLightboxSrc(trade.resultScreenshot)} />
+                </Card>
+              )}
+            </div>
           )}
-          {trade.resultScreenshot && (
-            <Card>
-              <h3 className="text-sm font-medium text-slate-300 mb-2">Result Screenshot</h3>
-              <img src={trade.resultScreenshot} alt="Result" className="w-full rounded-lg cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setLightboxSrc(trade.resultScreenshot!)} />
-            </Card>
+          {trade.additionalScreenshots && trade.additionalScreenshots.length > 0 && (
+            <div className="grid grid-cols-2 gap-4">
+              {trade.additionalScreenshots.map((src, i) => (
+                <Card key={i}>
+                  <h3 className="text-sm font-medium text-slate-300 mb-2">Additional Screenshot {i + 1}</h3>
+                  <img src={src} alt={`Additional ${i + 1}`} className="w-full rounded-lg cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setLightboxSrc(src)} />
+                </Card>
+              ))}
+            </div>
           )}
         </div>
       )}

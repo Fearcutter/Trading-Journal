@@ -126,6 +126,22 @@ create policy "Users own their backtest sessions" on public.backtest_sessions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create index idx_backtest_sessions_user_id on public.backtest_sessions(user_id);
 
+-- Additional screenshots column for trades
+alter table public.trades add column if not exists additional_screenshots_paths text[];
+
+-- Live Trading Sessions
+create table public.live_trading_sessions (
+  id uuid primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  data jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.live_trading_sessions enable row level security;
+create policy "Users own their live trading sessions" on public.live_trading_sessions
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create index idx_live_trading_sessions_user_id on public.live_trading_sessions(user_id);
+
 -- Storage bucket for screenshots
 insert into storage.buckets (id, name, public) values ('screenshots', 'screenshots', false);
 

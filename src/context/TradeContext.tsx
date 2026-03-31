@@ -27,7 +27,7 @@ interface TradeContextValue {
 const TradeContext = createContext<TradeContextValue | null>(null);
 
 export function TradeProvider({ children }: { children: ReactNode }) {
-  const [rawTrades, setTrades, loading] = useSupabaseList<Trade>('trades', { screenshotFields: ['setupScreenshot', 'resultScreenshot'] });
+  const [rawTrades, setTrades, loading] = useSupabaseList<Trade>('trades', { screenshotFields: ['setupScreenshot', 'resultScreenshot', 'additionalScreenshots'] });
   const trades = useMemo(() => rawTrades.map(normalizeTrade), [rawTrades]);
 
   const addTrade = useCallback((data: TradeFormData): Trade => {
@@ -57,6 +57,7 @@ export function TradeProvider({ children }: { children: ReactNode }) {
       postTradeNotes: data.postTradeNotes,
       setupScreenshot: data.setupScreenshot,
       resultScreenshot: data.resultScreenshot,
+      additionalScreenshots: data.additionalScreenshots?.length ? data.additionalScreenshots : undefined,
       tags: data.tags,
       customFields: data.customFields || {},
       mae: data.mae ? Number(data.mae) : undefined,

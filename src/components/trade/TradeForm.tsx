@@ -42,6 +42,7 @@ function getDefaultFormData(settings: { defaultInstrument: string; defaultContra
     postTradeNotes: '',
     setupScreenshot: '',
     resultScreenshot: '',
+    additionalScreenshots: [],
     tags: [],
     customFields: {},
     mae: '',
@@ -361,9 +362,41 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
       </div>
 
       {/* Screenshots */}
-      <div className="grid grid-cols-2 gap-4">
-        <ImageUpload label="Setup Screenshot" value={form.setupScreenshot} onChange={v => update('setupScreenshot', v)} />
-        <ImageUpload label="Result Screenshot" value={form.resultScreenshot} onChange={v => update('resultScreenshot', v)} />
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <ImageUpload label="Setup Screenshot" value={form.setupScreenshot} onChange={v => update('setupScreenshot', v)} />
+          <ImageUpload label="Result Screenshot" value={form.resultScreenshot} onChange={v => update('resultScreenshot', v)} />
+        </div>
+        {/* Additional screenshots — rendered in pairs, always one empty slot at end */}
+        {(() => {
+          const slots = [...(form.additionalScreenshots ?? []), ''];
+          const pairs: [number, number | null][] = [];
+          for (let i = 0; i < slots.length; i += 2) {
+            pairs.push([i, i + 1 < slots.length ? i + 1 : null]);
+          }
+          return pairs.map(([a, b]) => (
+            <div key={a} className="grid grid-cols-2 gap-4">
+              {[a, b].map(i => {
+                if (i === null) return <div key="empty" />;
+                const src = slots[i] ?? '';
+                return (
+                  <ImageUpload
+                    key={i}
+                    label={`Additional Screenshot ${i + 1}`}
+                    value={src}
+                    onChange={v => {
+                      const next = [...(form.additionalScreenshots ?? [])];
+                      if (i >= next.length) next.push(v);
+                      else next[i] = v;
+                      while (next.length > 0 && next[next.length - 1] === '') next.pop();
+                      update('additionalScreenshots', next);
+                    }}
+                  />
+                );
+              })}
+            </div>
+          ));
+        })()}
       </div>
 
       {/* Tags */}

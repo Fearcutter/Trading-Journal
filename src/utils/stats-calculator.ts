@@ -145,6 +145,80 @@ export function calculateDailyPL(trades: Trade[], plField: PLField = 'dollarPL')
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
+// Thresholds match Analytics tab's calculateRunnerAnalysis: [1.5, 2, 2.5, 3, 4]
+export type RMultipleBucket = 'loss' | 'r1' | 'r1_5' | 'r2' | 'r2_5' | 'r3' | 'r4plus';
+
+export const R_BUCKET_LABELS: Record<RMultipleBucket, string> = {
+  loss: 'Loss',
+  r1: '1R',
+  r1_5: '1.5R',
+  r2: '2R',
+  r2_5: '2.5R',
+  r3: '3R',
+  r4plus: '4R+',
+};
+
+function classifyRBucket(trade: Trade): RMultipleBucket {
+  const stopDistance = Math.abs(trade.entry - trade.stopLoss);
+  if (!stopDistance || trade.mfe == null) {
+    return trade.result === 'loss' ? 'loss' : 'r1';
+  }
+  const mfeR = trade.mfe / stopDistance;
+  if (mfeR >= 4) return 'r4plus';
+  if (mfeR >= 3) return 'r3';
+  if (mfeR >= 2.5) return 'r2_5';
+  if (mfeR >= 2) return 'r2';
+  if (mfeR >= 1.5) return 'r1_5';
+  if (mfeR >= 1) return 'r1';
+  return 'loss';
+}
+
+export function calculateCumulativePLByRMultiple(
+  trades: Trade[],
+  plField: PLField = 'dollarPL',
+): { index: number; date: string; loss: number; r1: number; r1_5: number; r2: number; r2_5: number; r3: number; r4plus: number }[] {
+  const sorted = [...trades].sort((a, b) => {
+    const d = a.date.localeCompare(b.date);
+    return d !== 0 ? d : (a.time || '').localeCompare(b.time || '');
+  });
+  const cum = { loss: 0, r1: 0, r1_5: 0, r2: 0, r2_5: 0, r3: 0, r4plus: 0 };
+  return sorted.map((t, i) => {
+    const bucket = classifyRBucket(t);
+    cum[bucket] += getTradeValue(t, plField);
+    return { index: i + 1, date: t.date, ...cum };
+  });
+}
+
+// Cumulative thresholds matching the Analytics tab's MFE Reach Analysis (thresholds [1, 1.5, 2, 2.5, 3])
+// "≥1R" = all trades where MFE >= 1R (same as Analytics W column at 1R)
+// "Loss" = trades where MFE < 1R (same as Analytics L column)
+export function calculatePLByRMultiple(trades: Trade[], plField: PLField = 'dollarPL'): { bucket: string; label: string; pl: number; count: number }[] {
+  const thresholds = [1, 1.5, 2, 2.5, 3] as const;
+  const withMFE = trades.filter(t => t.mfe != null && Math.abs(t.entry - t.stopLoss) > 0);
+  const noMFE = trades.filter(t => t.mfe == null || Math.abs(t.entry - t.stopLoss) === 0);
+  const lossTrades = withMFE.filter(t => t.mfe! < Math.abs(t.entry - t.stopLoss));
+  const allLoss = [...lossTrades, ...noMFE];
+
+  return [
+    {
+      bucket: 'loss',
+      label: 'Loss',
+      pl: allLoss.reduce((s, t) => s + getTradeValue(t, plField), 0),
+      count: allLoss.length,
+    },
+    ...thresholds.map(r => {
+      const key = `r${String(r).replace('.', '_')}`;
+      const reached = withMFE.filter(t => t.mfe! >= r * Math.abs(t.entry - t.stopLoss));
+      return {
+        bucket: key,
+        label: `≥${r}R`,
+        pl: reached.reduce((s, t) => s + getTradeValue(t, plField), 0),
+        count: reached.length,
+      };
+    }),
+  ];
+}
+
 export function calculateRRDistribution(trades: Trade[]): { bin: string; count: number }[] {
   const bins: Record<string, number> = {};
   for (const t of trades) {

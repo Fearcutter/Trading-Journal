@@ -28,6 +28,7 @@ export interface Trade {
   postTradeNotes: string;
   setupScreenshot: string; // base64
   resultScreenshot: string; // base64
+  additionalScreenshots?: string[]; // base64 array
   tags: string[];
   mae?: number;
   mfe?: number;
@@ -62,6 +63,8 @@ export interface TradeFormData {
   postTradeNotes: string;
   setupScreenshot: string;
   resultScreenshot: string;
+  additionalScreenshots?: string[];
+
   tags: string[];
   mae?: number | '';
   mfe?: number | '';

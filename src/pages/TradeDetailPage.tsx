@@ -45,6 +45,7 @@ export default function TradeDetailPage() {
       drawback2R: data.drawback2R === '' ? undefined : data.drawback2R,
       returnedToBE: data.returnedToBE,
       accountIds: data.accountIds,
+      additionalScreenshots: data.additionalScreenshots?.length ? data.additionalScreenshots : undefined,
     });
     toast.success('Trade updated');
     navigate(-1);
@@ -104,6 +105,7 @@ export default function TradeDetailPage() {
             postTradeNotes: trade.postTradeNotes,
             setupScreenshot: trade.setupScreenshot,
             resultScreenshot: trade.resultScreenshot,
+            additionalScreenshots: trade.additionalScreenshots,
             tags: trade.tags,
             mae: trade.mae,
             mfe: trade.mfe,

@@ -5,6 +5,8 @@ import { TradeProvider } from './context/TradeContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { JournalProvider } from './context/JournalContext';
 import { BacktestProvider } from './context/BacktestContext';
+import { LiveSessionProvider } from './context/LiveSessionContext';
+import LiveTradingSessionPage from './pages/LiveTradingSessionPage';
 import { PlaybookProvider } from './context/PlaybookContext';
 import { HabitProvider } from './context/HabitContext';
 import { ApexAccountProvider } from './context/ApexAccountContext';
@@ -45,6 +47,7 @@ function AuthGate() {
     <MigrationGate>
       <TradeProvider>
         <BacktestProvider>
+        <LiveSessionProvider>
         <JournalProvider>
           <PlaybookProvider>
             <HabitProvider>
@@ -65,6 +68,7 @@ function AuthGate() {
               <Route element={<AppLayout />}>
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/live-trading" element={<LiveTradingPage />} />
+                <Route path="/live-trading/:sessionId" element={<LiveTradingSessionPage />} />
                 <Route path="/trades/:id" element={<TradeDetailPage />} />
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/analytics" element={<AnalyticsPage />} />
@@ -87,6 +91,7 @@ function AuthGate() {
             </HabitProvider>
           </PlaybookProvider>
         </JournalProvider>
+        </LiveSessionProvider>
         </BacktestProvider>
       </TradeProvider>
     </MigrationGate>

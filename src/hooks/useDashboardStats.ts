@@ -10,6 +10,8 @@ import {
   calculateCumulativePL,
   calculateDailyPL,
   calculateRRDistribution,
+  calculatePLByRMultiple,
+  calculateCumulativePLByRMultiple,
 } from '../utils/stats-calculator';
 
 export function useDashboardStats(trades: Trade[], plField: PLField = 'dollarPL') {
@@ -25,5 +27,7 @@ export function useDashboardStats(trades: Trade[], plField: PLField = 'dollarPL'
     winCount: trades.filter(t => t.result === 'win').length,
     lossCount: trades.filter(t => t.result === 'loss').length,
     beCount: trades.filter(t => t.result === 'breakeven').length,
+    plByRMultiple: calculatePLByRMultiple(trades, plField),
+    cumulativePLByRMultiple: calculateCumulativePLByRMultiple(trades, plField),
   }), [trades, plField]);
 }
