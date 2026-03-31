@@ -5,7 +5,8 @@ export function exportTradesToCSV(trades: Trade[], customCategories: CustomCateg
   const headers = [
     'Date', 'Time', 'Instrument', 'Direction', 'Entry', 'Stop Loss',
     'Take Profit', 'Exit Price', 'Contracts', 'Result', 'Points P&L',
-    'Dollar P&L', 'R:R', 'Setup Type', 'Confluences', 'Confluences Against', 'Emotion Before',
+    'Dollar P&L', 'R:R', 'MAE', 'MFE', 'Drawback from 1R', 'Drawback from 2R',
+    'Setup Type', 'Confluences', 'Confluences Against', 'Emotion Before',
     'Emotion After', 'Grade', 'Pre-Trade Notes', 'Post-Trade Notes', 'Tags',
     ...customCategories.map(c => c.name),
   ];
@@ -25,6 +26,10 @@ export function exportTradesToCSV(trades: Trade[], customCategories: CustomCateg
       t.pointsPL,
       t.dollarPL,
       t.riskReward,
+      t.mae ?? '',
+      t.mfe ?? '',
+      t.drawback1R ?? '',
+      t.drawback2R ?? '',
       t.setupType,
       t.confluences.join('; '),
       (t.confluencesAgainst ?? []).join('; '),
