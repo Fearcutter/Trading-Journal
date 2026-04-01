@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { useTrades } from '../context/TradeContext';
 import { useHabits } from '../context/HabitContext';
+import { usePLFormatter } from '../hooks/usePLFormatter';
 import CalendarGrid from '../components/calendar/CalendarGrid';
 import DayTradesPanel from '../components/calendar/DayTradesPanel';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
@@ -13,6 +14,7 @@ import { PlusCircle } from 'lucide-react';
 export default function CalendarPage() {
   const { trades: allTrades } = useTrades();
   const { checkIns: habitCheckIns } = useHabits();
+  const pl = usePLFormatter();
   const liveTrades = useMemo(() => allTrades.filter(t => !t.sessionId), [allTrades]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -24,26 +26,22 @@ export default function CalendarPage() {
   }, [liveTrades, currentMonth]);
 
   const monthStats = useMemo(() => {
-    const totalR = monthTrades.reduce((sum, t) => {
-      const risk = Math.abs(t.entry - t.stopLoss);
-      if (risk === 0) return sum;
-      const pnl = t.direction === 'long' ? t.exitPrice - t.entry : t.entry - t.exitPrice;
-      return sum + pnl / risk;
-    }, 0);
+    const totalPL = monthTrades.reduce((sum, t) => sum + pl.getPL(t), 0);
     const wins = monthTrades.filter(t => t.result === 'win').length;
+    const losses = monthTrades.filter(t => t.result === 'loss').length;
     const tradingDays = new Set(monthTrades.map(t => t.date)).size;
-    const greenDays = Object.values(
-      monthTrades.reduce<Record<string, number>>((acc, t) => {
-        const risk = Math.abs(t.entry - t.stopLoss);
-        if (risk === 0) return acc;
-        const pnl = t.direction === 'long' ? t.exitPrice - t.entry : t.entry - t.exitPrice;
-        acc[t.date] = (acc[t.date] || 0) + pnl / risk;
-        return acc;
-      }, {})
-    ).filter(r => r > 0).length;
 
-    return { totalR, wins, totalTrades: monthTrades.length, tradingDays, greenDays };
-  }, [monthTrades]);
+    const byDate: Record<string, number> = {};
+    for (const t of monthTrades) {
+      byDate[t.date] = (byDate[t.date] || 0) + pl.getPL(t);
+    }
+    const greenDays = Object.values(byDate).filter(v => v > 0).length;
+    const redDays = Object.values(byDate).filter(v => v < 0).length;
+
+    const winRate = monthTrades.length > 0 ? Math.round((wins / monthTrades.length) * 100) : 0;
+
+    return { totalPL, wins, losses, winRate, tradingDays, greenDays, redDays, totalTrades: monthTrades.length };
+  }, [monthTrades, pl]);
 
   const selectedTrades = useMemo(() => {
     if (!selectedDate) return [];
@@ -70,7 +68,7 @@ export default function CalendarPage() {
       {/* Month navigation */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => setCurrentMonth(prev => subMonths(prev, 1))}
+          onClick={() => { setCurrentMonth(prev => subMonths(prev, 1)); setSelectedDate(null); }}
           className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
         >
           <ChevronLeft size={20} />
@@ -79,45 +77,33 @@ export default function CalendarPage() {
           {format(currentMonth, 'MMMM yyyy')}
         </h2>
         <button
-          onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}
+          onClick={() => { setCurrentMonth(prev => addMonths(prev, 1)); setSelectedDate(null); }}
           className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
         >
           <ChevronRight size={20} />
         </button>
       </div>
 
-      {/* Monthly summary */}
-      <div className="flex gap-6 text-sm">
-        <div>
-          <span className="text-slate-500">P&L: </span>
-          <span className={`font-mono font-medium ${monthStats.totalR > 0 ? 'text-emerald-400' : monthStats.totalR < 0 ? 'text-rose-400' : 'text-slate-300'}`}>
-            {monthStats.totalR > 0 ? '+' : ''}{monthStats.totalR % 1 === 0 ? monthStats.totalR.toFixed(0) : monthStats.totalR.toFixed(2)}R
-          </span>
-        </div>
-        <div>
-          <span className="text-slate-500">Trades: </span>
-          <span className="text-slate-300">{monthStats.totalTrades}</span>
-        </div>
-        <div>
-          <span className="text-slate-500">Win Rate: </span>
-          <span className="text-slate-300">
-            {monthStats.totalTrades > 0 ? `${((monthStats.wins / monthStats.totalTrades) * 100).toFixed(0)}%` : '—'}
-          </span>
-        </div>
-        <div>
-          <span className="text-slate-500">Trading Days: </span>
-          <span className="text-slate-300">{monthStats.tradingDays}</span>
-        </div>
-        <div>
-          <span className="text-slate-500">Green Days: </span>
-          <span className="text-emerald-400">{monthStats.greenDays}</span>
-          <span className="text-slate-500"> / {monthStats.tradingDays}</span>
-        </div>
+      {/* Monthly stats bar */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+        {[
+          { label: 'Net P&L', value: pl.formatPLValue(monthStats.totalPL), color: monthStats.totalPL > 0 ? 'text-emerald-400' : monthStats.totalPL < 0 ? 'text-rose-400' : 'text-slate-300' },
+          { label: 'Trades', value: String(monthStats.totalTrades), color: 'text-slate-200' },
+          { label: 'Win Rate', value: monthStats.totalTrades > 0 ? `${monthStats.winRate}%` : '—', color: 'text-slate-200' },
+          { label: 'Days Traded', value: String(monthStats.tradingDays), color: 'text-slate-200' },
+          { label: 'Green Days', value: String(monthStats.greenDays), color: 'text-emerald-400' },
+          { label: 'Red Days', value: String(monthStats.redDays), color: 'text-rose-400' },
+        ].map(stat => (
+          <div key={stat.label} className="bg-slate-800/60 rounded-lg px-3 py-2 text-center">
+            <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">{stat.label}</p>
+            <p className={`font-mono text-sm font-semibold ${stat.color}`}>{stat.value}</p>
+          </div>
+        ))}
       </div>
 
       {/* Calendar + Day Panel */}
-      <div className="flex gap-4">
-        <div className="flex-1">
+      <div className="flex gap-4 items-start">
+        <div className="flex-1 min-w-0">
           <CalendarGrid
             currentMonth={currentMonth}
             trades={liveTrades}
@@ -127,7 +113,7 @@ export default function CalendarPage() {
           />
         </div>
         {selectedDate && (
-          <div className="w-80 shrink-0">
+          <div className="w-72 shrink-0">
             <DayTradesPanel
               date={selectedDate}
               trades={selectedTrades}
