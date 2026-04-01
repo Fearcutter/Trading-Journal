@@ -7,6 +7,7 @@ import {
   format,
   isSameMonth,
   isToday,
+  isAfter,
 } from 'date-fns';
 import type { Trade } from '../../types/trade';
 import type { DailyHabitCheckIn } from '../../types/habit';
@@ -87,7 +88,9 @@ export default function CalendarGrid({ currentMonth, trades, selectedDate, onSel
           let weekTradingDays = 0;
 
           for (const day of week) {
-            if (!isSameMonth(day, currentMonth)) continue;
+            const inMonth = isSameMonth(day, currentMonth);
+            const isNextMonthOverflow = !inMonth && isAfter(day, monthEnd);
+            if (!inMonth && !isNextMonthOverflow) continue;
             const dateStr = format(day, 'yyyy-MM-dd');
             const dayTrades = tradesByDate[dateStr] || [];
             if (dayTrades.length > 0) {
@@ -103,19 +106,22 @@ export default function CalendarGrid({ currentMonth, trades, selectedDate, onSel
                 const dayTrades = tradesByDate[dateStr] || [];
                 const dayPL = getDayPL(dateStr);
                 const inMonth = isSameMonth(day, currentMonth);
+                const isNextMonthOverflow = !inMonth && isAfter(day, monthEnd);
+                const showData = inMonth || isNextMonthOverflow;
 
                 return (
                   <CalendarDay
                     key={dateStr}
                     day={day.getDate()}
                     pl={dayPL}
-                    formattedPL={dayTrades.length > 0 && inMonth ? formatPLValue(dayPL) : null}
+                    formattedPL={dayTrades.length > 0 && showData ? formatPLValue(dayPL) : null}
                     tradeCount={dayTrades.length}
                     isCurrentMonth={inMonth}
+                    isNextMonthOverflow={isNextMonthOverflow}
                     isToday={isToday(day)}
                     isSelected={selectedDate === dateStr}
                     hasHabitCheckIn={habitCheckInDates.has(dateStr)}
-                    onClick={() => inMonth && onSelectDate(dateStr)}
+                    onClick={() => showData && onSelectDate(dateStr)}
                   />
                 );
               })}

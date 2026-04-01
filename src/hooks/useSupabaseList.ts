@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { uploadScreenshot, getSignedUrl, isBase64 } from '../lib/screenshots';
@@ -80,6 +81,10 @@ export function useSupabaseList<T extends { id: string }>(
           .select('*')
           .eq('user_id', user!.id);
 
+        if (!cancelled && error) {
+          console.error(`[useSupabaseList] Failed to load "${table}":`, error);
+          toast.error(`Failed to load ${table}: ${error.message}`);
+        }
         if (!cancelled && !error && data) {
           const reconstructed = data.map(row => {
             const item = { id: row.id, ...row.data } as T;
@@ -131,7 +136,11 @@ export function useSupabaseList<T extends { id: string }>(
     // Deletes
     const deletedIds = [...prevMap.keys()].filter(id => !newMap.has(id));
     if (deletedIds.length > 0) {
-      await supabase.from(table).delete().in('id', deletedIds);
+      const { error: deleteError } = await supabase.from(table).delete().in('id', deletedIds);
+      if (deleteError) {
+        console.error(`[useSupabaseList] Failed to delete from "${table}":`, deleteError);
+        toast.error(`Failed to delete from ${table}: ${deleteError.message}`);
+      }
     }
 
     // Upserts
@@ -217,7 +226,12 @@ export function useSupabaseList<T extends { id: string }>(
     }
 
     if (upserts.length > 0) {
-      await supabase.from(table).upsert(upserts);
+      const { error: upsertError } = await supabase.from(table).upsert(upserts);
+      if (upsertError) {
+        console.error(`[useSupabaseList] Failed to save to "${table}":`, upsertError);
+        toast.error(`Failed to save to ${table}: ${upsertError.message}`);
+        return; // Don't advance prevItemsRef so the next attempt re-tries the full diff
+      }
     }
 
     prevItemsRef.current = newItems;

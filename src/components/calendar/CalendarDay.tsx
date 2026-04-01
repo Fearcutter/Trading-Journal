@@ -4,6 +4,7 @@ interface CalendarDayProps {
   formattedPL: string | null;
   tradeCount: number;
   isCurrentMonth: boolean;
+  isNextMonthOverflow?: boolean;
   isToday: boolean;
   isSelected: boolean;
   hasHabitCheckIn?: boolean;
@@ -11,9 +12,9 @@ interface CalendarDayProps {
 }
 
 export default function CalendarDay({
-  day, pl, formattedPL, tradeCount, isCurrentMonth, isToday, isSelected, hasHabitCheckIn, onClick,
+  day, pl, formattedPL, tradeCount, isCurrentMonth, isNextMonthOverflow, isToday, isSelected, hasHabitCheckIn, onClick,
 }: CalendarDayProps) {
-  const hasTrades = tradeCount > 0 && isCurrentMonth;
+  const hasTrades = tradeCount > 0 && (isCurrentMonth || isNextMonthOverflow);
 
   const bgClass = !hasTrades
     ? 'bg-slate-800/30 hover:bg-slate-800/50'
@@ -29,13 +30,19 @@ export default function CalendarDay({
       ? 'text-slate-300'
       : 'text-slate-500';
 
+  const opacityClass = !isCurrentMonth && !isNextMonthOverflow
+    ? 'opacity-25 pointer-events-none'
+    : isNextMonthOverflow
+      ? 'opacity-60'
+      : '';
+
   return (
     <button
       onClick={onClick}
       className={`
         relative flex flex-col p-2 min-h-[88px] rounded-lg transition-all text-left w-full
         ${bgClass}
-        ${!isCurrentMonth ? 'opacity-25 pointer-events-none' : ''}
+        ${opacityClass}
         ${isSelected ? 'ring-2 ring-white ring-offset-1 ring-offset-slate-900' : ''}
       `}
     >
