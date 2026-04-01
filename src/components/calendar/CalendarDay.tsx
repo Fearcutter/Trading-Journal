@@ -15,14 +15,13 @@ export default function CalendarDay({
 }: CalendarDayProps) {
   const hasTrades = tradeCount > 0 && isCurrentMonth;
 
-  const getBgClass = () => {
-    if (!hasTrades) return 'bg-slate-800/30 hover:bg-slate-800/50';
-    const intensity = Math.min(Math.abs(pl) / 5, 1);
-    if (pl > 0) return intensity > 0.5 ? 'bg-emerald-400/25 hover:bg-emerald-400/35' : 'bg-emerald-400/10 hover:bg-emerald-400/20';
-    if (pl < 0) return intensity > 0.5 ? 'bg-rose-400/25 hover:bg-rose-400/35' : 'bg-rose-400/10 hover:bg-rose-400/20';
-    return 'bg-amber-400/10 hover:bg-amber-400/20';
-  };
-  const bgClass = getBgClass();
+  const bgClass = !hasTrades
+    ? 'bg-slate-800/30 hover:bg-slate-800/50'
+    : pl > 0
+      ? 'bg-emerald-400/20 hover:bg-emerald-400/30'
+      : pl < 0
+        ? 'bg-rose-400/20 hover:bg-rose-400/30'
+        : 'bg-amber-400/15 hover:bg-amber-400/25';
 
   const dateColor = isToday
     ? 'text-blue-400'
