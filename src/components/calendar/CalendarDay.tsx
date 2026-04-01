@@ -15,18 +15,19 @@ export default function CalendarDay({
 }: CalendarDayProps) {
   const hasTrades = tradeCount > 0 && isCurrentMonth;
 
-  const bgClass = hasTrades
-    ? pl > 0
-      ? 'bg-emerald-600 hover:bg-emerald-500'
-      : pl < 0
-        ? 'bg-rose-600 hover:bg-rose-500'
-        : 'bg-slate-500 hover:bg-slate-400'
-    : 'bg-slate-800/50 hover:bg-slate-800';
+  const getBgClass = () => {
+    if (!hasTrades) return 'bg-slate-800/30 hover:bg-slate-800/50';
+    const intensity = Math.min(Math.abs(pl) / 5, 1);
+    if (pl > 0) return intensity > 0.5 ? 'bg-emerald-400/25 hover:bg-emerald-400/35' : 'bg-emerald-400/10 hover:bg-emerald-400/20';
+    if (pl < 0) return intensity > 0.5 ? 'bg-rose-400/25 hover:bg-rose-400/35' : 'bg-rose-400/10 hover:bg-rose-400/20';
+    return 'bg-amber-400/10 hover:bg-amber-400/20';
+  };
+  const bgClass = getBgClass();
 
-  const dateColor = hasTrades
-    ? 'text-white/80'
-    : isToday
-      ? 'text-blue-400'
+  const dateColor = isToday
+    ? 'text-blue-400'
+    : hasTrades
+      ? 'text-slate-300'
       : 'text-slate-500';
 
   return (
@@ -41,15 +42,15 @@ export default function CalendarDay({
     >
       {/* Top row: date + indicators */}
       <div className="flex items-start justify-between w-full">
-        <span className={`text-xs font-semibold leading-none ${dateColor} ${isToday && hasTrades ? '!text-white font-bold' : ''}`}>
+        <span className={`text-xs font-semibold leading-none ${dateColor}`}>
           {day}
         </span>
         <div className="flex items-center gap-1">
           {hasHabitCheckIn && (
-            <span className={`w-1.5 h-1.5 rounded-full ${hasTrades ? 'bg-white/70' : 'bg-emerald-400'}`} />
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
           )}
           {hasTrades && (
-            <span className="text-[10px] font-medium text-white/50 leading-none">
+            <span className="text-[10px] font-medium text-slate-500 leading-none">
               {tradeCount}t
             </span>
           )}
@@ -59,7 +60,7 @@ export default function CalendarDay({
       {/* P&L — pushed to bottom */}
       <div className="flex-1 flex items-end">
         {hasTrades && formattedPL && (
-          <p className="font-mono text-sm font-bold text-white leading-none">
+          <p className={`font-mono text-xs font-semibold leading-none ${pl > 0 ? 'text-emerald-400' : pl < 0 ? 'text-rose-400' : 'text-amber-400'}`}>
             {formattedPL}
           </p>
         )}
