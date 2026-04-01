@@ -15,7 +15,7 @@ export default function CalendarPage() {
   const { trades: allTrades } = useTrades();
   const { checkIns: habitCheckIns } = useHabits();
   const pl = usePLFormatter();
-  const liveTrades = useMemo(() => allTrades.filter(t => !t.sessionId), [allTrades]);
+  const liveTrades = allTrades;
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
