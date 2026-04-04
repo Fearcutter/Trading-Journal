@@ -17,6 +17,7 @@ interface TradeFormProps {
   onSubmit: (data: TradeFormData) => void;
   submitLabel?: string;
   sessionId?: string;
+  hideAccounts?: boolean;
 }
 
 function getDefaultFormData(settings: { defaultInstrument: string; defaultContracts: number; tradingTimezone: string }): TradeFormData {
@@ -53,7 +54,7 @@ function getDefaultFormData(settings: { defaultInstrument: string; defaultContra
   };
 }
 
-export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save Trade', sessionId }: TradeFormProps) {
+export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save Trade', sessionId, hideAccounts }: TradeFormProps) {
   const settings = useSettings();
   const { accounts } = useApexAccounts();
   const activeAccounts = useMemo(() => accounts.filter(a => a.status === 'active'), [accounts]);
@@ -167,7 +168,7 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
       </div>
 
       {/* Apex Account Selector */}
-      {activeAccounts.length > 0 && (
+      {!hideAccounts && activeAccounts.length > 0 && (
         <div className="space-y-1">
           <label className="block text-sm font-medium text-slate-300">Apex Accounts</label>
           <div className="flex flex-wrap gap-2">

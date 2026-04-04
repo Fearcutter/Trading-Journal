@@ -64,6 +64,8 @@ export default function TradeRow({ trade, selected, onSelect, hiddenColumns, ski
           {(() => {
             const stopDistance = Math.abs(trade.entry - trade.stopLoss);
             if (!stopDistance || trade.mfe == null) return <span className="text-slate-500">—</span>;
+            // If price returned to BE, any runner was stopped there — MFE beyond 1R is from the second leg
+            if (trade.returnedToBE && trade.mfe >= stopDistance) return <span className="font-mono font-medium text-amber-400">BE</span>;
             if (trade.mfe >= 2 * stopDistance) return <span className="font-mono font-medium text-emerald-400">+2R</span>;
             if (trade.mfe >= stopDistance) return <span className="font-mono font-medium text-amber-400">BE</span>;
             return <span className="text-slate-500">—</span>;
@@ -75,6 +77,8 @@ export default function TradeRow({ trade, selected, onSelect, hiddenColumns, ski
           {(() => {
             const stopDistance = Math.abs(trade.entry - trade.stopLoss);
             if (!stopDistance || trade.mfe == null) return <span className="text-slate-500">—</span>;
+            // If price returned to BE, any runner was stopped there — MFE beyond 1R is from the second leg
+            if (trade.returnedToBE && trade.mfe >= stopDistance) return <span className="font-mono font-medium text-amber-400">BE</span>;
             if (trade.mfe >= 3 * stopDistance) return <span className="font-mono font-medium text-emerald-400">+3R</span>;
             if (trade.mfe >= stopDistance) return <span className="font-mono font-medium text-amber-400">BE</span>;
             return <span className="text-slate-500">—</span>;

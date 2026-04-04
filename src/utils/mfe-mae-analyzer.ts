@@ -61,8 +61,9 @@ export function calculateRunnerSurvival(trades: Trade[]) {
     return { trade: t, exitR, mfeR: sd > 0 ? t.mfe! / sd : 0 };
   });
 
-  const survivedToClose = exitRs.filter(e => e.exitR >= 1).length;
-  const stoppedAtBE = exitRs.filter(e => Math.abs(e.exitR) < 0.1).length;
+  // returnedToBE trades: runner was stopped at BE regardless of final exit price
+  const survivedToClose = exitRs.filter(e => e.exitR >= 1 && !e.trade.returnedToBE).length;
+  const stoppedAtBE = exitRs.filter(e => Math.abs(e.exitR) < 0.1 || e.trade.returnedToBE === true).length;
   const with1RDrawback = runnersFrom1R.filter(t => t.drawback1R != null && getStopDistance(t) > 0);
   const avgDrawbackFrom1R = with1RDrawback.length > 0
     ? with1RDrawback.reduce((s, t) => s + t.drawback1R! / getStopDistance(t), 0) / with1RDrawback.length
@@ -156,7 +157,9 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const mfeR = t.mfe! / getStopDistance(t);
         if (mfeR < 1) return -1;
-        return (1 + binaryR(mfeR, 1.5)) / 2;
+        // returnedToBE: runner was stopped at BE (0R for runner portion)
+        const runnerMfeR = t.returnedToBE ? Math.min(mfeR, 1) : mfeR;
+        return (1 + binaryR(runnerMfeR, 1.5)) / 2;
       },
     },
     {
@@ -165,7 +168,8 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const mfeR = t.mfe! / getStopDistance(t);
         if (mfeR < 1) return -1;
-        return (1 + binaryR(mfeR, 2)) / 2;
+        const runnerMfeR = t.returnedToBE ? Math.min(mfeR, 1) : mfeR;
+        return (1 + binaryR(runnerMfeR, 2)) / 2;
       },
     },
     {
@@ -174,7 +178,8 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const mfeR = t.mfe! / getStopDistance(t);
         if (mfeR < 1) return -1;
-        return (1 + binaryR(mfeR, 2.5)) / 2;
+        const runnerMfeR = t.returnedToBE ? Math.min(mfeR, 1) : mfeR;
+        return (1 + binaryR(runnerMfeR, 2.5)) / 2;
       },
     },
     {
@@ -183,23 +188,33 @@ export function calculateExitStrategyComparison(trades: Trade[]) {
       calc: (t: Trade) => {
         const mfeR = t.mfe! / getStopDistance(t);
         if (mfeR < 1) return -1;
-        return (1 + binaryR(mfeR, 3)) / 2;
+        const runnerMfeR = t.returnedToBE ? Math.min(mfeR, 1) : mfeR;
+        return (1 + binaryR(runnerMfeR, 3)) / 2;
       },
     },
     {
       strategy: 'All-in at 2R',
       description: 'All contracts exit at 2R target',
-      calc: (t: Trade) => binaryR(t.mfe! / getStopDistance(t), 2),
+      calc: (t: Trade) => {
+        const mfeR = t.returnedToBE ? Math.min(t.mfe! / getStopDistance(t), 1) : t.mfe! / getStopDistance(t);
+        return binaryR(mfeR, 2);
+      },
     },
     {
       strategy: 'All-in at 2.5R',
       description: 'All contracts exit at 2.5R target',
-      calc: (t: Trade) => binaryR(t.mfe! / getStopDistance(t), 2.5),
+      calc: (t: Trade) => {
+        const mfeR = t.returnedToBE ? Math.min(t.mfe! / getStopDistance(t), 1) : t.mfe! / getStopDistance(t);
+        return binaryR(mfeR, 2.5);
+      },
     },
     {
       strategy: 'All-in at 3R',
       description: 'All contracts exit at 3R target',
-      calc: (t: Trade) => binaryR(t.mfe! / getStopDistance(t), 3),
+      calc: (t: Trade) => {
+        const mfeR = t.returnedToBE ? Math.min(t.mfe! / getStopDistance(t), 1) : t.mfe! / getStopDistance(t);
+        return binaryR(mfeR, 3);
+      },
     },
   ];
 

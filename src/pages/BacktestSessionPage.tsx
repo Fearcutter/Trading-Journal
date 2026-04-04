@@ -432,6 +432,7 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
               setPasteInitialData(undefined);
             }}
             submitLabel="Save to Session"
+            hideAccounts
           />
         </div>
       )}

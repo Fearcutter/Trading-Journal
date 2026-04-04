@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTrades } from '../context/TradeContext';
+import { useBacktest } from '../context/BacktestContext';
 import TradeDetail from '../components/trade/TradeDetail';
 import TradeForm from '../components/trade/TradeForm';
 import Button from '../components/ui/Button';
@@ -16,7 +17,9 @@ export default function TradeDetailPage() {
   const [searchParams] = useSearchParams();
   const [editing, setEditing] = useState(searchParams.has('edit'));
 
+  const { getSession: getBacktestSession } = useBacktest();
   const trade = trades.find(t => t.id === id);
+  const isBacktestTrade = !!(trade?.sessionId && getBacktestSession(trade.sessionId));
 
   if (!trade) {
     return (
@@ -118,6 +121,7 @@ export default function TradeDetailPage() {
           }}
           onSubmit={handleUpdate}
           submitLabel="Update Trade"
+          hideAccounts={isBacktestTrade}
         />
       ) : (
         <TradeDetail trade={trade} />
