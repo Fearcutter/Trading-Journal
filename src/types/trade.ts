@@ -35,6 +35,7 @@ export interface Trade {
   drawback1R?: number;
   drawback2R?: number;
   returnedToBE?: boolean;
+  afterBeOutcome?: 'hit_sl' | 'reversed_to_tp';
   customFields?: Record<string, string[]>;
   accountIds?: string[];
   sessionId?: string;
@@ -71,6 +72,7 @@ export interface TradeFormData {
   drawback1R?: number | '';
   drawback2R?: number | '';
   returnedToBE?: boolean;
+  afterBeOutcome?: 'hit_sl' | 'reversed_to_tp';
   customFields?: Record<string, string[]>;
   accountIds?: string[];
   pointsPL?: number;

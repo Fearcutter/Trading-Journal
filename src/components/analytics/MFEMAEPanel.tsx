@@ -11,8 +11,7 @@ interface MFEMAEPanelProps {
 
 export default function MFEMAEPanel({ trades, stats }: MFEMAEPanelProps) {
   const pl = usePLFormatter();
-  const { averages, runnerAnalysis, runnerSurvival, gradeAnalysis, exitStrategies } = stats;
-
+  const { averages, runnerAnalysis, runnerSurvival, gradeAnalysis, exitStrategies, afterBEAnalysis } = stats;
   const hasData = averages.tradesWithData > 0;
 
   return (
@@ -135,6 +134,49 @@ export default function MFEMAEPanel({ trades, stats }: MFEMAEPanelProps) {
               </div>
             </div>
           </div>
+
+          {/* After-BE Outcome Analysis */}
+          {afterBEAnalysis.total > 0 && (
+            <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
+              <h3 className="text-sm font-medium text-slate-300 mb-1">After-BE Outcome</h3>
+              <p className="text-xs text-slate-500 mb-3">Trades that hit 1R then returned to breakeven ({afterBEAnalysis.total} total)</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-700">
+                      <th className="text-left py-2 px-3 text-slate-400 font-medium">Outcome</th>
+                      <th className="text-right py-2 px-3 text-slate-400 font-medium">Count</th>
+                      <th className="text-right py-2 px-3 text-slate-400 font-medium">%</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-slate-300">
+                    <tr className="border-b border-slate-700/50">
+                      <td className="py-2 px-3">Reversed from BE → continued to win</td>
+                      <td className="text-right py-2 px-3 font-mono text-emerald-400">{afterBEAnalysis.wonFromBE}</td>
+                      <td className="text-right py-2 px-3 font-mono text-emerald-400">{afterBEAnalysis.wonPct.toFixed(1)}%</td>
+                    </tr>
+                    <tr className="border-b border-slate-700/50">
+                      <td className="py-2 px-3">Stopped at BE → reversed toward TP</td>
+                      <td className="text-right py-2 px-3 font-mono text-amber-400">{afterBEAnalysis.reversedAtBE}</td>
+                      <td className="text-right py-2 px-3 font-mono text-amber-400">{afterBEAnalysis.reversedPct.toFixed(1)}%</td>
+                    </tr>
+                    <tr className="border-b border-slate-700/50">
+                      <td className="py-2 px-3">Stopped at BE → ran to original SL</td>
+                      <td className="text-right py-2 px-3 font-mono text-rose-400">{afterBEAnalysis.hitSLAfterBE}</td>
+                      <td className="text-right py-2 px-3 font-mono text-rose-400">{afterBEAnalysis.hitSLPct.toFixed(1)}%</td>
+                    </tr>
+                    {afterBEAnalysis.unknownAfterBE > 0 && (
+                      <tr>
+                        <td className="py-2 px-3 text-slate-500">Stopped at BE → outcome unknown</td>
+                        <td className="text-right py-2 px-3 font-mono text-slate-500">{afterBEAnalysis.unknownAfterBE}</td>
+                        <td className="text-right py-2 px-3 font-mono text-slate-500">—</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Grade Analysis */}
           {gradeAnalysis.length > 0 && (

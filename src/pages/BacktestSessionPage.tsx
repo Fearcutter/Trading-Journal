@@ -29,6 +29,7 @@ import MissedTradesBreakdown from '../components/trading-plan/MissedTradesBreakd
 import BestVsFirstComparison from '../components/trading-plan/BestVsFirstComparison';
 import { exportTradesToCSV, downloadCSV } from '../utils/csv-export';
 import { useMFEMAEStats } from '../hooks/useMFEMAEStats';
+import { calculateAfterBEAnalysis } from '../utils/mfe-mae-analyzer';
 import MFEMAEPanel from '../components/analytics/MFEMAEPanel';
 import ConfluencesTab from '../components/confluences/ConfluencesTab';
 
@@ -553,6 +554,11 @@ function AnalyticsTab({ advanced, trades, tradeCount, planComparison }: { advanc
     };
   }, [trades]);
 
+  const afterBEData = useMemo(() => {
+    const result = calculateAfterBEAnalysis(trades);
+    return result.total > 0 ? result : null;
+  }, [trades]);
+
   if (tradeCount < 2) {
     return <EmptyState icon={<LineChartIcon size={48} />} title="Need more trades for analytics" description="Add at least 2 trades to this session to see analytics." />;
   }
@@ -597,6 +603,48 @@ function AnalyticsTab({ advanced, trades, tradeCount, planComparison }: { advanc
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {afterBEData && (
+        <Card className="md:col-span-2">
+          <h3 className="text-sm font-medium text-slate-300 mb-1">After-BE Outcome</h3>
+          <p className="text-xs text-slate-500 mb-3">Trades that hit 1R then returned to breakeven ({afterBEData.total} total)</p>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-700">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Outcome</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">Count</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">%</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-slate-700/50">
+                  <td className="px-3 py-2 text-sm text-slate-300">Reversed from BE → continued to win</td>
+                  <td className="px-3 py-2 text-sm text-center font-mono text-emerald-400">{afterBEData.wonFromBE}</td>
+                  <td className="px-3 py-2 text-sm text-center font-mono text-emerald-400">{afterBEData.wonPct.toFixed(1)}%</td>
+                </tr>
+                <tr className="border-b border-slate-700/50">
+                  <td className="px-3 py-2 text-sm text-slate-300">Stopped at BE → reversed toward TP</td>
+                  <td className="px-3 py-2 text-sm text-center font-mono text-amber-400">{afterBEData.reversedAtBE}</td>
+                  <td className="px-3 py-2 text-sm text-center font-mono text-amber-400">{afterBEData.reversedPct.toFixed(1)}%</td>
+                </tr>
+                <tr className={afterBEData.unknownAfterBE > 0 ? 'border-b border-slate-700/50' : ''}>
+                  <td className="px-3 py-2 text-sm text-slate-300">Stopped at BE → ran to original SL</td>
+                  <td className="px-3 py-2 text-sm text-center font-mono text-rose-400">{afterBEData.hitSLAfterBE}</td>
+                  <td className="px-3 py-2 text-sm text-center font-mono text-rose-400">{afterBEData.hitSLPct.toFixed(1)}%</td>
+                </tr>
+                {afterBEData.unknownAfterBE > 0 && (
+                  <tr>
+                    <td className="px-3 py-2 text-sm text-slate-500">Stopped at BE → outcome unknown</td>
+                    <td className="px-3 py-2 text-sm text-center font-mono text-slate-500">{afterBEData.unknownAfterBE}</td>
+                    <td className="px-3 py-2 text-sm text-center font-mono text-slate-500">—</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

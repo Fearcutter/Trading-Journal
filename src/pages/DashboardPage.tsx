@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTrades } from '../context/TradeContext';
 import { useSettings } from '../context/SettingsContext';
+import { useLiveSession } from '../context/LiveSessionContext';
 import { useFilteredTrades, defaultFilters } from '../hooks/useFilteredTrades';
 import type { TradeFilters } from '../hooks/useFilteredTrades';
 import { useDashboardStats } from '../hooks/useDashboardStats';
@@ -27,11 +28,15 @@ import { LayoutDashboard, PlusCircle, Settings2 } from 'lucide-react';
 
 export default function DashboardPage() {
   const { trades } = useTrades();
+  const { sessions: liveSessions } = useLiveSession();
   const { dashboardWidgets } = useSettings();
   const [filters, setFilters] = useState<TradeFilters>(defaultFilters);
   const [tradeScope, setTradeScope] = useState<'live' | 'all'>('live');
   const [customizerOpen, setCustomizerOpen] = useState(false);
-  const scopedTrades = tradeScope === 'live' ? trades.filter(t => !t.sessionId) : trades;
+  const liveSessionIds = new Set(liveSessions.map(s => s.id));
+  const scopedTrades = tradeScope === 'live'
+    ? trades.filter(t => !t.sessionId || liveSessionIds.has(t.sessionId))
+    : trades;
   const filtered = useFilteredTrades(scopedTrades, filters);
   const { plField } = usePLFormatter();
   const dashboard = useDashboardStats(filtered, plField);

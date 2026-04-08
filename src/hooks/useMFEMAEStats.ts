@@ -7,6 +7,7 @@ import {
   calculateRunnerSurvival,
   calculateGradeAnalysis,
   calculateExitStrategyComparison,
+  calculateAfterBEAnalysis,
 } from '../utils/mfe-mae-analyzer';
 
 export function useMFEMAEStats(trades: Trade[], plField: PLField) {
@@ -16,5 +17,6 @@ export function useMFEMAEStats(trades: Trade[], plField: PLField) {
     runnerSurvival: calculateRunnerSurvival(trades),
     gradeAnalysis: calculateGradeAnalysis(trades, plField),
     exitStrategies: calculateExitStrategyComparison(trades),
+    afterBEAnalysis: calculateAfterBEAnalysis(trades),
   }), [trades, plField]);
 }

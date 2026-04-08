@@ -126,6 +126,36 @@ export function calculateGradeAnalysis(trades: Trade[], plField: PLField) {
   }).sort((a, b) => b.avgPL - a.avgPL);
 }
 
+export function calculateAfterBEAnalysis(trades: Trade[]) {
+  // Trades that hit 1R and returned to BE
+  const withReturnedToBE = trades.filter(t => t.returnedToBE === true && t.mfe != null && getStopDistance(t) > 0 && t.mfe >= getStopDistance(t));
+
+  if (withReturnedToBE.length === 0) {
+    return { total: 0, wonFromBE: 0, hitSLAfterBE: 0, reversedAtBE: 0, unknownAfterBE: 0, wonPct: 0, hitSLPct: 0, reversedPct: 0 };
+  }
+
+  // result = 'win': trade reversed from BE and continued to win (no afterBeOutcome needed)
+  const wonFromBE = withReturnedToBE.filter(t => t.result === 'win').length;
+  // stopped at BE (result = 'breakeven'), then hit original SL
+  const hitSLAfterBE = withReturnedToBE.filter(t => t.result === 'breakeven' && t.afterBeOutcome === 'hit_sl').length;
+  // stopped at BE, then reversed back toward TP
+  const reversedAtBE = withReturnedToBE.filter(t => t.result === 'breakeven' && t.afterBeOutcome === 'reversed_to_tp').length;
+  // stopped at BE, outcome not recorded
+  const unknownAfterBE = withReturnedToBE.filter(t => t.result === 'breakeven' && t.afterBeOutcome === undefined).length;
+
+  const total = withReturnedToBE.length;
+  return {
+    total,
+    wonFromBE,
+    hitSLAfterBE,
+    reversedAtBE,
+    unknownAfterBE,
+    wonPct: (wonFromBE / total) * 100,
+    hitSLPct: (hitSLAfterBE / total) * 100,
+    reversedPct: (reversedAtBE / total) * 100,
+  };
+}
+
 export function calculateExitStrategyComparison(trades: Trade[]) {
   const validTrades = trades.filter(t => t.mfe != null && getStopDistance(t) > 0);
   if (validTrades.length === 0) return [];

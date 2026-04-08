@@ -51,6 +51,7 @@ function getDefaultFormData(settings: { defaultInstrument: string; defaultContra
     drawback1R: '',
     drawback2R: '',
     returnedToBE: undefined,
+    afterBeOutcome: undefined,
   };
 }
 
@@ -218,7 +219,7 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
           <div className="inline-flex rounded-lg border border-slate-600 overflow-hidden mt-1">
             <button
               type="button"
-              onClick={() => update('returnedToBE', undefined)}
+              onClick={() => { update('returnedToBE', undefined); update('afterBeOutcome', undefined); }}
               className={`px-3 py-2 text-sm font-medium transition-colors ${
                 form.returnedToBE === undefined
                   ? 'bg-slate-600 text-white'
@@ -240,7 +241,7 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
             </button>
             <button
               type="button"
-              onClick={() => update('returnedToBE', false)}
+              onClick={() => { update('returnedToBE', false); update('afterBeOutcome', undefined); }}
               className={`px-3 py-2 text-sm font-medium transition-colors ${
                 form.returnedToBE === false
                   ? 'bg-rose-600 text-white'
@@ -252,6 +253,49 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
           </div>
         </div>
       </div>
+
+      {/* After-BE Outcome — only when returnedToBE and result is breakeven */}
+      {form.returnedToBE === true && form.result === 'breakeven' && (
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-slate-300">After-BE Outcome</label>
+          <p className="text-xs text-slate-500 mb-1">After being stopped at BE, what did price do next?</p>
+          <div className="inline-flex rounded-lg border border-slate-600 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => update('afterBeOutcome', undefined)}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${
+                form.afterBeOutcome === undefined
+                  ? 'bg-slate-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Unknown
+            </button>
+            <button
+              type="button"
+              onClick={() => update('afterBeOutcome', 'hit_sl')}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${
+                form.afterBeOutcome === 'hit_sl'
+                  ? 'bg-rose-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Ran to SL
+            </button>
+            <button
+              type="button"
+              onClick={() => update('afterBeOutcome', 'reversed_to_tp')}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${
+                form.afterBeOutcome === 'reversed_to_tp'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Reversed to TP
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Computed values display */}
       {computed && (
