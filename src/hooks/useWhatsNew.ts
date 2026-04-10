@@ -2,23 +2,19 @@ import { useState, useEffect } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { CHANGELOG } from '../constants/changelog';
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export function useWhatsNew() {
   const [lastSeen, setLastSeen] = useLocalStorage<string>('whatsNewLastSeen', '');
   const latestDate = CHANGELOG[0]?.date ?? '';
 
-  // Show if the latest entry hasn't been seen yet today
-  const [show, setShow] = useState(() => CHANGELOG.length > 0 && lastSeen !== latestDate);
+  // All entries newer than the last-seen date
+  const unseen = CHANGELOG.filter(e => e.date > lastSeen);
 
-  // Midnight check: if the app is open when the date rolls over, trigger the popup
+  const [show, setShow] = useState(() => unseen.length > 0);
+
+  // Midnight check: if the app is open when new entries become relevant, trigger popup
   useEffect(() => {
     const id = setInterval(() => {
-      if (CHANGELOG.length > 0 && lastSeen !== CHANGELOG[0].date) {
-        setShow(true);
-      }
+      if (CHANGELOG.some(e => e.date > lastSeen)) setShow(true);
     }, 60_000);
     return () => clearInterval(id);
   }, [lastSeen]);
@@ -28,5 +24,5 @@ export function useWhatsNew() {
     setShow(false);
   };
 
-  return { show, dismiss };
+  return { show, dismiss, unseen };
 }

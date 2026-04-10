@@ -29,7 +29,7 @@ export default function AppLayout() {
           <Outlet />
         </main>
       </div>
-      <WhatsNewModal open={show} onDismiss={dismiss} />
+      <WhatsNewModal open={show} onDismiss={dismiss} unseen={unseen} />
     </div>
   );
 }
