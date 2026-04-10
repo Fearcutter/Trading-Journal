@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
 import type { Trade } from '../../types/trade';
 import Badge from '../ui/Badge';
-import { formatDate, formatTime, formatPoints } from '../../utils/formatters';
+import { formatDate, formatTime, formatPoints, formatCurrency } from '../../utils/formatters';
 import { usePLFormatter } from '../../hooks/usePLFormatter';
+import { useSettings } from '../../context/SettingsContext';
 
 export type HiddenColumns = {
   points?: boolean;
@@ -10,6 +11,7 @@ export type HiddenColumns = {
   setup?: boolean;
   reached2R?: boolean;
   reached3R?: boolean;
+  oneR?: boolean;
 };
 
 interface TradeRowProps {
@@ -22,6 +24,7 @@ interface TradeRowProps {
 
 export default function TradeRow({ trade, selected, onSelect, hiddenColumns, skipped }: TradeRowProps) {
   const pl = usePLFormatter();
+  const { instruments, plDisplayMode } = useSettings();
 
   return (
     <tr className={`border-b border-slate-700/50 hover:bg-slate-800/50 transition-colors ${skipped ? 'opacity-50' : ''}`}>
@@ -59,6 +62,28 @@ export default function TradeRow({ trade, selected, onSelect, hiddenColumns, ski
           return <span className={`font-mono text-sm font-medium ${r > 0 ? 'text-emerald-400' : r < 0 ? 'text-rose-400' : 'text-amber-400'}`}>{r > 0 ? '+' : ''}{rStr}R</span>;
         })()}
       </td>
+      {!hiddenColumns?.oneR && (
+        <td className="px-3 py-3 text-sm text-center">
+          {(() => {
+            const stopDist = Math.abs(trade.entry - trade.stopLoss);
+            if (!stopDist) return <span className="text-slate-500">—</span>;
+            const exitR = trade.pointsPL / stopDist;
+            const mfeR = trade.mfe != null ? trade.mfe / stopDist : null;
+            const reached1R = (mfeR != null && mfeR >= 1) || exitR >= 1 || trade.returnedToBE === true;
+            if (!reached1R) return <span className="text-slate-500">—</span>;
+            if (plDisplayMode === 'r') {
+              return <span className="font-mono font-medium text-emerald-400">+1R</span>;
+            }
+            if (plDisplayMode === 'points') {
+              return <span className="font-mono font-medium text-emerald-400">{stopDist % 1 === 0 ? stopDist.toFixed(0) : stopDist.toFixed(2)} pts</span>;
+            }
+            const instrument = instruments.find(i => i.symbol === trade.instrument);
+            if (!instrument) return <span className="font-mono font-medium text-emerald-400">{stopDist % 1 === 0 ? stopDist.toFixed(0) : stopDist.toFixed(2)} pts</span>;
+            const oneRDollar = stopDist * instrument.pointValue * trade.contracts;
+            return <span className="font-mono font-medium text-emerald-400">{formatCurrency(oneRDollar)}</span>;
+          })()}
+        </td>
+      )}
       {!hiddenColumns?.reached2R && (
         <td className="px-3 py-3 text-sm text-center">
           {(() => {

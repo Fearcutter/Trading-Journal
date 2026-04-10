@@ -405,6 +405,10 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
                 Setup
               </label>
               <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-slate-100 px-1">
+                <input type="checkbox" checked={!hiddenColumns.oneR} onChange={() => setHiddenColumns(h => ({ ...h, oneR: !h.oneR }))} className="rounded border-slate-600 bg-slate-800" />
+                1R
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-slate-100 px-1">
                 <input type="checkbox" checked={!hiddenColumns.reached2R} onChange={() => setHiddenColumns(h => ({ ...h, reached2R: !h.reached2R }))} className="rounded border-slate-600 bg-slate-800" />
                 2R
               </label>
@@ -473,6 +477,7 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
                     <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Dir.</th>
                     <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Grade</th>
                     <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">R</th>
+                    {!hiddenColumns.oneR && <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider text-center">1R</th>}
                     {!hiddenColumns.reached2R && <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider text-center">2R</th>}
                     {!hiddenColumns.reached3R && <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider text-center">3R</th>}
                     {!hiddenColumns.points && <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Points</th>}
@@ -559,6 +564,16 @@ function AnalyticsTab({ advanced, trades, tradeCount, planComparison }: { advanc
     return result.total > 0 ? result : null;
   }, [trades]);
 
+  const oneRStats = useMemo(() => {
+    const valid = trades.filter(t => Math.abs(t.entry - t.stopLoss) > 0);
+    if (valid.length === 0) return null;
+    const stopDists = valid.map(t => Math.abs(t.entry - t.stopLoss));
+    const avg = stopDists.reduce((s, v) => s + v, 0) / stopDists.length;
+    const min = Math.min(...stopDists);
+    const max = Math.max(...stopDists);
+    return { avg, min, max, count: valid.length };
+  }, [trades]);
+
   if (tradeCount < 2) {
     return <EmptyState icon={<LineChartIcon size={48} />} title="Need more trades for analytics" description="Add at least 2 trades to this session to see analytics." />;
   }
@@ -605,6 +620,26 @@ function AnalyticsTab({ advanced, trades, tradeCount, planComparison }: { advanc
                 ))}
               </tbody>
             </table>
+          </div>
+        </Card>
+      )}
+
+      {oneRStats && (
+        <Card className="md:col-span-2">
+          <h3 className="text-sm font-medium text-slate-300 mb-3">1R Risk per Trade <span className="text-slate-500 font-normal">({oneRStats.count} trades)</span></h3>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <p className="text-xs text-slate-500">Avg 1R (pts)</p>
+              <p className="text-lg font-bold text-slate-50 font-mono">{oneRStats.avg % 1 === 0 ? oneRStats.avg.toFixed(0) : oneRStats.avg.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Min 1R (pts)</p>
+              <p className="text-lg font-bold text-slate-50 font-mono">{oneRStats.min % 1 === 0 ? oneRStats.min.toFixed(0) : oneRStats.min.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Max 1R (pts)</p>
+              <p className="text-lg font-bold text-slate-50 font-mono">{oneRStats.max % 1 === 0 ? oneRStats.max.toFixed(0) : oneRStats.max.toFixed(2)}</p>
+            </div>
           </div>
         </Card>
       )}

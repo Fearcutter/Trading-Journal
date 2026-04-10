@@ -403,10 +403,10 @@ function TradeLogTab({ sessionTrades, sessionId, onTradeSubmit, skippedTradeIds 
           </Button>
           {showColumnMenu && (
             <div className="absolute right-0 top-full mt-1 z-20 bg-slate-800 border border-slate-600 rounded-lg p-2 shadow-lg space-y-1 min-w-[140px]">
-              {(['points', 'pl', 'setup', 'reached2R', 'reached3R'] as const).map(col => (
+              {(['points', 'pl', 'setup', 'oneR', 'reached2R', 'reached3R'] as const).map(col => (
                 <label key={col} className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-slate-100 px-1">
                   <input type="checkbox" checked={!hiddenColumns[col]} onChange={() => setHiddenColumns(h => ({ ...h, [col]: !h[col] }))} className="rounded border-slate-600 bg-slate-800" />
-                  {col === 'reached2R' ? '2R' : col === 'reached3R' ? '3R' : col.charAt(0).toUpperCase() + col.slice(1)}
+                  {col === 'oneR' ? '1R' : col === 'reached2R' ? '2R' : col === 'reached3R' ? '3R' : col.charAt(0).toUpperCase() + col.slice(1)}
                 </label>
               ))}
             </div>
@@ -461,6 +461,7 @@ function TradeLogTab({ sessionTrades, sessionId, onTradeSubmit, skippedTradeIds 
                     <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Dir.</th>
                     <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Grade</th>
                     <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">R</th>
+                    {!hiddenColumns.oneR && <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider text-center">1R</th>}
                     {!hiddenColumns.reached2R && <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider text-center">2R</th>}
                     {!hiddenColumns.reached3R && <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider text-center">3R</th>}
                     {!hiddenColumns.points && <th className="px-3 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Points</th>}
@@ -539,6 +540,16 @@ function AnalyticsTab({ advanced, trades, tradeCount, planComparison }: { advanc
     return result.total > 0 ? result : null;
   }, [trades]);
 
+  const oneRStats = useMemo(() => {
+    const valid = trades.filter(t => Math.abs(t.entry - t.stopLoss) > 0);
+    if (valid.length === 0) return null;
+    const stopDists = valid.map(t => Math.abs(t.entry - t.stopLoss));
+    const avg = stopDists.reduce((s, v) => s + v, 0) / stopDists.length;
+    const min = Math.min(...stopDists);
+    const max = Math.max(...stopDists);
+    return { avg, min, max, count: valid.length };
+  }, [trades]);
+
   if (tradeCount < 2) {
     return <EmptyState icon={<LineChartIcon size={48} />} title="Need more trades for analytics" description="Add at least 2 trades to see analytics." />;
   }
@@ -583,6 +594,26 @@ function AnalyticsTab({ advanced, trades, tradeCount, planComparison }: { advanc
           </div>
         </Card>
       )}
+      {oneRStats && (
+        <Card className="md:col-span-2">
+          <h3 className="text-sm font-medium text-slate-300 mb-3">1R Risk per Trade <span className="text-slate-500 font-normal">({oneRStats.count} trades)</span></h3>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <p className="text-xs text-slate-500">Avg 1R (pts)</p>
+              <p className="text-lg font-bold text-slate-50 font-mono">{oneRStats.avg % 1 === 0 ? oneRStats.avg.toFixed(0) : oneRStats.avg.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Min 1R (pts)</p>
+              <p className="text-lg font-bold text-slate-50 font-mono">{oneRStats.min % 1 === 0 ? oneRStats.min.toFixed(0) : oneRStats.min.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Max 1R (pts)</p>
+              <p className="text-lg font-bold text-slate-50 font-mono">{oneRStats.max % 1 === 0 ? oneRStats.max.toFixed(0) : oneRStats.max.toFixed(2)}</p>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {afterBEData && (
         <Card className="md:col-span-2">
           <h3 className="text-sm font-medium text-slate-300 mb-1">After-BE Outcome</h3>
