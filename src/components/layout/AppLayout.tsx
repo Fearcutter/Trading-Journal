@@ -1,6 +1,8 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
+import WhatsNewModal from '../WhatsNewModal';
+import { useWhatsNew } from '../../hooks/useWhatsNew';
 
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard',
@@ -16,6 +18,7 @@ export default function AppLayout() {
   const location = useLocation();
   const path = location.pathname;
   const title = pageTitles[path] || (path.startsWith('/trades/') ? 'Trade Detail' : 'Trading Journal');
+  const { show, dismiss } = useWhatsNew();
 
   return (
     <div className="flex min-h-screen bg-slate-900">
@@ -26,6 +29,7 @@ export default function AppLayout() {
           <Outlet />
         </main>
       </div>
+      <WhatsNewModal open={show} onDismiss={dismiss} />
     </div>
   );
 }
