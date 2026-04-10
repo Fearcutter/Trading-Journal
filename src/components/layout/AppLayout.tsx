@@ -18,7 +18,7 @@ export default function AppLayout() {
   const location = useLocation();
   const path = location.pathname;
   const title = pageTitles[path] || (path.startsWith('/trades/') ? 'Trade Detail' : 'Trading Journal');
-  const { show, dismiss } = useWhatsNew();
+  const { show, dismiss, unseen } = useWhatsNew();
 
   return (
     <div className="flex min-h-screen bg-slate-900">
