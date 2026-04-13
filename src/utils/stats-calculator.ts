@@ -5,6 +5,7 @@ import { getTradeValue } from './pl-helpers';
 export interface DashboardStats {
   totalPL: number;
   winRate: number;
+  trueWinRate: number;
   totalTrades: number;
   profitFactor: number;
   avgWin: number;
@@ -20,6 +21,7 @@ export function calculateDashboardStats(trades: Trade[], plField: PLField = 'dol
     return {
       totalPL: 0,
       winRate: 0,
+      trueWinRate: 0,
       totalTrades: 0,
       profitFactor: 0,
       avgWin: 0,
@@ -61,6 +63,7 @@ export function calculateDashboardStats(trades: Trade[], plField: PLField = 'dol
   return {
     totalPL,
     winRate: trades.length > 0 ? (wins.length / trades.length) * 100 : 0,
+    trueWinRate: (wins.length + losses.length) > 0 ? (wins.length / (wins.length + losses.length)) * 100 : 0,
     totalTrades: trades.length,
     profitFactor: totalLosses > 0 ? totalWins / totalLosses : totalWins > 0 ? Infinity : 0,
     avgWin: wins.length > 0 ? totalWins / wins.length : 0,

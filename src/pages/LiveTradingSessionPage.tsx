@@ -233,9 +233,10 @@ function DashboardTab({ dashboard, tradeCount, planComparison }: { dashboard: Re
           <MissedTradesBreakdown comparison={planComparison} />
         </>
       )}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <StatMini label="Total Trades" value={String(stats.totalTrades)} />
-        <StatMini label="Win Rate" value={formatPercent(stats.winRate)} />
+        <StatMini label="Raw WR" value={formatPercent(stats.winRate)} />
+        <StatMini label="True WR" value={formatPercent(stats.trueWinRate)} />
         <StatMini label="Total P&L" value={pl.formatPLValue(stats.totalPL)} color={stats.totalPL > 0 ? 'text-emerald-400' : stats.totalPL < 0 ? 'text-rose-400' : undefined} />
         <StatMini label="Avg P&L" value={stats.totalTrades > 0 ? pl.formatPLValue(stats.totalPL / stats.totalTrades) : pl.formatPLAbs(0)} color={stats.totalPL > 0 ? 'text-emerald-400' : stats.totalPL < 0 ? 'text-rose-400' : undefined} />
         <StatMini label="Profit Factor" value={stats.profitFactor === Infinity ? '---' : stats.profitFactor.toFixed(2)} />
