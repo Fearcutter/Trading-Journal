@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { useTrades } from '../context/TradeContext';
 import { useHabits } from '../context/HabitContext';
+import { useLiveSession } from '../context/LiveSessionContext';
 import { usePLFormatter } from '../hooks/usePLFormatter';
 import CalendarGrid from '../components/calendar/CalendarGrid';
 import DayTradesPanel from '../components/calendar/DayTradesPanel';
@@ -13,9 +14,13 @@ import { PlusCircle } from 'lucide-react';
 
 export default function CalendarPage() {
   const { trades: allTrades } = useTrades();
+  const { sessions: liveSessions } = useLiveSession();
   const { checkIns: habitCheckIns } = useHabits();
   const pl = usePLFormatter();
-  const liveTrades = allTrades;
+  const liveTrades = useMemo(() => {
+    const liveIds = new Set(liveSessions.map(s => s.id));
+    return allTrades.filter(t => t.sessionId && liveIds.has(t.sessionId));
+  }, [allTrades, liveSessions]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
