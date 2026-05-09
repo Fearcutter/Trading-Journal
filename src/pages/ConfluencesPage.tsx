@@ -9,6 +9,7 @@ import CombinationAnalysis from '../components/confluences/CombinationAnalysis';
 import EmptyState from '../components/ui/EmptyState';
 import Button from '../components/ui/Button';
 import { Layers, PlusCircle } from 'lucide-react';
+import OverlapScopeToggle, { type OverlapScope } from '../components/filters/OverlapScopeToggle';
 
 type CategoryOption = {
   id: string;
@@ -22,12 +23,17 @@ export default function ConfluencesPage() {
   const settings = useSettings();
   const { plField } = usePLFormatter();
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [overlapScope, setOverlapScope] = useState<OverlapScope>('exclude');
+  const scopedTrades = useMemo(
+    () => overlapScope === 'exclude' ? trades.filter(t => !t.overlap) : trades,
+    [trades, overlapScope]
+  );
 
   // Original confluence analytics
-  const confluenceStats = useMemo(() => analyzeConfluences(trades, plField, 'confluences'), [trades, plField]);
-  const confluenceAgainstStats = useMemo(() => analyzeConfluences(trades, plField, 'confluencesAgainst'), [trades, plField]);
-  const combos3 = useMemo(() => analyzeConfluenceCombinations(trades, plField, 3), [trades, plField]);
-  const combos2 = useMemo(() => analyzeConfluenceCombinations(trades, plField, 2).filter(c => c.count < 3), [trades, plField]);
+  const confluenceStats = useMemo(() => analyzeConfluences(scopedTrades, plField, 'confluences'), [scopedTrades, plField]);
+  const confluenceAgainstStats = useMemo(() => analyzeConfluences(scopedTrades, plField, 'confluencesAgainst'), [scopedTrades, plField]);
+  const combos3 = useMemo(() => analyzeConfluenceCombinations(scopedTrades, plField, 3), [scopedTrades, plField]);
+  const combos2 = useMemo(() => analyzeConfluenceCombinations(scopedTrades, plField, 2).filter(c => c.count < 3), [scopedTrades, plField]);
 
   // Additional category options (excluding confluences which are shown above)
   const categoryOptions: CategoryOption[] = useMemo(() => {
@@ -47,13 +53,13 @@ export default function ConfluencesPage() {
   const active = selectedCategory ? categoryOptions.find(c => c.id === selectedCategory) : null;
 
   const categoryStats = useMemo(
-    () => active ? analyzeCategoryField(trades, plField, active.extractor) : [],
-    [trades, plField, active]
+    () => active ? analyzeCategoryField(scopedTrades, plField, active.extractor) : [],
+    [scopedTrades, plField, active]
   );
 
   const categoryCombos = useMemo(
-    () => active?.isMulti ? analyzeCategoryCombinations(trades, plField, active.extractor) : [],
-    [trades, plField, active]
+    () => active?.isMulti ? analyzeCategoryCombinations(scopedTrades, plField, active.extractor) : [],
+    [scopedTrades, plField, active]
   );
 
   if (trades.length === 0) {
@@ -73,6 +79,9 @@ export default function ConfluencesPage() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-end">
+        <OverlapScopeToggle value={overlapScope} onChange={setOverlapScope} />
+      </div>
       {/* Original Confluences Section */}
       <ConfluenceTable data={confluenceStats} title="Confluences (FOR) Performance" />
       {confluenceAgainstStats.length > 0 && (
