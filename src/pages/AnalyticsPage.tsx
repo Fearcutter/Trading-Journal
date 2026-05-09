@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react';
 import { useTrades } from '../context/TradeContext';
 import { useAdvancedStats } from '../hooks/useAdvancedStats';
 import { usePLFormatter } from '../hooks/usePLFormatter';
@@ -8,11 +9,17 @@ import InstrumentComparisonChart from '../components/analytics/InstrumentCompari
 import StreakChart from '../components/analytics/StreakChart';
 import MonteCarloChart from '../components/analytics/MonteCarloChart';
 import PlanComplianceWidget from '../components/trading-plan/PlanComplianceWidget';
+import OverlapScopeToggle, { type OverlapScope } from '../components/filters/OverlapScopeToggle';
 
 export default function AnalyticsPage() {
   const { trades } = useTrades();
   const pl = usePLFormatter();
-  const stats = useAdvancedStats(trades, pl.plField);
+  const [overlapScope, setOverlapScope] = useState<OverlapScope>('exclude');
+  const overlapScopedTrades = useMemo(
+    () => overlapScope === 'exclude' ? trades.filter(t => !t.overlap) : trades,
+    [trades, overlapScope]
+  );
+  const stats = useAdvancedStats(overlapScopedTrades, pl.plField);
 
   if (trades.length === 0) {
     return (
@@ -25,7 +32,10 @@ export default function AnalyticsPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <h2 className="text-2xl font-bold text-slate-50">Advanced Analytics</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-slate-50">Advanced Analytics</h2>
+        <OverlapScopeToggle value={overlapScope} onChange={setOverlapScope} />
+      </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-4 gap-4">
@@ -63,7 +73,7 @@ export default function AnalyticsPage() {
         <InstrumentComparisonChart data={stats.performanceByInstrument} />
         <StreakChart data={stats.streaks.streaks} />
         <MonteCarloChart simulations={stats.monteCarlo.simulations} percentiles={stats.monteCarlo.percentiles} />
-        <PlanComplianceWidget trades={trades} />
+        <PlanComplianceWidget trades={overlapScopedTrades} />
       </div>
     </div>
   );
