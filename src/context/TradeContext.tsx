@@ -66,6 +66,7 @@ export function TradeProvider({ children }: { children: ReactNode }) {
       drawback2R: data.drawback2R ? Number(data.drawback2R) : undefined,
       returnedToBE: data.returnedToBE,
       afterBeOutcome: data.afterBeOutcome,
+      overlap: data.overlap,
       accountIds: data.accountIds?.length ? data.accountIds : undefined,
       sessionId: data.sessionId || undefined,
       createdAt: now,
