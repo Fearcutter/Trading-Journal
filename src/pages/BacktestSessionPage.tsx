@@ -32,6 +32,7 @@ import { useMFEMAEStats } from '../hooks/useMFEMAEStats';
 import { calculateAfterBEAnalysis } from '../utils/mfe-mae-analyzer';
 import MFEMAEPanel from '../components/analytics/MFEMAEPanel';
 import ConfluencesTab from '../components/confluences/ConfluencesTab';
+import OverlapScopeToggle, { type OverlapScope } from '../components/filters/OverlapScopeToggle';
 
 const SESSION_DOT_COLORS: Record<string, string> = {
   blue: 'bg-blue-500',
@@ -76,9 +77,14 @@ export default function BacktestSessionPage() {
   const { planState, setEnabled, setTradesPerDay } = useTradingPlanMode(sessionId!);
   const planComparison = useTradingPlanStats(sessionTrades, planState, plField);
   const activeTrades = planState.enabled && planComparison ? planComparison.planTrades : sessionTrades;
-  const dashboard = useDashboardStats(activeTrades, plField);
-  const advanced = useAdvancedStats(activeTrades, plField);
-  const mfeStats = useMFEMAEStats(activeTrades, plField);
+  const [overlapScope, setOverlapScope] = useState<OverlapScope>('exclude');
+  const overlapScopedTrades = useMemo(
+    () => overlapScope === 'exclude' ? activeTrades.filter(t => !t.overlap) : activeTrades,
+    [activeTrades, overlapScope]
+  );
+  const dashboard = useDashboardStats(overlapScopedTrades, plField);
+  const advanced = useAdvancedStats(overlapScopedTrades, plField);
+  const mfeStats = useMFEMAEStats(overlapScopedTrades, plField);
 
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState('');
@@ -157,25 +163,30 @@ export default function BacktestSessionPage() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 border-b border-slate-700 pb-px">
-        {TABS.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            onClick={() => setActiveTab(key)}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-              activeTab === key
-                ? 'bg-slate-800 text-slate-50 border border-slate-700 border-b-slate-800 -mb-px'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-            }`}
-          >
-            <Icon size={16} />
-            {label}
-          </button>
-        ))}
+      <div className="flex items-center justify-between gap-3 border-b border-slate-700 pb-px">
+        <div className="flex gap-1">
+          {TABS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+                activeTab === key
+                  ? 'bg-slate-800 text-slate-50 border border-slate-700 border-b-slate-800 -mb-px'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <Icon size={16} />
+              {label}
+            </button>
+          ))}
+        </div>
+        {activeTab !== 'tradelog' && (
+          <OverlapScopeToggle value={overlapScope} onChange={setOverlapScope} />
+        )}
       </div>
 
       {/* Tab content */}
-      {activeTab === 'dashboard' && <DashboardTab dashboard={dashboard} tradeCount={activeTrades.length} planComparison={planComparison} />}
+      {activeTab === 'dashboard' && <DashboardTab dashboard={dashboard} tradeCount={overlapScopedTrades.length} planComparison={planComparison} />}
       {activeTab === 'tradelog' && (
         <TradeLogTab
           trades={sessionTrades}
@@ -184,12 +195,12 @@ export default function BacktestSessionPage() {
           skippedTradeIds={planComparison?.skippedTradeIds}
         />
       )}
-      {activeTab === 'analytics' && <AnalyticsTab advanced={advanced} trades={activeTrades} tradeCount={activeTrades.length} planComparison={planComparison} />}
-      {activeTab === 'confluences' && <ConfluencesTab trades={activeTrades} />}
+      {activeTab === 'analytics' && <AnalyticsTab advanced={advanced} trades={overlapScopedTrades} tradeCount={overlapScopedTrades.length} planComparison={planComparison} />}
+      {activeTab === 'confluences' && <ConfluencesTab trades={overlapScopedTrades} />}
       {activeTab === 'mfe-mae' && (
-        activeTrades.length === 0
+        overlapScopedTrades.length === 0
           ? <EmptyState icon={<Target size={48} />} title="No trades yet" description="Add trades to this session to see MFE/MAE analysis." />
-          : <MFEMAEPanel trades={activeTrades} stats={mfeStats} />
+          : <MFEMAEPanel trades={overlapScopedTrades} stats={mfeStats} />
       )}
     </div>
   );
