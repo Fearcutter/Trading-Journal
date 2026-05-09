@@ -58,6 +58,16 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
         ]}
       />
       <Select
+        label="Overlap"
+        value={filters.overlap}
+        onValueChange={v => update('overlap', v as TradeFilters['overlap'])}
+        options={[
+          { value: '', label: 'All' },
+          { value: 'yes', label: 'Yes' },
+          { value: 'no', label: 'No' },
+        ]}
+      />
+      <Select
         label="Setup"
         value={filters.setupType}
         onValueChange={v => update('setupType', v)}
