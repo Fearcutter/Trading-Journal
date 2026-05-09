@@ -85,10 +85,10 @@ export default function TradeDetail({ trade }: TradeDetailProps) {
       </Card>
 
       {/* Runner Drawback */}
-      {(trade.drawback1R != null || trade.drawback2R != null || trade.returnedToBE != null) && (
+      {(trade.drawback1R != null || trade.drawback2R != null || trade.returnedToBE != null || trade.overlap != null) && (
         <Card>
           <h3 className="text-sm font-medium text-slate-300 mb-3">Runner Drawback</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <div>
               <p className="text-xs text-slate-500">Drawback from 1R</p>
               <p className="font-mono text-sm text-slate-200">
@@ -105,6 +105,12 @@ export default function TradeDetail({ trade }: TradeDetailProps) {
               <p className="text-xs text-slate-500">Returned to BE?</p>
               <p className={`text-sm font-medium ${trade.returnedToBE === true ? 'text-emerald-400' : trade.returnedToBE === false ? 'text-rose-400' : 'text-slate-500'}`}>
                 {trade.returnedToBE === true ? 'Yes' : trade.returnedToBE === false ? 'No' : '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Overlap?</p>
+              <p className={`text-sm font-medium ${trade.overlap === true ? 'text-amber-400' : trade.overlap === false ? 'text-slate-300' : 'text-slate-500'}`}>
+                {trade.overlap === true ? 'Yes' : trade.overlap === false ? 'No' : '—'}
               </p>
             </div>
           </div>
