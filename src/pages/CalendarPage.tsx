@@ -3,6 +3,7 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns
 import { useTrades } from '../context/TradeContext';
 import { useHabits } from '../context/HabitContext';
 import { useLiveSession } from '../context/LiveSessionContext';
+import OverlapScopeToggle, { type OverlapScope } from '../components/filters/OverlapScopeToggle';
 import { usePLFormatter } from '../hooks/usePLFormatter';
 import CalendarGrid from '../components/calendar/CalendarGrid';
 import DayTradesPanel from '../components/calendar/DayTradesPanel';
@@ -23,12 +24,17 @@ export default function CalendarPage() {
   }, [allTrades, liveSessions]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [overlapScope, setOverlapScope] = useState<OverlapScope>('exclude');
+  const scopedLiveTrades = useMemo(
+    () => overlapScope === 'exclude' ? liveTrades.filter(t => !t.overlap) : liveTrades,
+    [liveTrades, overlapScope]
+  );
 
   const monthTrades = useMemo(() => {
     const start = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
     const end = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
-    return liveTrades.filter(t => t.date >= start && t.date <= end);
-  }, [liveTrades, currentMonth]);
+    return scopedLiveTrades.filter(t => t.date >= start && t.date <= end);
+  }, [scopedLiveTrades, currentMonth]);
 
   const monthStats = useMemo(() => {
     const totalPL = monthTrades.reduce((sum, t) => sum + pl.getPL(t), 0);
@@ -50,10 +56,10 @@ export default function CalendarPage() {
 
   const selectedTrades = useMemo(() => {
     if (!selectedDate) return [];
-    return liveTrades.filter(t => t.date === selectedDate).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-  }, [liveTrades, selectedDate]);
+    return scopedLiveTrades.filter(t => t.date === selectedDate).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  }, [scopedLiveTrades, selectedDate]);
 
-  if (liveTrades.length === 0) {
+  if (scopedLiveTrades.length === 0) {
     return (
       <EmptyState
         icon={<Calendar size={48} />}
@@ -70,6 +76,10 @@ export default function CalendarPage() {
 
   return (
     <div className="space-y-4">
+      {/* Scope toggle */}
+      <div className="flex items-center justify-end">
+        <OverlapScopeToggle value={overlapScope} onChange={setOverlapScope} />
+      </div>
       {/* Month navigation */}
       <div className="flex items-center justify-between">
         <button
@@ -111,7 +121,7 @@ export default function CalendarPage() {
         <div className="flex-1 min-w-0">
           <CalendarGrid
             currentMonth={currentMonth}
-            trades={liveTrades}
+            trades={scopedLiveTrades}
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
             habitCheckIns={habitCheckIns}
