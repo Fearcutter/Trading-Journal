@@ -47,6 +47,7 @@ export default function TradeDetailPage() {
       drawback1R: data.drawback1R === '' ? undefined : data.drawback1R,
       drawback2R: data.drawback2R === '' ? undefined : data.drawback2R,
       returnedToBE: data.returnedToBE,
+      overlap: data.overlap,
       accountIds: data.accountIds,
       additionalScreenshots: data.additionalScreenshots?.length ? data.additionalScreenshots : undefined,
     });
@@ -115,6 +116,7 @@ export default function TradeDetailPage() {
             drawback1R: trade.drawback1R ?? '',
             drawback2R: trade.drawback2R ?? '',
             returnedToBE: trade.returnedToBE,
+            overlap: trade.overlap,
             sessionId: trade.sessionId,
             customFields: trade.customFields,
             accountIds: trade.accountIds,
