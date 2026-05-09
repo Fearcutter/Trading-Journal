@@ -8,6 +8,7 @@ import type { TradeFilters } from '../hooks/useFilteredTrades';
 import { useDashboardStats } from '../hooks/useDashboardStats';
 import { usePLFormatter } from '../hooks/usePLFormatter';
 import FilterBar from '../components/filters/FilterBar';
+import OverlapScopeToggle, { type OverlapScope } from '../components/filters/OverlapScopeToggle';
 import StatsBar from '../components/dashboard/StatsBar';
 import CumulativePLChart from '../components/dashboard/CumulativePLChart';
 import DailyPLChart from '../components/dashboard/DailyPLChart';
@@ -32,12 +33,16 @@ export default function DashboardPage() {
   const { dashboardWidgets } = useSettings();
   const [filters, setFilters] = useState<TradeFilters>(defaultFilters);
   const [tradeScope, setTradeScope] = useState<'live' | 'all'>('live');
+  const [overlapScope, setOverlapScope] = useState<OverlapScope>('exclude');
   const [customizerOpen, setCustomizerOpen] = useState(false);
   const liveSessionIds = new Set(liveSessions.map(s => s.id));
   const scopedTrades = tradeScope === 'live'
     ? trades.filter(t => !t.sessionId || liveSessionIds.has(t.sessionId))
     : trades;
-  const filtered = useFilteredTrades(scopedTrades, filters);
+  const overlapScopedTrades = overlapScope === 'exclude'
+    ? scopedTrades.filter(t => !t.overlap)
+    : scopedTrades;
+  const filtered = useFilteredTrades(overlapScopedTrades, filters);
   const { plField } = usePLFormatter();
   const dashboard = useDashboardStats(filtered, plField);
 
@@ -78,6 +83,9 @@ export default function DashboardPage() {
           >
             All
           </button>
+          <div className="ml-2 pl-2 border-l border-slate-700">
+            <OverlapScopeToggle value={overlapScope} onChange={setOverlapScope} />
+          </div>
         </div>
         <button
           onClick={() => setCustomizerOpen(true)}
