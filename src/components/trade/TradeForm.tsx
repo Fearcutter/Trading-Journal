@@ -52,6 +52,7 @@ function getDefaultFormData(settings: { defaultInstrument: string; defaultContra
     drawback2R: '',
     returnedToBE: undefined,
     afterBeOutcome: undefined,
+    overlap: undefined,
   };
 }
 
@@ -211,7 +212,7 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
       </div>
 
       {/* Runner Drawback Tracking (Optional) */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <Input label="Drawback from 1R (pts)" type="number" step="any" mono value={form.drawback1R} onChange={e => update('drawback1R', e.target.value === '' ? '' : Number(e.target.value))} placeholder="Max pullback after reaching 1R" />
         <Input label="Drawback from 2R (pts)" type="number" step="any" mono value={form.drawback2R} onChange={e => update('drawback2R', e.target.value === '' ? '' : Number(e.target.value))} placeholder="Max pullback after reaching 2R" />
         <div className="space-y-1">
@@ -245,6 +246,33 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
               className={`px-3 py-2 text-sm font-medium transition-colors ${
                 form.returnedToBE === false
                   ? 'bg-rose-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              No
+            </button>
+          </div>
+        </div>
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-slate-300">Overlap?</label>
+          <div className="inline-flex rounded-lg border border-slate-600 overflow-hidden mt-1">
+            <button
+              type="button"
+              onClick={() => update('overlap', form.overlap === true ? undefined : true)}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${
+                form.overlap === true
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Yes
+            </button>
+            <button
+              type="button"
+              onClick={() => update('overlap', form.overlap === false ? undefined : false)}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${
+                form.overlap === false
+                  ? 'bg-slate-600 text-white'
                   : 'bg-slate-800 text-slate-400 hover:text-slate-200'
               }`}
             >
