@@ -45,6 +45,11 @@ export default function TradeRow({ trade, selected, onSelect, hiddenColumns, ski
       </td>
       <td className="px-3 py-3">
         <span className="font-mono text-sm font-medium text-slate-200">{trade.instrument}</span>
+        {trade.overlap === true && (
+          <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-400/15 text-amber-300 border border-amber-700/40">
+            Overlap
+          </span>
+        )}
       </td>
       <td className="px-3 py-3">
         <Badge variant={trade.direction === 'long' ? 'long' : 'short'}>
