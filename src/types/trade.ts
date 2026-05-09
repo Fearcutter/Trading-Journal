@@ -36,6 +36,7 @@ export interface Trade {
   drawback2R?: number;
   returnedToBE?: boolean;
   afterBeOutcome?: 'hit_sl' | 'reversed_to_tp';
+  overlap?: boolean;
   customFields?: Record<string, string[]>;
   accountIds?: string[];
   sessionId?: string;
@@ -73,6 +74,7 @@ export interface TradeFormData {
   drawback2R?: number | '';
   returnedToBE?: boolean;
   afterBeOutcome?: 'hit_sl' | 'reversed_to_tp';
+  overlap?: boolean;
   customFields?: Record<string, string[]>;
   accountIds?: string[];
   pointsPL?: number;
