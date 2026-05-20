@@ -454,7 +454,7 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
       )}
 
       {/* Filter bar + search */}
-      <FilterBar filters={filters} onChange={setFilters} />
+      <FilterBar filters={filters} onChange={setFilters} hideAccountFilter />
       <div className="relative max-w-xs">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
         <input
