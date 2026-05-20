@@ -13,6 +13,7 @@ export interface TradeFilters {
   rMultiple: RMultipleFilter;
   search: string;
   overlap: '' | 'yes' | 'no';
+  accountIds: string[];
   sessionId?: string;
 }
 
@@ -26,6 +27,7 @@ export const defaultFilters: TradeFilters = {
   rMultiple: '',
   search: '',
   overlap: '',
+  accountIds: [],
 };
 
 export function useFilteredTrades(trades: Trade[], filters: TradeFilters): Trade[] {
@@ -47,6 +49,10 @@ export function useFilteredTrades(trades: Trade[], filters: TradeFilters): Trade
       if (filters.result && trade.result !== filters.result) return false;
       if (filters.overlap === 'yes' && trade.overlap !== true) return false;
       if (filters.overlap === 'no' && trade.overlap === true) return false;
+      if (filters.accountIds.length > 0) {
+        if (!trade.accountIds || trade.accountIds.length === 0) return false;
+        if (!trade.accountIds.some(id => filters.accountIds.includes(id))) return false;
+      }
       if (filters.setupType && trade.setupType !== filters.setupType) return false;
       if (filters.rMultiple) {
         const stopDistance = Math.abs(trade.entry - trade.stopLoss);
