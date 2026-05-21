@@ -34,6 +34,7 @@ import { useMFEMAEStats } from '../hooks/useMFEMAEStats';
 import { calculateAfterBEAnalysis } from '../utils/mfe-mae-analyzer';
 import MFEMAEPanel from '../components/analytics/MFEMAEPanel';
 import OverlapScopeToggle, { type OverlapScope } from '../components/filters/OverlapScopeToggle';
+import MultiSelect, { type MultiSelectOption } from '../components/ui/MultiSelect';
 import ConfluencesTab from '../components/confluences/ConfluencesTab';
 
 const SESSION_DOT_COLORS: Record<string, string> = {
@@ -81,13 +82,36 @@ export default function LiveTradingSessionPage() {
   const planComparison = useTradingPlanStats(sessionTrades, planState, plField);
   const activeTrades = planState.enabled && planComparison ? planComparison.planTrades : sessionTrades;
   const [overlapScope, setOverlapScope] = useState<OverlapScope>('exclude');
+  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
   const overlapScopedTrades = useMemo(
     () => overlapScope === 'exclude' ? activeTrades.filter(t => !t.overlap) : activeTrades,
     [activeTrades, overlapScope]
   );
-  const dashboard = useDashboardStats(overlapScopedTrades, plField);
-  const advanced = useAdvancedStats(overlapScopedTrades, plField);
-  const mfeStats = useMFEMAEStats(overlapScopedTrades, plField);
+  const accountScopedTrades = useMemo(() => {
+    if (selectedAccountIds.length === 0) return overlapScopedTrades;
+    return overlapScopedTrades.filter(t =>
+      t.accountIds?.some(id => selectedAccountIds.includes(id))
+    );
+  }, [overlapScopedTrades, selectedAccountIds]);
+  const accountOptions: MultiSelectOption[] = useMemo(() => {
+    const STATUS_ORDER: Record<string, number> = { active: 0, blown: 1, completed: 2 };
+    const formatSize = (n: number) => (n >= 1000 ? `${n / 1000}K` : String(n));
+    return [...accounts]
+      .sort((a, b) => {
+        const sa = STATUS_ORDER[a.status] ?? 99;
+        const sb = STATUS_ORDER[b.status] ?? 99;
+        if (sa !== sb) return sa - sb;
+        return a.label.localeCompare(b.label);
+      })
+      .map(a => ({
+        value: a.id,
+        label: `${formatSize(a.accountSize)} ${a.label}`,
+        sublabel: a.status === 'active' ? undefined : `(${a.status})`,
+      }));
+  }, [accounts]);
+  const dashboard = useDashboardStats(accountScopedTrades, plField);
+  const advanced = useAdvancedStats(accountScopedTrades, plField);
+  const mfeStats = useMFEMAEStats(accountScopedTrades, plField);
 
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState('');
@@ -196,12 +220,22 @@ export default function LiveTradingSessionPage() {
           ))}
         </div>
         {activeTab !== 'tradelog' && (
-          <OverlapScopeToggle value={overlapScope} onChange={setOverlapScope} />
+          <div className="flex items-center gap-3">
+            {accountOptions.length > 0 && (
+              <MultiSelect
+                value={selectedAccountIds}
+                onChange={setSelectedAccountIds}
+                options={accountOptions}
+                placeholder="All accounts"
+              />
+            )}
+            <OverlapScopeToggle value={overlapScope} onChange={setOverlapScope} />
+          </div>
         )}
       </div>
 
       {/* Tab content */}
-      {activeTab === 'dashboard' && <DashboardTab dashboard={dashboard} tradeCount={overlapScopedTrades.length} planComparison={planComparison} />}
+      {activeTab === 'dashboard' && <DashboardTab dashboard={dashboard} tradeCount={accountScopedTrades.length} planComparison={planComparison} />}
       {activeTab === 'tradelog' && (
         <TradeLogTab
           sessionTrades={sessionTrades}
@@ -210,12 +244,12 @@ export default function LiveTradingSessionPage() {
           skippedTradeIds={planComparison?.skippedTradeIds}
         />
       )}
-      {activeTab === 'analytics' && <AnalyticsTab advanced={advanced} trades={overlapScopedTrades} tradeCount={overlapScopedTrades.length} planComparison={planComparison} />}
-      {activeTab === 'confluences' && <ConfluencesTab trades={overlapScopedTrades} />}
+      {activeTab === 'analytics' && <AnalyticsTab advanced={advanced} trades={accountScopedTrades} tradeCount={accountScopedTrades.length} planComparison={planComparison} />}
+      {activeTab === 'confluences' && <ConfluencesTab trades={accountScopedTrades} />}
       {activeTab === 'mfe-mae' && (
-        overlapScopedTrades.length === 0
+        accountScopedTrades.length === 0
           ? <EmptyState icon={<Target size={48} />} title="No trades yet" description="Add trades to this session to see MFE/MAE analysis." />
-          : <MFEMAEPanel trades={overlapScopedTrades} stats={mfeStats} />
+          : <MFEMAEPanel trades={accountScopedTrades} stats={mfeStats} />
       )}
     </div>
   );
