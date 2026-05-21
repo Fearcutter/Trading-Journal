@@ -257,6 +257,8 @@ export default function LiveTradingSessionPage() {
 
 function DashboardTab({ dashboard, tradeCount, planComparison }: { dashboard: ReturnType<typeof useDashboardStats>; tradeCount: number; planComparison?: TradingPlanComparison | null }) {
   const pl = usePLFormatter();
+  const [visibleRLines, setVisibleRLines] = useState<Record<string, boolean>>({ loss: true, r1: true, r1_5: true, r2: true, r2_5: true, r3: true, r4plus: true });
+  const toggleRLine = (key: string) => setVisibleRLines(prev => ({ ...prev, [key]: !prev[key] }));
 
   if (tradeCount === 0) {
     return <EmptyState icon={<BarChart3 size={48} />} title="No trades yet" description="Add trades to see statistics." />;
@@ -266,9 +268,6 @@ function DashboardTab({ dashboard, tradeCount, planComparison }: { dashboard: Re
 
   const R_COLORS = { loss: '#f87171', r1: '#fbbf24', r1_5: '#fb923c', r2: '#a78bfa', r2_5: '#38bdf8', r3: '#34d399', r4plus: '#86efac' } as const;
   const R_TEXT_COLORS = { loss: 'text-rose-400', r1: 'text-amber-400', r1_5: 'text-orange-400', r2: 'text-violet-400', r2_5: 'text-sky-400', r3: 'text-emerald-400', r4plus: 'text-green-300' } as const;
-  const [visibleRLines, setVisibleRLines] = useState<Record<string, boolean>>({ loss: true, r1: true, r1_5: true, r2: true, r2_5: true, r3: true, r4plus: true });
-
-  const toggleRLine = (key: string) => setVisibleRLines(prev => ({ ...prev, [key]: !prev[key] }));
 
   return (
     <div className="space-y-4">
