@@ -75,17 +75,20 @@ export default function TradeRow({ trade, selected, onSelect, hiddenColumns, ski
             const exitR = trade.pointsPL / stopDist;
             const mfeR = trade.mfe != null ? trade.mfe / stopDist : null;
             const reached1R = (mfeR != null && mfeR >= 1) || exitR >= 1 || trade.returnedToBE === true;
-            if (!reached1R) return <span className="text-slate-500">—</span>;
+            const isLoss = trade.result === 'loss';
+            if (!reached1R && !isLoss) return <span className="text-slate-500">—</span>;
+            const colorCls = isLoss ? 'text-rose-400' : 'text-emerald-400';
+            const formatStop = stopDist % 1 === 0 ? stopDist.toFixed(0) : stopDist.toFixed(2);
             if (plDisplayMode === 'r') {
-              return <span className="font-mono font-medium text-emerald-400">+1R</span>;
+              return <span className={`font-mono font-medium ${colorCls}`}>{isLoss ? '-1R' : '+1R'}</span>;
             }
             if (plDisplayMode === 'points') {
-              return <span className="font-mono font-medium text-emerald-400">{stopDist % 1 === 0 ? stopDist.toFixed(0) : stopDist.toFixed(2)} pts</span>;
+              return <span className={`font-mono font-medium ${colorCls}`}>{isLoss ? '-' : ''}{formatStop} pts</span>;
             }
             const instrument = instruments.find(i => i.symbol === trade.instrument);
-            if (!instrument) return <span className="font-mono font-medium text-emerald-400">{stopDist % 1 === 0 ? stopDist.toFixed(0) : stopDist.toFixed(2)} pts</span>;
+            if (!instrument) return <span className={`font-mono font-medium ${colorCls}`}>{isLoss ? '-' : ''}{formatStop} pts</span>;
             const oneRDollar = stopDist * instrument.pointValue * trade.contracts;
-            return <span className="font-mono font-medium text-emerald-400">{formatCurrency(oneRDollar)}</span>;
+            return <span className={`font-mono font-medium ${colorCls}`}>{formatCurrency(isLoss ? -oneRDollar : oneRDollar)}</span>;
           })()}
         </td>
       )}
