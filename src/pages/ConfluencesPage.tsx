@@ -10,6 +10,7 @@ import EmptyState from '../components/ui/EmptyState';
 import Button from '../components/ui/Button';
 import { Layers, PlusCircle } from 'lucide-react';
 import OverlapScopeToggle, { type OverlapScope } from '../components/filters/OverlapScopeToggle';
+import IFVGStopMethodSection from '../components/confluences/IFVGStopMethodSection';
 
 type CategoryOption = {
   id: string;
@@ -119,6 +120,8 @@ export default function ConfluencesPage() {
           )}
         </>
       )}
+
+      <IFVGStopMethodSection trades={scopedTrades} />
     </div>
   );
 }
