@@ -5,7 +5,7 @@ export function exportTradesToCSV(trades: Trade[], customCategories: CustomCateg
   const headers = [
     'Date', 'Time', 'Instrument', 'Direction', 'Entry', 'Stop Loss',
     'Take Profit', 'Exit Price', 'Contracts', 'Result', 'Points P&L',
-    'Dollar P&L', 'R:R', 'MAE', 'MFE', 'Drawback from 1R', 'Drawback from 2R',
+    'Dollar P&L', 'R:R', 'MAE', 'MFE', 'Drawback from 1R', 'Drawback from 2R', 'iFVG Size',
     'Overlap',
     'Setup Type', 'Confluences', 'Confluences Against', 'Emotion Before',
     'Emotion After', 'Grade', 'Pre-Trade Notes', 'Post-Trade Notes', 'Tags',
@@ -31,6 +31,7 @@ export function exportTradesToCSV(trades: Trade[], customCategories: CustomCateg
       t.mfe ?? '',
       t.drawback1R ?? '',
       t.drawback2R ?? '',
+      t.ifvgSize ?? '',
       t.overlap === true ? 'Yes' : '',
       t.setupType,
       t.confluences.join('; '),

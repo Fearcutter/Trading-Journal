@@ -46,6 +46,7 @@ function getDefaultFormData(settings: { defaultInstrument: string; defaultContra
     additionalScreenshots: [],
     tags: [],
     customFields: {},
+    ifvgSize: '',
     mae: '',
     mfe: '',
     drawback1R: '',
@@ -115,6 +116,7 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
       pointsPL: computed?.pointsPL ?? 0,
       dollarPL: computed?.dollarPL ?? 0,
       riskReward: computed?.rr ?? 0,
+      ifvgSize: form.ifvgSize === '' ? undefined : Number(form.ifvgSize),
       mae: form.mae === '' ? undefined : Number(form.mae),
       mfe: form.mfe === '' ? undefined : Number(form.mfe),
       drawback1R: form.drawback1R === '' ? undefined : Number(form.drawback1R),
@@ -203,6 +205,11 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
         <Input label="Stop Loss" type="number" step="any" mono value={form.stopLoss} onChange={e => update('stopLoss', e.target.value === '' ? '' : Number(e.target.value))} />
         <Input label="Take Profit" type="number" step="any" mono value={form.takeProfit} onChange={e => update('takeProfit', e.target.value === '' ? '' : Number(e.target.value))} />
         <Input label="Exit Price" type="number" step="any" mono value={form.exitPrice} onChange={e => update('exitPrice', e.target.value === '' ? '' : Number(e.target.value))} />
+      </div>
+
+      {/* iFVG Size (Optional) */}
+      <div className="grid grid-cols-4 gap-4">
+        <Input label="iFVG Size (pts)" type="number" step="any" mono value={form.ifvgSize} onChange={e => update('ifvgSize', e.target.value === '' ? '' : Number(e.target.value))} placeholder="Size of the iFVG entered off" />
       </div>
 
       {/* Excursion Tracking (Optional) */}

@@ -30,6 +30,7 @@ export interface Trade {
   resultScreenshot: string; // base64
   additionalScreenshots?: string[]; // base64 array
   tags: string[];
+  ifvgSize?: number;
   mae?: number;
   mfe?: number;
   drawback1R?: number;
@@ -68,6 +69,7 @@ export interface TradeFormData {
   additionalScreenshots?: string[];
 
   tags: string[];
+  ifvgSize?: number | '';
   mae?: number | '';
   mfe?: number | '';
   drawback1R?: number | '';

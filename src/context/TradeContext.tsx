@@ -60,6 +60,7 @@ export function TradeProvider({ children }: { children: ReactNode }) {
       additionalScreenshots: data.additionalScreenshots?.length ? data.additionalScreenshots : undefined,
       tags: data.tags,
       customFields: data.customFields || {},
+      ifvgSize: data.ifvgSize ? Number(data.ifvgSize) : undefined,
       mae: data.mae ? Number(data.mae) : undefined,
       mfe: data.mfe ? Number(data.mfe) : undefined,
       drawback1R: data.drawback1R ? Number(data.drawback1R) : undefined,

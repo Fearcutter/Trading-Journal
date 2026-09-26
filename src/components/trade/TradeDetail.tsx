@@ -132,6 +132,12 @@ export default function TradeDetail({ trade }: TradeDetailProps) {
               <p className="text-sm font-medium text-slate-200">{trade.grade}</p>
             </div>
           )}
+          {trade.ifvgSize != null && (
+            <div className="mt-2">
+              <p className="text-xs text-slate-500">iFVG Size</p>
+              <p className="font-mono text-sm text-slate-200">{trade.ifvgSize.toFixed(2)} pts</p>
+            </div>
+          )}
         </Card>
         <Card>
           <h3 className="text-sm font-medium text-slate-300 mb-3">Confluences</h3>
