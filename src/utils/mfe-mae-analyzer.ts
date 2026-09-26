@@ -1,9 +1,6 @@
 import type { Trade } from '../types/trade';
 import { getTradeValue, type PLField } from './pl-helpers';
-
-function getStopDistance(trade: Trade): number {
-  return Math.abs(trade.entry - trade.stopLoss);
-}
+import { getStopDistance } from './r-multiple';
 
 export function calculateMFEMAEAverages(trades: Trade[]) {
   const withData = trades.filter(t => t.mae != null && t.mfe != null);
