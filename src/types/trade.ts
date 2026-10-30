@@ -7,6 +7,7 @@ export interface Trade {
   id: string;
   date: string; // ISO date string
   time: string; // HH:mm format
+  exitTime?: string; // HH:mm, same timezone as time
   instrument: string; // e.g., 'NQ'
   direction: TradeDirection;
   entry: number;
@@ -48,6 +49,7 @@ export interface Trade {
 export interface TradeFormData {
   date: string;
   time: string;
+  exitTime?: string;
   instrument: string;
   direction: TradeDirection;
   entry: number | '';

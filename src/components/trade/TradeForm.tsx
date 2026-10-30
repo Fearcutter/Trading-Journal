@@ -26,6 +26,7 @@ function getDefaultFormData(settings: { defaultInstrument: string; defaultContra
   return {
     date: now.date,
     time: now.time,
+    exitTime: '',
     instrument: settings.defaultInstrument,
     direction: 'long',
     entry: '',
@@ -159,9 +160,10 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
       {/* Date/Time/Instrument */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-5 gap-4">
         <Input label="Date" type="date" value={form.date} onChange={e => update('date', e.target.value)} />
         <Input label="Time" type="time" value={form.time} onChange={e => update('time', e.target.value)} />
+        <Input label="Exit time" type="time" value={form.exitTime ?? ''} onChange={e => update('exitTime', e.target.value)} />
         <Select label="Instrument" value={form.instrument} onValueChange={v => update('instrument', v)} options={instrumentOptions} />
         <Input
           label="Contracts"

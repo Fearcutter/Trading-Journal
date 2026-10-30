@@ -12,6 +12,7 @@ import MonteCarloChart from '../components/analytics/MonteCarloChart';
 import PlanComplianceWidget from '../components/trading-plan/PlanComplianceWidget';
 import OverlapScopeToggle, { type OverlapScope } from '../components/filters/OverlapScopeToggle';
 import MultiSelect, { type MultiSelectOption } from '../components/ui/MultiSelect';
+import TimingSection from '../components/analytics/TimingSection';
 
 export default function AnalyticsPage() {
   const { trades } = useTrades();
@@ -116,6 +117,8 @@ export default function AnalyticsPage() {
         <MonteCarloChart simulations={stats.monteCarlo.simulations} percentiles={stats.monteCarlo.percentiles} />
         <PlanComplianceWidget trades={accountScopedTrades} />
       </div>
+
+      <TimingSection trades={accountScopedTrades} />
     </div>
   );
 }

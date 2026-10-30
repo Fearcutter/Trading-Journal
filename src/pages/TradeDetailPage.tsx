@@ -47,6 +47,7 @@ export default function TradeDetailPage() {
   const handleUpdate = (data: TradeFormData) => {
     updateTrade(trade.id, {
       ...data,
+      exitTime: data.exitTime || undefined,
       entry: Number(data.entry),
       stopLoss: Number(data.stopLoss),
       takeProfit: Number(data.takeProfit),
@@ -104,6 +105,7 @@ export default function TradeDetailPage() {
           initialData={{
             date: trade.date,
             time: trade.time,
+            exitTime: trade.exitTime ?? '',
             instrument: trade.instrument,
             direction: trade.direction,
             entry: trade.entry,

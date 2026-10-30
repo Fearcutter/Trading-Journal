@@ -13,6 +13,7 @@ export interface ParsedTradeData {
   result: 'win' | 'loss' | 'breakeven';
   date?: string;  // yyyy-MM-dd
   time?: string;  // HH:mm
+  exitTime?: string;  // HH:mm — the drawing's right edge (close line)
 }
 
 /**
@@ -86,6 +87,13 @@ export function parseTradingViewHTML(html: string, instruments?: Instrument[], t
       time = converted.time;
     }
 
+    // Exit time from the close line's timestamp (the box's right edge), if it's after entry
+    let exitTime: string | undefined;
+    const exitT = points?.[3]?.time_t;
+    if (typeof timeT === 'number' && typeof exitT === 'number' && exitT > timeT) {
+      exitTime = unixToTimezone(exitT, timezone || 'America/New_York').time;
+    }
+
     // Derive SL/TP from tick-based calculation: entry ± level × tickSize
     let stopLoss = 0;
     let takeProfit = 0;
@@ -124,6 +132,7 @@ export function parseTradingViewHTML(html: string, instruments?: Instrument[], t
       result,
       date,
       time,
+      exitTime,
     };
   } catch {
     return null;

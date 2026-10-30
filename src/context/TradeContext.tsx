@@ -36,6 +36,7 @@ export function TradeProvider({ children }: { children: ReactNode }) {
       id: uuidv4(),
       date: data.date,
       time: data.time,
+      exitTime: data.exitTime || undefined,
       instrument: data.instrument,
       direction: data.direction,
       entry: Number(data.entry),

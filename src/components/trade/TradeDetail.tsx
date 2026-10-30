@@ -8,6 +8,7 @@ import Card from '../ui/Card';
 import { formatDate, formatTime } from '../../utils/formatters';
 import { usePLFormatter, getTradeRMultiple } from '../../hooks/usePLFormatter';
 import { splitCustomFields } from '../../utils/custom-field-groups';
+import { tradeDurationMinutes, formatDuration } from '../../utils/trade-timing';
 
 interface TradeDetailProps {
   trade: Trade;
@@ -49,6 +50,12 @@ export default function TradeDetail({ trade }: TradeDetailProps) {
           <p className="text-sm font-medium text-slate-200">
             {formatDate(trade.date)} {trade.time && formatTime(trade.time)}
           </p>
+          {tradeDurationMinutes(trade) !== null && (
+            <p className="text-xs text-slate-400 mt-1">
+              Held: <span className="font-mono text-slate-200">{formatDuration(tradeDurationMinutes(trade)!)}</span>
+              {trade.exitTime && <span className="text-slate-500"> (out {formatTime(trade.exitTime)})</span>}
+            </p>
+          )}
         </Card>
         <Card>
           <p className="text-xs text-slate-500 mb-1">Entry / Exit</p>

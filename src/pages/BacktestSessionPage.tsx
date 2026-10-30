@@ -542,6 +542,7 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
           result: data.result,
           date: data.date || '',
           time: data.time || '',
+          exitTime: data.exitTime || '',
         });
         setShowAddForm(true);
       }} />

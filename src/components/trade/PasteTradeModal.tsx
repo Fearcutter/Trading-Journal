@@ -227,6 +227,12 @@ export default function PasteTradeModal({ open, onOpenChange, sessionId, onParse
                     <span className="font-mono text-slate-200">{parsed.time}</span>
                   </div>
                 )}
+                {parsed.exitTime && (
+                  <div>
+                    <span className="text-slate-500">Exit time:</span>{' '}
+                    <span className="font-mono text-slate-200">{parsed.exitTime}</span>
+                  </div>
+                )}
               </div>
             </div>
             <Button onClick={handleContinue} className="w-full">
