@@ -230,6 +230,15 @@ function CategorySectionsManager({ settings }: { settings: ReturnType<typeof use
             <Trash2 size={14} />
           </button>
         </div>
+        <label className="flex items-center gap-2 mb-3 text-sm text-slate-400 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={!!cat.showUnderConfluences}
+            onChange={e => settings.updateCustomCategory(cat.id, { showUnderConfluences: e.target.checked })}
+            className="rounded border-slate-600 bg-slate-800"
+          />
+          Show under Confluences on the trade page
+        </label>
         <ListManager
           title="Options"
           items={cat.options}

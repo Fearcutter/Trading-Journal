@@ -4,6 +4,8 @@ export interface CustomCategory {
   id: string;
   name: string;
   options: string[];
+  /** Shown inside the Confluences box on the trade page instead of under Custom Fields. */
+  showUnderConfluences?: boolean;
 }
 
 export interface DashboardWidgetConfig {

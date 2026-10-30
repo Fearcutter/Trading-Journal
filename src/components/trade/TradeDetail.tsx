@@ -7,6 +7,7 @@ import Badge from '../ui/Badge';
 import Card from '../ui/Card';
 import { formatDate, formatTime } from '../../utils/formatters';
 import { usePLFormatter, getTradeRMultiple } from '../../hooks/usePLFormatter';
+import { splitCustomFields } from '../../utils/custom-field-groups';
 
 interface TradeDetailProps {
   trade: Trade;
@@ -16,6 +17,10 @@ export default function TradeDetail({ trade }: TradeDetailProps) {
   const pl = usePLFormatter();
   const settings = useSettings();
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const customGroups = splitCustomFields(settings.customCategories, settings.categorySectionOrder);
+  const filled = (id: string) => (trade.customFields?.[id] ?? []).length > 0;
+  const confluenceFields = customGroups.underConfluences.filter(c => filled(c.id));
+  const otherFields = customGroups.other.filter(c => filled(c.id));
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -161,20 +166,29 @@ export default function TradeDetail({ trade }: TradeDetailProps) {
               </div>
             </div>
           )}
-          {trade.confluences.length === 0 && (trade.confluencesAgainst ?? []).length === 0 && (
+          {confluenceFields.map(cat => (
+            <div key={cat.id} className="mt-2">
+              <p className="text-xs text-slate-500 mb-1 uppercase">{cat.name}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {trade.customFields![cat.id].map(v => (
+                  <span key={v} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-900/40 text-blue-300 border border-blue-700/50">{v}</span>
+                ))}
+              </div>
+            </div>
+          ))}
+          {trade.confluences.length === 0 && (trade.confluencesAgainst ?? []).length === 0 && confluenceFields.length === 0 && (
             <p className="text-sm text-slate-500">None selected</p>
           )}
         </Card>
       </div>
 
       {/* Custom Fields */}
-      {trade.customFields && Object.keys(trade.customFields).length > 0 && (settings.customCategories || []).length > 0 && (
+      {otherFields.length > 0 && (
         <Card>
           <h3 className="text-sm font-medium text-slate-300 mb-3">Custom Fields</h3>
           <div className="grid grid-cols-2 gap-4">
-            {(settings.customCategories || []).map(cat => {
-              const value = trade.customFields?.[cat.id];
-              if (!value || value.length === 0) return null;
+            {otherFields.map(cat => {
+              const value = trade.customFields![cat.id];
               return (
                 <div key={cat.id}>
                   <p className="text-xs text-slate-500 mb-1">{cat.name}</p>
