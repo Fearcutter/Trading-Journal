@@ -144,6 +144,26 @@ export function analyzeCombos(trades: Trade[], forOf: LabelsOf, plField: PLField
     .sort((a, b) => b.winRate - a.winRate);
 }
 
+/**
+ * Grid of the `limit` most-used FOR confluences: grid[i][j] is trades that had both names[i] and names[j]
+ * (null on the diagonal). totalNames is how many confluences there are before the limit.
+ */
+export function analyzePairGrid(trades: Trade[], forOf: LabelsOf, plField: PLField, limit = 8) {
+  const usage = new Map<string, number>();
+  const labelSets = trades.map(t => new Set(forOf(t)));
+  for (const set of labelSets) for (const name of set) usage.set(name, (usage.get(name) ?? 0) + 1);
+  const ranked = [...usage.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+  const names = ranked.slice(0, limit);
+  const grid: (Summary | null)[][] = names.map(() => names.map(() => null));
+  for (let i = 0; i < names.length; i++) {
+    for (let j = i + 1; j < names.length; j++) {
+      const both = trades.filter((_, k) => labelSets[k].has(names[i]) && labelSets[k].has(names[j]));
+      grid[i][j] = grid[j][i] = summarize(both, plField);
+    }
+  }
+  return { names, grid, totalNames: ranked.length };
+}
+
 /** Live = no session or a live session (same as the Dashboard). Backtest = a current backtest session. */
 export function scopeTrades(trades: Trade[], scope: TradeScope, liveSessionIds: Set<string>, backtestSessionIds: Set<string>): Trade[] {
   if (scope === 'live') return trades.filter(t => !t.sessionId || liveSessionIds.has(t.sessionId));

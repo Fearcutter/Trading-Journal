@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useSettings } from '../../context/SettingsContext';
 import { analyzeCategoryField, analyzeCategoryCombinations, categoryExtractors } from '../../utils/confluence-analyzer';
-import { confluenceLists, analyzeEdge, analyzeForCount, analyzeNetScore, analyzeAgainstCost, analyzeCombos } from '../../utils/confluence-insights';
-import EdgeTable from './EdgeTable';
-import StackingTable from './StackingTable';
+import { confluenceLists, analyzeEdge, analyzeForCount, analyzeNetScore, analyzeAgainstCost, analyzeCombos, analyzePairGrid } from '../../utils/confluence-insights';
+import EdgeBars from './EdgeBars';
+import StackingColumns from './StackingColumns';
 import AgainstCost from './AgainstCost';
+import ComboHeatmap from './ComboHeatmap';
 import { usePLFormatter } from '../../hooks/usePLFormatter';
 import ConfluenceTable from './ConfluenceTable';
 import CombinationAnalysis from './CombinationAnalysis';
@@ -34,8 +35,9 @@ export default function ConfluencesTab({ trades }: { trades: Trade[] }) {
   const forCount = useMemo(() => analyzeForCount(trades, forOf, plField), [trades, forOf, plField]);
   const netScore = useMemo(() => analyzeNetScore(trades, forOf, againstOf, plField), [trades, forOf, againstOf, plField]);
   const againstCost = useMemo(() => analyzeAgainstCost(trades, againstOf, plField), [trades, againstOf, plField]);
-  const combos3 = useMemo(() => analyzeCombos(trades, forOf, plField, 3), [trades, forOf, plField]);
-  const combos2 = useMemo(() => analyzeCombos(trades, forOf, plField, 2).filter(c => c.count < 3), [trades, forOf, plField]);
+  const combos = useMemo(() => analyzeCombos(trades, forOf, plField, 3), [trades, forOf, plField]);
+  const pairGridTop = useMemo(() => analyzePairGrid(trades, forOf, plField, 8), [trades, forOf, plField]);
+  const pairGridAll = useMemo(() => analyzePairGrid(trades, forOf, plField, Infinity), [trades, forOf, plField]);
 
   const categoryOptions: CategoryOption[] = useMemo(() => {
     const builtIn: CategoryOption[] = [
@@ -75,25 +77,24 @@ export default function ConfluencesTab({ trades }: { trades: Trade[] }) {
 
   return (
     <div className="space-y-6">
-      <EdgeTable
+      <EdgeBars
         data={forEdge}
-        title="Confluences (FOR): do they give me an edge?"
-        subtitle="Trades with each confluence vs trades without it. Edge = R per trade with it minus without it."
+        title="Confluences (FOR): which ones give me an edge?"
+        subtitle="Edge = R per trade with the confluence minus R per trade without it. Green helps, red hurts."
       />
       {againstEdge.length > 0 && (
-        <EdgeTable
+        <EdgeBars
           data={againstEdge}
           title="Confluences (AGAINST)"
-          subtitle="A negative edge means trades with this warning did worse than trades without it."
+          subtitle="Red = trades with this warning did worse than trades without it."
         />
       )}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <StackingTable rows={forCount} title="Does stacking help?" subtitle="Results by number of FOR confluences" labelHeader="FOR count" />
-        <StackingTable rows={netScore} title="Net confluence score" subtitle="FOR count minus AGAINST count" labelHeader="Net score" />
+        <StackingColumns rows={forCount} title="Does stacking help?" subtitle="R per trade by number of FOR confluences" labelHeader="FOR count" />
+        <StackingColumns rows={netScore} title="Net confluence score" subtitle="R per trade by FOR count minus AGAINST count" labelHeader="Net score" />
       </div>
       <AgainstCost data={againstCost} />
-      <CombinationAnalysis data={combos3} />
-      <CombinationAnalysis data={combos2} title="Confluence Pair Analysis (Emerging)" subtitle="Combinations with 2 occurrences" />
+      <ComboHeatmap top={pairGridTop} all={pairGridAll} combos={combos} />
 
       {categoryOptions.length > 0 && (
         <>
