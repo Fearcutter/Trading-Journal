@@ -1,11 +1,13 @@
 import { formatPercent } from '../../utils/formatters';
 import { usePLFormatter } from '../../hooks/usePLFormatter';
+import { formatR } from '../../utils/confluence-insights';
 
 interface CombinationData {
   combo: string[];
   winRate: number;
   count: number;
   avgPL: number;
+  rPerTrade?: number | null;
 }
 
 interface CombinationAnalysisProps {
@@ -16,6 +18,7 @@ interface CombinationAnalysisProps {
 
 export default function CombinationAnalysis({ data, title = 'Confluence Pair Analysis', subtitle = 'Combinations with 3+ occurrences' }: CombinationAnalysisProps) {
   const pl = usePLFormatter();
+  const showR = data.some(row => row.rPerTrade !== undefined);
 
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
@@ -30,6 +33,7 @@ export default function CombinationAnalysis({ data, title = 'Confluence Pair Ana
               <th className="px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Combination</th>
               <th className="px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider text-right">Count</th>
               <th className="px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider text-right">Win Rate</th>
+              {showR && <th className="px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider text-right">R per trade</th>}
               <th className="px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider text-right">Avg P&L</th>
             </tr>
           </thead>
@@ -51,6 +55,13 @@ export default function CombinationAnalysis({ data, title = 'Confluence Pair Ana
                     {formatPercent(row.winRate)}
                   </span>
                 </td>
+                {showR && (
+                  <td className="px-4 py-3 text-right">
+                    <span className={`font-mono text-sm ${row.rPerTrade == null ? 'text-slate-500' : row.rPerTrade >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {formatR(row.rPerTrade ?? null)}
+                    </span>
+                  </td>
+                )}
                 <td className="px-4 py-3 text-right">
                   <span className={`font-mono text-sm ${row.avgPL >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                     {pl.formatPLValue(row.avgPL)}

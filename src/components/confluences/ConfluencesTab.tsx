@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useSettings } from '../../context/SettingsContext';
-import { analyzeConfluences, analyzeConfluenceCombinations, analyzeCategoryField, analyzeCategoryCombinations, categoryExtractors } from '../../utils/confluence-analyzer';
+import { analyzeCategoryField, analyzeCategoryCombinations, categoryExtractors } from '../../utils/confluence-analyzer';
+import { confluenceLists, analyzeEdge, analyzeForCount, analyzeNetScore, analyzeAgainstCost, analyzeCombos } from '../../utils/confluence-insights';
+import EdgeTable from './EdgeTable';
+import StackingTable from './StackingTable';
+import AgainstCost from './AgainstCost';
 import { usePLFormatter } from '../../hooks/usePLFormatter';
 import ConfluenceTable from './ConfluenceTable';
 import CombinationAnalysis from './CombinationAnalysis';
@@ -20,10 +24,18 @@ export default function ConfluencesTab({ trades }: { trades: Trade[] }) {
   const { plField } = usePLFormatter();
   const [selectedCategory, setSelectedCategory] = useState('');
 
-  const confluenceStats = useMemo(() => analyzeConfluences(trades, plField, 'confluences'), [trades, plField]);
-  const confluenceAgainstStats = useMemo(() => analyzeConfluences(trades, plField, 'confluencesAgainst'), [trades, plField]);
-  const combos3 = useMemo(() => analyzeConfluenceCombinations(trades, plField, 3), [trades, plField]);
-  const combos2 = useMemo(() => analyzeConfluenceCombinations(trades, plField, 2).filter(c => c.count < 3), [trades, plField]);
+  // FOR / AGAINST include custom fields set to count as confluences (e.g. "TDI: Cross")
+  const { forOf, againstOf } = useMemo(
+    () => confluenceLists(settings.customCategories, settings.categorySectionOrder),
+    [settings.customCategories, settings.categorySectionOrder]
+  );
+  const forEdge = useMemo(() => analyzeEdge(trades, forOf, plField), [trades, forOf, plField]);
+  const againstEdge = useMemo(() => analyzeEdge(trades, againstOf, plField), [trades, againstOf, plField]);
+  const forCount = useMemo(() => analyzeForCount(trades, forOf, plField), [trades, forOf, plField]);
+  const netScore = useMemo(() => analyzeNetScore(trades, forOf, againstOf, plField), [trades, forOf, againstOf, plField]);
+  const againstCost = useMemo(() => analyzeAgainstCost(trades, againstOf, plField), [trades, againstOf, plField]);
+  const combos3 = useMemo(() => analyzeCombos(trades, forOf, plField, 3), [trades, forOf, plField]);
+  const combos2 = useMemo(() => analyzeCombos(trades, forOf, plField, 2).filter(c => c.count < 3), [trades, forOf, plField]);
 
   const categoryOptions: CategoryOption[] = useMemo(() => {
     const builtIn: CategoryOption[] = [
@@ -63,10 +75,23 @@ export default function ConfluencesTab({ trades }: { trades: Trade[] }) {
 
   return (
     <div className="space-y-6">
-      <ConfluenceTable data={confluenceStats} title="Confluences (FOR) Performance" />
-      {confluenceAgainstStats.length > 0 && (
-        <ConfluenceTable data={confluenceAgainstStats} title="Confluences (AGAINST) Performance" />
+      <EdgeTable
+        data={forEdge}
+        title="Confluences (FOR): do they give me an edge?"
+        subtitle="Trades with each confluence vs trades without it. Edge = R per trade with it minus without it."
+      />
+      {againstEdge.length > 0 && (
+        <EdgeTable
+          data={againstEdge}
+          title="Confluences (AGAINST)"
+          subtitle="A negative edge means trades with this warning did worse than trades without it."
+        />
       )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <StackingTable rows={forCount} title="Does stacking help?" subtitle="Results by number of FOR confluences" labelHeader="FOR count" />
+        <StackingTable rows={netScore} title="Net confluence score" subtitle="FOR count minus AGAINST count" labelHeader="Net score" />
+      </div>
+      <AgainstCost data={againstCost} />
       <CombinationAnalysis data={combos3} />
       <CombinationAnalysis data={combos2} title="Confluence Pair Analysis (Emerging)" subtitle="Combinations with 2 occurrences" />
 
