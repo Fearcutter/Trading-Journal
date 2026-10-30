@@ -8,6 +8,7 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
+import CoachAccessCard from '../components/settings/CoachAccessCard';
 import { Plus, X, Download, Upload, Trash2, HardDrive, AlertTriangle, GripVertical } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
@@ -329,6 +330,8 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 max-w-5xl">
+      <CoachAccessCard />
+
       {/* Display Mode */}
       <Card>
         <h3 className="text-sm font-medium text-slate-300 mb-3">Display</h3>
