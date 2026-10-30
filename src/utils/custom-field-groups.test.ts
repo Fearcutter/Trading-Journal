@@ -1,27 +1,40 @@
 import { describe, it, expect } from 'vitest';
-import { splitCustomFields } from './custom-field-groups';
+import { splitCustomFields, confluenceGroupOf } from './custom-field-groups';
 import type { CustomCategory } from '../types/settings';
 
-const cat = (id: string, showUnderConfluences?: boolean): CustomCategory => ({ id, name: id.toUpperCase(), options: [], showUnderConfluences });
+const cat = (id: string, extra: Partial<CustomCategory> = {}): CustomCategory => ({ id, name: id.toUpperCase(), options: [], ...extra });
+
+describe('confluenceGroupOf', () => {
+  it('reads the FOR/AGAINST choice', () => {
+    expect(confluenceGroupOf(cat('a', { confluenceGroup: 'for' }))).toBe('for');
+    expect(confluenceGroupOf(cat('a', { confluenceGroup: 'against' }))).toBe('against');
+    expect(confluenceGroupOf(cat('a'))).toBeNull();
+  });
+  it('treats the earlier on/off switch as FOR', () => {
+    expect(confluenceGroupOf(cat('a', { showUnderConfluences: true }))).toBe('for');
+    expect(confluenceGroupOf(cat('a', { showUnderConfluences: true, confluenceGroup: null }))).toBeNull();
+  });
+});
 
 describe('splitCustomFields', () => {
-  it('puts switched-on fields under Confluences and the rest under Custom Fields', () => {
-    const r = splitCustomFields([cat('tdi', true), cat('session'), cat('bias', false)], []);
-    expect(r.underConfluences.map(c => c.id)).toEqual(['tdi']);
-    expect(r.other.map(c => c.id)).toEqual(['session', 'bias']);
+  it('sorts fields into FOR, AGAINST and Custom Fields', () => {
+    const r = splitCustomFields([cat('tdi', { confluenceGroup: 'for' }), cat('news', { confluenceGroup: 'against' }), cat('session')], []);
+    expect(r.for.map(c => c.id)).toEqual(['tdi']);
+    expect(r.against.map(c => c.id)).toEqual(['news']);
+    expect(r.other.map(c => c.id)).toEqual(['session']);
   });
 
   it('follows the Settings card order', () => {
-    const r = splitCustomFields([cat('a', true), cat('b', true), cat('c')], ['confluences', 'b', 'c', 'a']);
-    expect(r.underConfluences.map(c => c.id)).toEqual(['b', 'a']);
+    const r = splitCustomFields([cat('a', { confluenceGroup: 'for' }), cat('b', { confluenceGroup: 'for' }), cat('c')], ['confluences', 'b', 'c', 'a']);
+    expect(r.for.map(c => c.id)).toEqual(['b', 'a']);
   });
 
   it('keeps fields missing from the order, after the ordered ones', () => {
-    const r = splitCustomFields([cat('new', true), cat('old', true)], ['old']);
-    expect(r.underConfluences.map(c => c.id)).toEqual(['old', 'new']);
+    const r = splitCustomFields([cat('new', { confluenceGroup: 'for' }), cat('old', { confluenceGroup: 'for' })], ['old']);
+    expect(r.for.map(c => c.id)).toEqual(['old', 'new']);
   });
 
   it('handles no custom fields', () => {
-    expect(splitCustomFields(undefined, undefined)).toEqual({ underConfluences: [], other: [] });
+    expect(splitCustomFields(undefined, undefined)).toEqual({ for: [], against: [], other: [] });
   });
 });

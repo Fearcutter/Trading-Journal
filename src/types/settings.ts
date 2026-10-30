@@ -4,7 +4,9 @@ export interface CustomCategory {
   id: string;
   name: string;
   options: string[];
-  /** Shown inside the Confluences box on the trade page instead of under Custom Fields. */
+  /** Join the trade page's FOR or AGAINST confluences instead of Custom Fields (null = off). */
+  confluenceGroup?: 'for' | 'against' | null;
+  /** Earlier on/off version of confluenceGroup; true meant FOR. */
   showUnderConfluences?: boolean;
 }
 

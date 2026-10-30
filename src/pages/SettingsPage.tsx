@@ -13,6 +13,7 @@ import { Plus, X, Download, Upload, Trash2, HardDrive, AlertTriangle, GripVertic
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 import type { CustomCategory } from '../types/settings';
+import { confluenceGroupOf } from '../utils/custom-field-groups';
 import { DndContext, closestCenter, DragOverlay, type DragStartEvent, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
@@ -230,15 +231,25 @@ function CategorySectionsManager({ settings }: { settings: ReturnType<typeof use
             <Trash2 size={14} />
           </button>
         </div>
-        <label className="flex items-center gap-2 mb-3 text-sm text-slate-400 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={!!cat.showUnderConfluences}
-            onChange={e => settings.updateCustomCategory(cat.id, { showUnderConfluences: e.target.checked })}
-            className="rounded border-slate-600 bg-slate-800"
-          />
-          Show under Confluences on the trade page
-        </label>
+        <div className="flex items-center gap-2 mb-3 text-sm text-slate-400">
+          <span>Count as confluence:</span>
+          <div className="flex rounded-lg overflow-hidden border border-slate-600">
+            {([[null, 'Off'], ['for', 'FOR'], ['against', 'AGAINST']] as const).map(([group, label]) => {
+              const active = confluenceGroupOf(cat) === group;
+              const activeColor = group === 'for' ? 'bg-emerald-700 text-white' : group === 'against' ? 'bg-rose-700 text-white' : 'bg-slate-600 text-white';
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => settings.updateCustomCategory(cat.id, { confluenceGroup: group, showUnderConfluences: undefined })}
+                  className={`px-2.5 py-1 text-xs font-medium transition-colors ${active ? activeColor : 'bg-slate-800 text-slate-400 hover:text-slate-200'}`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <ListManager
           title="Options"
           items={cat.options}

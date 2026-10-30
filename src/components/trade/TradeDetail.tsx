@@ -19,8 +19,12 @@ export default function TradeDetail({ trade }: TradeDetailProps) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const customGroups = splitCustomFields(settings.customCategories, settings.categorySectionOrder);
   const filled = (id: string) => (trade.customFields?.[id] ?? []).length > 0;
-  const confluenceFields = customGroups.underConfluences.filter(c => filled(c.id));
   const otherFields = customGroups.other.filter(c => filled(c.id));
+  // Custom fields counted as confluences join the FOR / AGAINST lists as "Field: value" tags
+  const fieldTags = (cats: typeof customGroups.for) => cats.flatMap(cat =>
+    (trade.customFields?.[cat.id] ?? []).map(v => ({ key: `${cat.id}:${v}`, label: `${cat.name}: ${v}` })));
+  const forTags = [...trade.confluences.map(c => ({ key: c, label: c })), ...fieldTags(customGroups.for)];
+  const againstTags = [...(trade.confluencesAgainst ?? []).map(c => ({ key: c, label: c })), ...fieldTags(customGroups.against)];
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -146,37 +150,27 @@ export default function TradeDetail({ trade }: TradeDetailProps) {
         </Card>
         <Card>
           <h3 className="text-sm font-medium text-slate-300 mb-3">Confluences</h3>
-          {trade.confluences.length > 0 && (
+          {forTags.length > 0 && (
             <div className="mb-2">
               <p className="text-xs text-slate-500 mb-1">FOR</p>
               <div className="flex flex-wrap gap-1.5">
-                {trade.confluences.map(c => (
-                  <span key={c} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-900/40 text-emerald-300 border border-emerald-700/50">{c}</span>
+                {forTags.map(t => (
+                  <span key={t.key} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-900/40 text-emerald-300 border border-emerald-700/50">{t.label}</span>
                 ))}
               </div>
             </div>
           )}
-          {(trade.confluencesAgainst ?? []).length > 0 && (
+          {againstTags.length > 0 && (
             <div>
               <p className="text-xs text-slate-500 mb-1">AGAINST</p>
               <div className="flex flex-wrap gap-1.5">
-                {trade.confluencesAgainst.map(c => (
-                  <span key={c} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-rose-900/40 text-rose-300 border border-rose-700/50">{c}</span>
+                {againstTags.map(t => (
+                  <span key={t.key} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-rose-900/40 text-rose-300 border border-rose-700/50">{t.label}</span>
                 ))}
               </div>
             </div>
           )}
-          {confluenceFields.map(cat => (
-            <div key={cat.id} className="mt-2">
-              <p className="text-xs text-slate-500 mb-1 uppercase">{cat.name}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {trade.customFields![cat.id].map(v => (
-                  <span key={v} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-900/40 text-blue-300 border border-blue-700/50">{v}</span>
-                ))}
-              </div>
-            </div>
-          ))}
-          {trade.confluences.length === 0 && (trade.confluencesAgainst ?? []).length === 0 && confluenceFields.length === 0 && (
+          {forTags.length === 0 && againstTags.length === 0 && (
             <p className="text-sm text-slate-500">None selected</p>
           )}
         </Card>
