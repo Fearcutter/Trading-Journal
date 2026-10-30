@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useView } from '../context/ViewContext';
+import { canOpenTrade } from '../constants/coachSections';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTrades } from '../context/TradeContext';
 import { useBacktest } from '../context/BacktestContext';
@@ -17,12 +18,20 @@ export default function TradeDetailPage() {
   const navigate = useNavigate();
   const { trades, updateTrade, deleteTrade } = useTrades();
   const [searchParams] = useSearchParams();
-  const { readOnly } = useView();
+  const { readOnly, mode, sharedSections } = useView();
   const [editing, setEditing] = useState(searchParams.has('edit') && !readOnly);
 
-  const { getSession: getBacktestSession } = useBacktest();
+  const { getSession: getBacktestSession, loading: backtestLoading } = useBacktest();
   const trade = trades.find(t => t.id === id);
   const isBacktestTrade = !!(trade?.sessionId && getBacktestSession(trade.sessionId));
+
+  if (mode === 'coach' && trade) {
+    // Whether this is a backtest trade isn't known until the sessions load
+    if (backtestLoading) return null;
+    if (!canOpenTrade(isBacktestTrade, sharedSections)) {
+      return <div className="py-24 text-center text-sm text-slate-400">This section isn't shared with you.</div>;
+    }
+  }
 
   if (!trade) {
     return (
@@ -133,7 +142,7 @@ export default function TradeDetailPage() {
       ) : (
         <>
           <TradeDetail trade={trade} />
-          {!isBacktestTrade && <CoachFeedback tradeId={trade.id} />}
+          <CoachFeedback tradeId={trade.id} />
         </>
       )}
     </div>

@@ -52,28 +52,40 @@ const ownerId = o.data.user.id;
 const { data: access } = await owner.from('coach_access').select('*').eq('owner_id', ownerId).single();
 const shared = expectRevoked ? [] : (access?.active ? access.sections : []);
 // Same rule as the database: live = no session, or one of the owner's live sessions.
-// Everything else (backtests, trades left behind by a deleted session) must stay hidden.
+// Backtest = one of the owner's backtest sessions (visible only when Backtesting is shared).
+// Trades left behind by a deleted session are neither and must always stay hidden.
 const liveSessions = await fetchAll(owner, 'live_trading_sessions', 'id', ownerId);
 const liveSessionIds = new Set(liveSessions.map(l => String(l.id)));
 const ownerTrades = await fetchAll(owner, 'trades', 'id, data, setup_screenshot_path', ownerId);
 const isLive = t => !t.data?.sessionId || liveSessionIds.has(String(t.data.sessionId));
+const btSessions = await fetchAll(owner, 'backtest_sessions', 'id', ownerId);
+const btSessionIds = new Set(btSessions.map(b => String(b.id)));
+const isBacktest = t => !!t.data?.sessionId && btSessionIds.has(String(t.data.sessionId));
 const liveTrades = ownerTrades.filter(isLive);
-const btTrades = ownerTrades.filter(t => !isLive(t));
+const btTrades = ownerTrades.filter(isBacktest);
+const orphanTrades = ownerTrades.filter(t => !isLive(t) && !isBacktest(t));
 const tradeShared = ['dashboard', 'live_trading', 'trade_details', 'calendar'].some(s => shared.includes(s));
+const btShared = shared.includes('backtesting');
 
-console.log(`Shared sections: ${shared.join(', ') || '(none)'} | live trades ${liveTrades.length}, hidden (backtest/orphaned) trades ${btTrades.length}`);
+console.log(`Shared sections: ${shared.join(', ') || '(none)'} | live trades ${liveTrades.length}, backtest trades ${btTrades.length}, orphaned trades ${orphanTrades.length}`);
 
-// 1. Backtests never visible
+// 1. Backtests follow Backtesting; orphaned trades never visible
 const { data: cBt } = await coach.from('backtest_sessions').select('id').eq('user_id', ownerId);
-check('backtest_sessions hidden', (cBt ?? []).length === 0);
+check('backtest_sessions follow sharing', (cBt ?? []).length === (btShared ? btSessions.length : 0), `coach ${(cBt ?? []).length}, expected ${btShared ? btSessions.length : 0}`);
 if (btTrades.length) {
-  const { data } = await coach.from('trades').select('id').in('id', btTrades.slice(0, 50).map(t => t.id));
-  check('backtest/orphaned trades hidden', (data ?? []).length === 0, `${(data ?? []).length} leaked`);
+  const sample = btTrades.slice(0, 50);
+  const { data } = await coach.from('trades').select('id').in('id', sample.map(t => t.id));
+  check('backtest trades follow sharing', (data ?? []).length === (btShared ? sample.length : 0), `coach sees ${(data ?? []).length} of ${sample.length} sampled`);
+}
+if (orphanTrades.length) {
+  const { data } = await coach.from('trades').select('id').in('id', orphanTrades.slice(0, 50).map(t => t.id));
+  check('orphaned trades hidden', (data ?? []).length === 0, `${(data ?? []).length} leaked`);
 }
 
-// 2. Trades visible iff a trade section is shared
+// 2. Total trades the coach can see
+const expectedTrades = (tradeShared ? liveTrades.length : 0) + (btShared ? btTrades.length : 0);
 const { count: cTradeCount } = await coach.from('trades').select('id', { count: 'exact', head: true }).eq('user_id', ownerId);
-check('live trade count', cTradeCount === (tradeShared ? liveTrades.length : 0), `coach sees ${cTradeCount}, expected ${tradeShared ? liveTrades.length : 0}`);
+check('trade count', cTradeCount === expectedTrades, `coach sees ${cTradeCount}, expected ${expectedTrades}`);
 
 // 3. Each table follows its section
 const tables = [
@@ -98,7 +110,7 @@ check('user_settings not directly readable', (cSettings ?? []).length === 0);
 const { data: shSettings } = await coach.rpc('get_shared_settings', { p_owner: ownerId });
 check('shared settings strip password hash', !shSettings || !('fundedAccountsPasswordHash' in shSettings));
 check('shared settings follow access', expectRevoked || !access?.active ? shSettings === null : shSettings !== null);
-for (const fn of ['is_live_trade', 'coach_can_view', 'coach_can_view_screenshot']) {
+for (const fn of ['is_live_trade', 'is_backtest_trade', 'coach_can_view', 'coach_can_view_screenshot']) {
   const { error } = await coach.rpc(fn, {});
   check(`helper ${fn} not callable through the API`, !!error);
 }
@@ -117,7 +129,12 @@ check('coach cannot insert journal entries', !!insErr);
 const btShot = btTrades.find(t => t.setup_screenshot_path);
 if (btShot) {
   const { error } = await coach.storage.from('screenshots').createSignedUrl(btShot.setup_screenshot_path, 60);
-  check('backtest screenshot hidden', !!error);
+  check('backtest screenshot follows sharing', btShared ? !error : !!error, error?.message);
+}
+const orphanShot = orphanTrades.find(t => t.setup_screenshot_path);
+if (orphanShot) {
+  const { error } = await coach.storage.from('screenshots').createSignedUrl(orphanShot.setup_screenshot_path, 60);
+  check('orphaned-trade screenshot hidden', !!error);
 }
 const liveShot = liveTrades.find(t => t.setup_screenshot_path);
 if (liveShot) {
@@ -128,8 +145,14 @@ if (liveShot) {
 // 7. Comments
 const coachId = c.data.user.id;
 if (btTrades[0]) {
-  const { error } = await coach.from('trade_comments').insert({ trade_id: btTrades[0].id, owner_id: ownerId, author_id: coachId, body: 'probe' });
-  check('cannot comment on backtest trade', !!error);
+  const { data, error } = await coach.from('trade_comments')
+    .insert({ trade_id: btTrades[0].id, owner_id: ownerId, author_id: coachId, body: 'probe' }).select().single();
+  check('comment on backtest trade follows backtesting', btShared ? !error : !!error, error?.message);
+  if (data) await coach.from('trade_comments').delete().eq('id', data.id);
+}
+if (orphanTrades[0]) {
+  const { error } = await coach.from('trade_comments').insert({ trade_id: orphanTrades[0].id, owner_id: ownerId, author_id: coachId, body: 'probe' });
+  check('cannot comment on orphaned trade', !!error);
 }
 if (liveTrades[0]) {
   const { data, error } = await coach.from('trade_comments')

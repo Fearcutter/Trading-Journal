@@ -167,3 +167,9 @@ Manual verification with a throwaway coach account against the real Supabase pro
 - **Id types.** `trade_comments.trade_id` is `text` with no foreign key, and ids are compared as text, because `supabase-fix-ids.sql` changed `trades.id` to text.
 - **Private helpers.** Policy helper functions live in a `private` schema that the Supabase API does not expose; `get_shared_settings` / `mark_trade_comments_read` are executable by `authenticated` only. Coach policies are `to authenticated` and start with `user_id <> auth.uid()` so the owner's own queries skip them. The migration is re-runnable.
 - **No lock-in.** Any login that has an invite can switch to its own journal (sidebar "Switch to…", and a "Go to my own journal" button on the access-off screen); the choice is remembered per browser. This stops a stranger trapping someone in a journal by inviting their email, and lets a coach keep their own journal.
+
+## Backtesting section (2026-10-30)
+
+- `backtesting` is an eighth, opt-in section (unticked on new invites; DB default unchanged).
+- When shared, the coach reads `backtest_sessions` and backtest trades (`private.is_backtest_trade`: session is one of the owner's backtest sessions), their screenshots, and all five session tabs. Trades from deleted sessions stay hidden.
+- Trade page and comments: live trades follow `trade_details`, backtest trades follow `backtesting` (`canOpenTrade`, `private.coach_can_comment_on_trade`, also used for reading/editing/deleting the coach's own comments).

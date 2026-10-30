@@ -4,6 +4,7 @@ import { FlaskConical, Trash2, Plus, X } from 'lucide-react';
 import { useBacktest } from '../context/BacktestContext';
 import { useTrades } from '../context/TradeContext';
 import { useSettings } from '../context/SettingsContext';
+import { useView } from '../context/ViewContext';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
@@ -33,6 +34,7 @@ export default function BacktestingPage() {
   const { sessions, addSession, deleteSession } = useBacktest();
   const { trades } = useTrades();
   const settings = useSettings();
+  const { readOnly } = useView();
   const pl = usePLFormatter();
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
@@ -83,12 +85,14 @@ export default function BacktestingPage() {
           <FlaskConical size={24} className="text-slate-400" />
           <h1 className="text-xl font-bold text-slate-50">Backtesting</h1>
         </div>
-        <Button size="sm" onClick={() => setShowForm(!showForm)}>
-          {showForm ? <><X size={14} /> Cancel</> : <><Plus size={14} /> New Session</>}
-        </Button>
+        {!readOnly && (
+          <Button size="sm" onClick={() => setShowForm(!showForm)}>
+            {showForm ? <><X size={14} /> Cancel</> : <><Plus size={14} /> New Session</>}
+          </Button>
+        )}
       </div>
 
-      {showForm && (
+      {showForm && !readOnly && (
         <form onSubmit={handleSubmit} className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input label="Session Name" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. NQ Breakout Strategy" required />
@@ -127,7 +131,7 @@ export default function BacktestingPage() {
         <EmptyState
           icon={<FlaskConical size={48} />}
           title="No backtest sessions"
-          description="Create a backtesting session to start testing strategies with simulated trades."
+          description={readOnly ? 'No backtest sessions yet.' : 'Create a backtesting session to start testing strategies with simulated trades.'}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -140,12 +144,14 @@ export default function BacktestingPage() {
                 to={`/backtesting/${session.id}`}
                 className="relative bg-slate-800 border border-slate-700 rounded-xl p-4 hover:border-slate-600 transition-colors group"
               >
-                <button
-                  onClick={e => { e.preventDefault(); e.stopPropagation(); handleDelete(session.id, session.name); }}
-                  className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-700 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Trash2 size={14} />
-                </button>
+                {!readOnly && (
+                  <button
+                    onClick={e => { e.preventDefault(); e.stopPropagation(); handleDelete(session.id, session.name); }}
+                    className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
                 <div className="flex items-center gap-2 mb-2">
                   <span className={`w-2.5 h-2.5 rounded-full ${SESSION_DOT_COLORS[session.color] || 'bg-blue-500'}`} />
                   <h3 className="font-bold text-slate-50 truncate">{session.name}</h3>

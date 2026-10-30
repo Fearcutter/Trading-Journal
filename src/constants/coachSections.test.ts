@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SECTION_KEYS, sectionForPath, canViewPath, firstSharedPath } from './coachSections';
+import { SECTION_KEYS, DEFAULT_INVITE_SECTIONS, sectionForPath, canViewPath, firstSharedPath, canOpenTrade } from './coachSections';
 
 describe('sectionForPath', () => {
   it.each([
@@ -12,11 +12,13 @@ describe('sectionForPath', () => {
     ['/habits', 'journal'],
     ['/playbook', 'playbook'],
     ['/apex-accounts', 'apex_accounts'],
+    ['/backtesting', 'backtesting'],
+    ['/backtesting/abc-123', 'backtesting'],
   ])('%s → %s', (path, section) => {
     expect(sectionForPath(path)).toBe(section);
   });
 
-  it.each(['/analytics', '/mfe-mae', '/confluences', '/category-analytics', '/backtesting', '/backtesting/x', '/risk-calculator', '/settings', '/nope'])(
+  it.each(['/analytics', '/mfe-mae', '/confluences', '/category-analytics', '/backtesting-x', '/risk-calculator', '/settings', '/nope'])(
     '%s is never shareable',
     path => { expect(sectionForPath(path)).toBeNull(); },
   );
@@ -32,6 +34,11 @@ describe('canViewPath', () => {
   });
   it('coach cannot view an unshared section', () => {
     expect(canViewPath('/trades/1', 'coach', ['dashboard'])).toBe(false);
+  });
+  it('backtesting alone opens trade pages (backtest trades), and the backtesting pages', () => {
+    expect(canViewPath('/trades/1', 'coach', ['backtesting'])).toBe(true);
+    expect(canViewPath('/backtesting/s1', 'coach', ['backtesting'])).toBe(true);
+    expect(canViewPath('/backtesting', 'coach', ['dashboard', 'trade_details'])).toBe(false);
   });
   it('coach cannot view never-shareable pages even with everything shared', () => {
     expect(canViewPath('/analytics', 'coach', SECTION_KEYS)).toBe(false);
@@ -51,5 +58,24 @@ describe('firstSharedPath', () => {
   });
   it('returns null when nothing is shared', () => {
     expect(firstSharedPath([])).toBeNull();
+  });
+});
+
+describe('canOpenTrade', () => {
+  it('live trades need trade details (even when backtesting is shared)', () => {
+    expect(canOpenTrade(false, ['trade_details'])).toBe(true);
+    expect(canOpenTrade(false, ['backtesting'])).toBe(false);
+    expect(canOpenTrade(false, ['dashboard', 'backtesting'])).toBe(false);
+  });
+  it('backtest trades need backtesting', () => {
+    expect(canOpenTrade(true, ['backtesting'])).toBe(true);
+    expect(canOpenTrade(true, ['trade_details'])).toBe(false);
+  });
+});
+
+describe('DEFAULT_INVITE_SECTIONS', () => {
+  it('a new invite shares everything except backtesting', () => {
+    expect(DEFAULT_INVITE_SECTIONS).toEqual(SECTION_KEYS.filter(k => k !== 'backtesting'));
+    expect(SECTION_KEYS).toContain('backtesting');
   });
 });

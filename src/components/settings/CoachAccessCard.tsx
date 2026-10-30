@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-import { SECTION_KEYS, SECTION_LABELS, type SectionKey } from '../../constants/coachSections';
+import { SECTION_KEYS, DEFAULT_INVITE_SECTIONS, SECTION_LABELS, type SectionKey } from '../../constants/coachSections';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -54,7 +54,7 @@ export default function CoachAccessCard() {
     const coachEmail = email.trim().toLowerCase();
     if (!coachEmail.includes('@')) { toast.error('Enter a valid email'); return; }
     if (coachEmail === (user.email ?? '').toLowerCase()) { toast.error("That's your own email"); return; }
-    const newRow: CoachAccessRow = { coach_email: coachEmail, sections: [...SECTION_KEYS], active: true };
+    const newRow: CoachAccessRow = { coach_email: coachEmail, sections: [...DEFAULT_INVITE_SECTIONS], active: true };
     const { error } = await supabase
       .from('coach_access')
       .insert({ owner_id: user.id, owner_email: user.email ?? '', ...newRow });

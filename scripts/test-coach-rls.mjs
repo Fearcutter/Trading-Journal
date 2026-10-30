@@ -147,6 +147,38 @@ await as(O, async () => {
   check('owner can mark comments read', r === true);
 });
 
+// ---- Backtesting shared (on its own: no trade sections)
+await db.exec(`update public.coach_access set sections = '{journal,backtesting}' where owner_id = '${O}'`);
+await as(C, async () => {
+  const ids = (await rows(`select id from public.trades order by id`)).map(r => r.id);
+  check('backtesting only: coach sees backtest trades, not live or orphaned', JSON.stringify(ids) === JSON.stringify(['t-backtest']), ids.join(','));
+  check('backtesting only: coach sees backtest sessions', (await rows(`select * from public.backtest_sessions`)).length === 1);
+  check('backtesting only: no live sessions', (await rows(`select * from public.live_trading_sessions`)).length === 0);
+  const shots = (await rows(`select name from storage.objects order by name`)).map(r => r.name);
+  check('backtesting only: only backtest-trade screenshots', JSON.stringify(shots) === JSON.stringify([`${O}/trades/t-backtest/setupScreenshot.png`]), shots.join(','));
+  const ok = await tryq(`insert into public.trade_comments (owner_id, trade_id, author_id, body) values ('${O}', 't-backtest', '${C}', 'bt note') returning id`);
+  check('backtesting only: coach can comment on backtest trade', !ok.error, ok.error);
+  const orphan = await tryq(`insert into public.trade_comments (owner_id, trade_id, author_id, body) values ('${O}', 't-orphan', '${C}', 'x')`);
+  check('backtesting only: still no comments on orphaned trade', !!orphan.error);
+  const live = await tryq(`insert into public.trade_comments (owner_id, trade_id, author_id, body) values ('${O}', 't-nosession', '${C}', 'x')`);
+  check('backtesting only: no comments on live trade', !!live.error);
+  const mine = (await rows(`select trade_id from public.trade_comments order by trade_id`)).map(r => r.trade_id);
+  check('backtesting only: coach sees only comments on trades they can see', JSON.stringify(mine) === JSON.stringify(['t-backtest']), mine.join(','));
+  const upd = await tryq(`update public.backtest_sessions set data = '{}' returning id`);
+  check('backtesting only: coach cannot change backtest sessions', upd.error || upd.rows.length === 0);
+  const del = await tryq(`delete from public.trades where id = 't-backtest' returning id`);
+  check('backtesting only: coach cannot delete backtest trades', del.error || del.rows.length === 0);
+});
+await db.exec(`update public.coach_access set sections = '{dashboard,live_trading,trade_details,calendar,journal,playbook,apex_accounts,backtesting}' where owner_id = '${O}'`);
+await as(C, async () => {
+  const ids = (await rows(`select id from public.trades order by id`)).map(r => r.id);
+  check('everything shared: live + backtest trades, never orphaned', JSON.stringify(ids) === JSON.stringify(['t-backtest', 't-livesession', 't-nosession']), ids.join(','));
+  check('everything shared: user_settings still not directly readable', (await rows(`select * from public.user_settings`)).length === 0);
+});
+await as(O, async () => {
+  check('owner sees backtest comment', (await rows(`select * from public.trade_comments where trade_id = 't-backtest'`)).length === 1);
+});
+
 // ---- Revoke
 await db.exec(`update public.coach_access set active = false where owner_id = '${O}'`);
 await as(C, async () => {

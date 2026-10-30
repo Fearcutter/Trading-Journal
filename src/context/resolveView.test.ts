@@ -37,7 +37,7 @@ describe('resolveView', () => {
   });
 
   it('ignores unknown section names', () => {
-    const r = resolveView(me, row({ sections: ['dashboard', 'backtesting', 'settings'] }), false);
+    const r = resolveView(me, row({ sections: ['dashboard', 'analytics', 'settings'] }), false);
     expect(r.status === 'ready' && r.value.sharedSections).toEqual(['dashboard']);
   });
 });

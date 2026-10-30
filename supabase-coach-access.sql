@@ -71,21 +71,37 @@ language sql stable security definer set search_path = public as $$
       )
 $$;
 
--- Any trade section being shared lets the coach read the owner's live trades.
-create or replace function private.coach_can_view_trade_row(p_owner uuid, p_data jsonb) returns boolean
+-- A trade is a backtest trade only if its session is one of the owner's existing
+-- backtest sessions. Trades left behind by a deleted session are neither, so stay hidden.
+create or replace function private.is_backtest_trade(p_owner uuid, p_data jsonb) returns boolean
 language sql stable security definer set search_path = public as $$
-  select private.coach_can_view_any(p_owner, array['dashboard','live_trading','trade_details','calendar'])
-     and private.is_live_trade(p_owner, p_data)
+  select coalesce(p_data->>'sessionId', '') <> ''
+     and exists (
+       select 1 from public.backtest_sessions b
+       where b.user_id = p_owner and b.id::text = p_data->>'sessionId'
+     )
 $$;
 
+-- Live trades: any trade section shared. Backtest trades: backtesting shared.
+create or replace function private.coach_can_view_trade_row(p_owner uuid, p_data jsonb) returns boolean
+language sql stable security definer set search_path = public as $$
+  select (private.coach_can_view_any(p_owner, array['dashboard','live_trading','trade_details','calendar'])
+          and private.is_live_trade(p_owner, p_data))
+      or (private.coach_can_view(p_owner, 'backtesting')
+          and private.is_backtest_trade(p_owner, p_data))
+$$;
+
+-- Comments: live trades follow trade_details, backtest trades follow backtesting.
 create or replace function private.coach_can_comment_on_trade(p_trade text, p_owner uuid) returns boolean
 language sql stable security definer set search_path = public as $$
-  select private.coach_can_view(p_owner, 'trade_details')
-     and exists (
-       select 1 from public.trades t
-       where t.id::text = p_trade and t.user_id = p_owner
-         and private.is_live_trade(t.user_id, t.data)
-     )
+  select exists (
+    select 1 from public.trades t
+    where t.id::text = p_trade and t.user_id = p_owner
+      and (
+        (private.coach_can_view(p_owner, 'trade_details') and private.is_live_trade(t.user_id, t.data))
+        or (private.coach_can_view(p_owner, 'backtesting') and private.is_backtest_trade(t.user_id, t.data))
+      )
+  )
 $$;
 
 create or replace function private.coach_can_view_screenshot(p_name text) returns boolean
@@ -177,7 +193,10 @@ create policy "Coach reads shared playbook" on public.playbook_entries
 drop policy if exists "Coach reads shared apex accounts" on public.apex_accounts;
 create policy "Coach reads shared apex accounts" on public.apex_accounts
   for select to authenticated using (user_id <> (select auth.uid()) and private.coach_can_view(user_id, 'apex_accounts'));
--- NOTE: no coach policy on user_settings or backtest_sessions (on purpose).
+drop policy if exists "Coach reads shared backtest sessions" on public.backtest_sessions;
+create policy "Coach reads shared backtest sessions" on public.backtest_sessions
+  for select to authenticated using (user_id <> (select auth.uid()) and private.coach_can_view(user_id, 'backtesting'));
+-- NOTE: no coach policy on user_settings (on purpose; see get_shared_settings).
 
 drop policy if exists "Coach views shared screenshots" on storage.objects;
 create policy "Coach views shared screenshots" on storage.objects
@@ -189,7 +208,7 @@ create policy "Owner reads comments on own trades" on public.trade_comments
   for select to authenticated using (auth.uid() = owner_id);
 drop policy if exists "Coach reads own comments" on public.trade_comments;
 create policy "Coach reads own comments" on public.trade_comments
-  for select to authenticated using (author_id = auth.uid() and private.coach_can_view(owner_id, 'trade_details'));
+  for select to authenticated using (author_id = auth.uid() and private.coach_can_comment_on_trade(trade_id, owner_id));
 drop policy if exists "Coach adds comments" on public.trade_comments;
 create policy "Coach adds comments" on public.trade_comments
   for insert to authenticated with check (
@@ -199,11 +218,11 @@ create policy "Coach adds comments" on public.trade_comments
   );
 drop policy if exists "Coach edits own comments" on public.trade_comments;
 create policy "Coach edits own comments" on public.trade_comments
-  for update to authenticated using (author_id = auth.uid() and private.coach_can_view(owner_id, 'trade_details'))
+  for update to authenticated using (author_id = auth.uid() and private.coach_can_comment_on_trade(trade_id, owner_id))
   with check (author_id = auth.uid());
 drop policy if exists "Coach deletes own comments" on public.trade_comments;
 create policy "Coach deletes own comments" on public.trade_comments
-  for delete to authenticated using (author_id = auth.uid() and private.coach_can_view(owner_id, 'trade_details'));
+  for delete to authenticated using (author_id = auth.uid() and private.coach_can_comment_on_trade(trade_id, owner_id));
 
 -- Only body/updated_at may be changed by a normal update (read flag goes through the function).
 revoke update on public.trade_comments from authenticated, anon;

@@ -6,6 +6,8 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, ReferenceL
 import { useBacktest } from '../context/BacktestContext';
 import { useTrades } from '../context/TradeContext';
 import { useSettings } from '../context/SettingsContext';
+import { useView } from '../context/ViewContext';
+import { useUnreadCommentTradeIds } from '../hooks/useUnreadCommentTradeIds';
 import { useDashboardStats } from '../hooks/useDashboardStats';
 import { useAdvancedStats } from '../hooks/useAdvancedStats';
 import TradeForm from '../components/trade/TradeForm';
@@ -57,6 +59,7 @@ export default function BacktestSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const { getSession, updateSession, loading } = useBacktest();
   const { trades, addTrade } = useTrades();
+  const { readOnly } = useView();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get('tab') as Tab) || 'dashboard';
@@ -151,7 +154,7 @@ export default function BacktestSessionPage() {
           ) : (
             <>
               <h1 className="text-xl font-bold text-slate-50">{session.name}</h1>
-              <button onClick={startEditing} className="p-1 text-slate-500 hover:text-slate-300 transition-colors"><Pencil size={14} /></button>
+              {!readOnly && <button onClick={startEditing} className="p-1 text-slate-500 hover:text-slate-300 transition-colors"><Pencil size={14} /></button>}
             </>
           )}
           <span className="text-sm text-slate-500">{sessionTrades.length} trade{sessionTrades.length !== 1 ? 's' : ''}</span>
@@ -338,6 +341,8 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const { deleteTrades } = useTrades();
   const settingsCtx = useSettings();
+  const { readOnly } = useView();
+  const unreadCommentIds = useUnreadCommentTradeIds();
 
   const activeFilters = { ...filters, search };
   const filtered = useFilteredTrades(trades, activeFilters);
@@ -377,6 +382,7 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
     <div className="space-y-4">
       {/* Action buttons */}
       <div className="flex gap-2">
+        {!readOnly && (<>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
           className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
@@ -391,8 +397,9 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
           <ClipboardPaste size={16} />
           Paste Trade
         </button>
+        </>)}
         <div className="flex-1" />
-        {selectedIds.size > 0 && (
+        {selectedIds.size > 0 && !readOnly && (
           <Button variant="danger" size="sm" onClick={handleBulkDelete}>
             <Trash2 size={14} /> Delete ({selectedIds.size})
           </Button>
@@ -436,7 +443,7 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
       </div>
 
       {/* Inline trade form */}
-      {showAddForm && (
+      {showAddForm && !readOnly && (
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
           <TradeForm
             key={JSON.stringify(pasteInitialData)}
@@ -467,7 +474,7 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
 
       {/* Trade table */}
       {trades.length === 0 ? (
-        <EmptyState icon={<BookOpen size={48} />} title="No trades in this session" description="Click 'Add Trade' or 'Paste Trade' to get started." />
+        <EmptyState icon={<BookOpen size={48} />} title="No trades in this session" description={readOnly ? 'No trades in this session yet.' : "Click 'Add Trade' or 'Paste Trade' to get started."} />
       ) : (
         <>
           <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
@@ -507,6 +514,7 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
                       onSelect={toggleSelect}
                       hiddenColumns={hiddenColumns}
                       skipped={skippedTradeIds?.has(trade.id)}
+                      hasUnreadComments={unreadCommentIds.has(trade.id)}
                     />
                   ))}
                 </tbody>
