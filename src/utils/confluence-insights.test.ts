@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   tradeR, summarize, confluenceLists, analyzeEdge, analyzeForCount, analyzeNetScore,
-  analyzeAgainstCost, analyzeCombos, scopeTrades, analyzePairGrid,
+  analyzeAgainstCost, analyzeCombos, scopeTrades,
 } from './confluence-insights';
 import type { Trade } from '../types/trade';
 import type { CustomCategory } from '../types/settings';
@@ -134,26 +134,5 @@ describe('scopeTrades', () => {
   });
   it('all = everything', () => {
     expect(scopeTrades(all, 'all', new Set(['L']), new Set(['B']))).toEqual(all);
-  });
-});
-
-describe('analyzePairGrid', () => {
-  const forOf = (x: Trade) => x.confluences;
-  it('picks the most-used confluences and fills both halves of the grid', () => {
-    const trades = [
-      win(2, { confluences: ['A', 'B'] }), win(2, { confluences: ['A', 'B'] }), loss({ confluences: ['A', 'C'] }),
-      loss({ confluences: ['A'] }),
-    ];
-    const g = analyzePairGrid(trades, forOf, 'dollarPL', 2);
-    expect(g.names).toEqual(['A', 'B']); // A used 4x, B 2x, C 1x
-    expect(g.grid[0][0]).toBeNull();
-    expect(g.grid[0][1]?.trades).toBe(2);
-    expect(g.grid[0][1]?.rPerTrade).toBe(2);
-    expect(g.grid[1][0]).toEqual(g.grid[0][1]);
-    expect(g.totalNames).toBe(3);
-  });
-  it('leaves pairs never seen together empty', () => {
-    const g = analyzePairGrid([win(1, { confluences: ['A'] }), win(1, { confluences: ['B'] })], forOf, 'dollarPL', 8);
-    expect(g.grid[0][1]?.trades).toBe(0);
   });
 });
