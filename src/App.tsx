@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ViewProvider, useView } from './context/ViewContext';
 import { TradeProvider } from './context/TradeContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { JournalProvider } from './context/JournalContext';
@@ -28,6 +30,13 @@ import BacktestSessionPage from './pages/BacktestSessionPage';
 import HabitsPage from './pages/HabitsPage';
 import ApexAccountsPage from './pages/ApexAccountsPage';
 
+/** Local-data migration only ever runs for the owner's own journal. */
+function OwnerMigrationGate({ children }: { children: ReactNode }) {
+  const { readOnly } = useView();
+  if (readOnly) return <>{children}</>;
+  return <MigrationGate>{children}</MigrationGate>;
+}
+
 function AuthGate() {
   const { user, loading } = useAuth();
 
@@ -44,7 +53,8 @@ function AuthGate() {
   }
 
   return (
-    <MigrationGate>
+    <ViewProvider>
+    <OwnerMigrationGate>
       <TradeProvider>
         <BacktestProvider>
         <LiveSessionProvider>
@@ -94,7 +104,8 @@ function AuthGate() {
         </LiveSessionProvider>
         </BacktestProvider>
       </TradeProvider>
-    </MigrationGate>
+    </OwnerMigrationGate>
+    </ViewProvider>
   );
 }
 
