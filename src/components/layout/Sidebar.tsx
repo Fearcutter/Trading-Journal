@@ -15,6 +15,8 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useView } from '../../context/ViewContext';
+import { canViewPath } from '../../constants/coachSections';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -33,6 +35,8 @@ const navItems = [
 
 export default function Sidebar() {
   const { signOut, user } = useAuth();
+  const view = useView();
+  const visibleItems = navItems.filter(item => canViewPath(item.to, view.mode, view.sharedSections));
 
   return (
     <aside className="w-56 bg-slate-800 border-r border-slate-700 flex flex-col h-screen sticky top-0">
@@ -40,7 +44,7 @@ export default function Sidebar() {
         <h1 className="text-lg font-bold text-slate-50 tracking-tight">Trading Journal</h1>
       </div>
       <nav className="flex-1 p-3 space-y-1">
-        {navItems.map(({ to, icon: Icon, label }) => (
+        {visibleItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
