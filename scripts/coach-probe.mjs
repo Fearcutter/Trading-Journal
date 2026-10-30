@@ -1,6 +1,8 @@
 // Checks what a coach account can and can't do against the real database.
-// Usage: OWNER_EMAIL=… OWNER_PASSWORD=… COACH_EMAIL=… COACH_PASSWORD=… node scripts/coach-probe.mjs [--expect-revoked]
+// Usage: node scripts/coach-probe.mjs [--expect-revoked]
+// Asks for the two logins (passwords hidden); OWNER_EMAIL etc. env vars skip the questions.
 import { readFileSync } from 'node:fs';
+import readline from 'node:readline';
 import { createClient } from '@supabase/supabase-js';
 
 const env = Object.fromEntries(
@@ -27,10 +29,22 @@ const check = (name, ok, detail = '') => {
   if (!ok) failures++;
 };
 
+function ask(question, hidden = false) {
+  return new Promise(resolve => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+    if (hidden) rl._writeToOutput = (str) => { if (str.startsWith(question)) process.stdout.write(question); };
+    rl.question(question, answer => { rl.close(); if (hidden) process.stdout.write('\n'); resolve(answer.trim()); });
+  });
+}
+const OWNER_EMAIL = process.env.OWNER_EMAIL || await ask('Your email: ');
+const OWNER_PASSWORD = process.env.OWNER_PASSWORD || await ask('Your password (hidden): ', true);
+const COACH_EMAIL = process.env.COACH_EMAIL || await ask('Coach email: ');
+const COACH_PASSWORD = process.env.COACH_PASSWORD || await ask('Coach password (hidden): ', true);
+
 const owner = mk();
 const coach = mk();
-const o = await owner.auth.signInWithPassword({ email: process.env.OWNER_EMAIL, password: process.env.OWNER_PASSWORD });
-const c = await coach.auth.signInWithPassword({ email: process.env.COACH_EMAIL, password: process.env.COACH_PASSWORD });
+const o = await owner.auth.signInWithPassword({ email: OWNER_EMAIL, password: OWNER_PASSWORD });
+const c = await coach.auth.signInWithPassword({ email: COACH_EMAIL, password: COACH_PASSWORD });
 if (o.error || c.error) { console.error('Login failed', o.error?.message, c.error?.message); process.exit(1); }
 const ownerId = o.data.user.id;
 
