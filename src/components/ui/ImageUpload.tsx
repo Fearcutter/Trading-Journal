@@ -6,9 +6,11 @@ interface ImageUploadProps {
   label?: string;
   value: string; // base64 data URL
   onChange: (value: string) => void;
+  /** Show the whole image at full width instead of a short cropped preview. */
+  fullSize?: boolean;
 }
 
-export default function ImageUpload({ label, value, onChange }: ImageUploadProps) {
+export default function ImageUpload({ label, value, onChange, fullSize = false }: ImageUploadProps) {
   const [focused, setFocused] = useState(false);
 
   const readFileAsDataURL = useCallback((file: File) => {
@@ -66,7 +68,7 @@ export default function ImageUpload({ label, value, onChange }: ImageUploadProps
           onBlur={() => setFocused(false)}
           className="relative group outline-none focus:ring-2 focus:ring-blue-500 rounded-lg"
         >
-          <img src={value} alt={label || 'Screenshot'} className="w-full rounded-lg border border-slate-600 max-h-48 object-cover" />
+          <img src={value} alt={label || 'Screenshot'} className={`w-full rounded-lg border border-slate-600 ${fullSize ? 'h-auto' : 'max-h-48 object-cover'}`} />
           <button
             type="button"
             onClick={() => onChange('')}

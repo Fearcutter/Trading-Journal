@@ -226,7 +226,7 @@ export default function TradeDetail({ trade }: TradeDetailProps) {
       {(trade.setupScreenshot || trade.resultScreenshot || trade.additionalScreenshots?.length) && (
         <div className="space-y-4">
           {(trade.setupScreenshot || trade.resultScreenshot) && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
               {trade.setupScreenshot && (
                 <Card>
                   <h3 className="text-sm font-medium text-slate-300 mb-2">Setup Screenshot</h3>
@@ -242,7 +242,7 @@ export default function TradeDetail({ trade }: TradeDetailProps) {
             </div>
           )}
           {trade.additionalScreenshots && trade.additionalScreenshots.length > 0 && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
               {trade.additionalScreenshots.map((src, i) => (
                 <Card key={i}>
                   <h3 className="text-sm font-medium text-slate-300 mb-2">Additional Screenshot {i + 1}</h3>

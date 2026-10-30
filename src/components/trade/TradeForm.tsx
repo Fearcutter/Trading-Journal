@@ -8,6 +8,7 @@ import Select from '../ui/Select';
 import Button from '../ui/Button';
 import TagInput from '../ui/TagInput';
 import ImageUpload from '../ui/ImageUpload';
+import AutoGrowTextarea from '../ui/AutoGrowTextarea';
 import ConfluenceSelector from './ConfluenceSelector';
 import { EMOTIONS_BEFORE, EMOTIONS_AFTER } from '../../constants/emotions';
 import { nowInTimezone } from '../../utils/timezone';
@@ -418,24 +419,22 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
       </div>
 
       {/* Notes */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-4">
         <div className="space-y-1">
           <label className="block text-sm font-medium text-slate-300">Pre-Trade Notes</label>
-          <textarea
+          <AutoGrowTextarea
             value={form.preTradeNotes}
             onChange={e => update('preTradeNotes', e.target.value)}
-            rows={3}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-hidden"
             placeholder="What was your thesis?"
           />
         </div>
         <div className="space-y-1">
           <label className="block text-sm font-medium text-slate-300">Post-Trade Notes</label>
-          <textarea
+          <AutoGrowTextarea
             value={form.postTradeNotes}
             onChange={e => update('postTradeNotes', e.target.value)}
-            rows={3}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-hidden"
             placeholder="What did you learn?"
           />
         </div>
@@ -443,40 +442,24 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
 
       {/* Screenshots */}
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <ImageUpload label="Setup Screenshot" value={form.setupScreenshot} onChange={v => update('setupScreenshot', v)} />
-          <ImageUpload label="Result Screenshot" value={form.resultScreenshot} onChange={v => update('resultScreenshot', v)} />
-        </div>
-        {/* Additional screenshots — rendered in pairs, always one empty slot at end */}
-        {(() => {
-          const slots = [...(form.additionalScreenshots ?? []), ''];
-          const pairs: [number, number | null][] = [];
-          for (let i = 0; i < slots.length; i += 2) {
-            pairs.push([i, i + 1 < slots.length ? i + 1 : null]);
-          }
-          return pairs.map(([a, b]) => (
-            <div key={a} className="grid grid-cols-2 gap-4">
-              {[a, b].map(i => {
-                if (i === null) return <div key="empty" />;
-                const src = slots[i] ?? '';
-                return (
-                  <ImageUpload
-                    key={i}
-                    label={`Additional Screenshot ${i + 1}`}
-                    value={src}
-                    onChange={v => {
-                      const next = [...(form.additionalScreenshots ?? [])];
-                      if (i >= next.length) next.push(v);
-                      else next[i] = v;
-                      while (next.length > 0 && next[next.length - 1] === '') next.pop();
-                      update('additionalScreenshots', next);
-                    }}
-                  />
-                );
-              })}
-            </div>
-          ));
-        })()}
+        <ImageUpload label="Setup Screenshot" value={form.setupScreenshot} onChange={v => update('setupScreenshot', v)} fullSize />
+        <ImageUpload label="Result Screenshot" value={form.resultScreenshot} onChange={v => update('resultScreenshot', v)} fullSize />
+        {/* Additional screenshots, one per row, always one empty slot at the end */}
+        {[...(form.additionalScreenshots ?? []), ''].map((src, i) => (
+          <ImageUpload
+            key={i}
+            label={`Additional Screenshot ${i + 1}`}
+            value={src}
+            fullSize
+            onChange={v => {
+              const next = [...(form.additionalScreenshots ?? [])];
+              if (i >= next.length) next.push(v);
+              else next[i] = v;
+              while (next.length > 0 && next[next.length - 1] === '') next.pop();
+              update('additionalScreenshots', next);
+            }}
+          />
+        ))}
       </div>
 
       {/* Tags */}
