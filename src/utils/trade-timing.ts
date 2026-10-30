@@ -12,7 +12,8 @@ export interface TimingRow {
   totalPL: number;
 }
 
-function row(label: string, trades: Trade[], plField: PLField): TimingRow {
+/** One table row: trades, win %, net R, R per trade and total P&L for a group of trades. */
+export function timingRow(label: string, trades: Trade[], plField: PLField): TimingRow {
   const s = summarize(trades, plField);
   return {
     label,
@@ -56,7 +57,7 @@ export function byDayOfWeek(trades: Trade[], plField: PLField): TimingRow[] {
   return order
     .map(d => ({ d, ts: trades.filter(t => dayOf(t) === d) }))
     .filter(({ d, ts }) => (d >= 1 && d <= 5) || ts.length > 0)
-    .map(({ d, ts }) => row(DAY_NAMES[d], ts, plField));
+    .map(({ d, ts }) => timingRow(DAY_NAMES[d], ts, plField));
 }
 
 const hhmm = (mins: number) => `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
@@ -73,7 +74,7 @@ export function byTimeBlock(trades: Trade[], plField: PLField, blockMinutes = 15
   }
   return [...groups.entries()]
     .sort((a, b) => a[0] - b[0])
-    .map(([start, ts]) => row(`${hhmm(start)}–${hhmm(start + blockMinutes - 1)}`, ts, plField));
+    .map(([start, ts]) => timingRow(`${hhmm(start)}–${hhmm(start + blockMinutes - 1)}`, ts, plField));
 }
 
 const DURATION_BUCKETS: { label: string; max: number }[] = [
@@ -90,7 +91,7 @@ export function byDuration(trades: Trade[], plField: PLField): TimingRow[] {
   const timed = trades.map(t => ({ t, d: tradeDurationMinutes(t) })).filter(x => x.d !== null) as { t: Trade; d: number }[];
   return DURATION_BUCKETS.map((bucket, i) => {
     const min = i === 0 ? 0 : DURATION_BUCKETS[i - 1].max;
-    return row(bucket.label, timed.filter(x => x.d >= min && x.d < bucket.max).map(x => x.t), plField);
+    return timingRow(bucket.label, timed.filter(x => x.d >= min && x.d < bucket.max).map(x => x.t), plField);
   });
 }
 

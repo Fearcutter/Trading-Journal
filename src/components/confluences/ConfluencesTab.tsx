@@ -5,6 +5,7 @@ import { confluenceLists, analyzeEdge, analyzeForCount, analyzeNetScore, analyze
 import EdgeTable from './EdgeTable';
 import StackingTable from './StackingTable';
 import AgainstCost from './AgainstCost';
+import IFVGStopMethodSection from './IFVGStopMethodSection';
 import { usePLFormatter } from '../../hooks/usePLFormatter';
 import ConfluenceTable from './ConfluenceTable';
 import CombinationAnalysis from './CombinationAnalysis';
@@ -123,6 +124,7 @@ export default function ConfluencesTab({ trades }: { trades: Trade[] }) {
           )}
         </>
       )}
+      <IFVGStopMethodSection trades={trades} />
     </div>
   );
 }

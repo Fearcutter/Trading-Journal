@@ -7,7 +7,6 @@ import EmptyState from '../components/ui/EmptyState';
 import Button from '../components/ui/Button';
 import { Layers, PlusCircle } from 'lucide-react';
 import OverlapScopeToggle, { type OverlapScope } from '../components/filters/OverlapScopeToggle';
-import IFVGStopMethodSection from '../components/confluences/IFVGStopMethodSection';
 import ConfluencesTab from '../components/confluences/ConfluencesTab';
 import { scopeTrades, type TradeScope } from '../utils/confluence-insights';
 
@@ -66,7 +65,6 @@ export default function ConfluencesPage() {
         <OverlapScopeToggle value={overlapScope} onChange={setOverlapScope} />
       </div>
       <ConfluencesTab trades={scopedTrades} />
-      <IFVGStopMethodSection trades={scopedTrades} />
     </div>
   );
 }

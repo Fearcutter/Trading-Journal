@@ -1,5 +1,7 @@
 import type { Trade } from '../types/trade';
 import { getRealizedR, getStopDistance } from './r-multiple';
+import type { PLField } from './pl-helpers';
+import { timingRow, type TimingRow } from './trade-timing';
 
 /** Cells built on fewer trades than this are flagged as unreliable. */
 export const THIN_SAMPLE_THRESHOLD = 5;
@@ -15,6 +17,7 @@ export interface SizeBand {
 
 export interface MatrixCell {
   avgR: number | null;
+  winRate: number | null;
   count: number;
   thin: boolean;
 }
@@ -88,12 +91,13 @@ function bandIndexOf(size: number, bands: SizeBand[]): number {
   return -1;
 }
 
-interface Acc { sum: number; count: number }
-const emptyAcc = (): Acc => ({ sum: 0, count: 0 });
+interface Acc { sum: number; count: number; wins: number }
+const emptyAcc = (): Acc => ({ sum: 0, count: 0, wins: 0 });
 
 function toCell(a: Acc): MatrixCell {
   return {
     avgR: a.count > 0 ? a.sum / a.count : null,
+    winRate: a.count > 0 ? (a.wins / a.count) * 100 : null,
     count: a.count,
     thin: a.count > 0 && a.count < THIN_SAMPLE_THRESHOLD,
   };
@@ -126,10 +130,13 @@ export function buildMatrix(
         entry = { bands: bands.map(emptyAcc), all: emptyAcc() };
         methods.set(method, entry);
       }
+      const won = trade.result === 'win' ? 1 : 0;
       entry.bands[idx].sum += r;
       entry.bands[idx].count++;
+      entry.bands[idx].wins += won;
       entry.all.sum += r;
       entry.all.count++;
+      entry.all.wins += won;
     }
   }
 
@@ -141,6 +148,13 @@ export function buildMatrix(
       totalCount: acc.all.count,
     }))
     .sort((a, b) => b.totalCount - a.totalCount);
+}
+
+/** Win rate and net R per size band, every trade with an iFVG size (any stop method). */
+export function buildSizeRows(trades: Trade[], bands: SizeBand[], plField: PLField): TimingRow[] {
+  const sized = trades.filter(t => t.ifvgSize != null);
+  return bands.map((band, i) =>
+    timingRow(`${band.label} pts`, sized.filter(t => bandIndexOf(t.ifvgSize!, bands) === i), plField));
 }
 
 /** One point per (trade, method) pair, on the same eligibility rules as the matrix. */

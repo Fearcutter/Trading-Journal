@@ -3,11 +3,13 @@ import type { Trade } from '../../types/trade';
 import { useSettings } from '../../context/SettingsContext';
 import { categoryExtractors } from '../../utils/confluence-analyzer';
 import {
-  suggestCutoffs, buildBands, buildMatrix, buildScatterPoints, countIneligible,
+  suggestCutoffs, buildBands, buildMatrix, buildScatterPoints, countIneligible, buildSizeRows,
 } from '../../utils/ifvg-sl-analyzer';
 import IFVGStopMethodScatter from './IFVGStopMethodScatter';
 import IFVGStopMethodGrid from './IFVGStopMethodGrid';
 import Card from '../ui/Card';
+import TimingTable from '../analytics/TimingTable';
+import { usePLFormatter } from '../../hooks/usePLFormatter';
 
 const CATEGORY_KEY = 'ifvg-sl-category';
 const BANDS_KEY = 'ifvg-sl-bands';
@@ -66,6 +68,8 @@ export default function IFVGStopMethodSection({ trades }: Props) {
   const rows = useMemo(() => buildMatrix(trades, extractor, bands), [trades, extractor, bands]);
   const points = useMemo(() => buildScatterPoints(trades, extractor), [trades, extractor]);
   const ineligible = useMemo(() => countIneligible(trades, extractor), [trades, extractor]);
+  const { plField } = usePLFormatter();
+  const sizeRows = useMemo(() => buildSizeRows(trades, bands, plField), [trades, bands, plField]);
 
   const updateCategory = (id: string) => {
     setChosenId(id);
@@ -129,6 +133,15 @@ export default function IFVGStopMethodSection({ trades }: Props) {
         </p>
       )}
 
+      {sizeRows.some(r => r.trades > 0) && (
+        <TimingTable
+          title="Win rate by iFVG size"
+          subtitle="Every trade with an iFVG size, all stop methods together. Sizes follow the cutoffs above."
+          labelHeader="iFVG size"
+          rows={sizeRows}
+        />
+      )}
+
       {rows.length === 0 ? (
         <Card>
           <h3 className="text-sm font-medium text-slate-300">iFVG Size vs Stop Method</h3>
@@ -143,8 +156,8 @@ export default function IFVGStopMethodSection({ trades }: Props) {
         </Card>
       ) : (
         <>
-          <IFVGStopMethodScatter points={points} lo={lo} hi={hi} />
           <IFVGStopMethodGrid rows={rows} bands={bands} />
+          <IFVGStopMethodScatter points={points} lo={lo} hi={hi} />
         </>
       )}
     </div>

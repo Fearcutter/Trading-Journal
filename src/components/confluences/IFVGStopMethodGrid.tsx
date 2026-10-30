@@ -40,6 +40,7 @@ function Cell({ cell, best }: { cell: MatrixCell; best: boolean }) {
         <p className="font-mono text-sm font-semibold">
           {cell.avgR > 0 ? '+' : ''}{cell.avgR.toFixed(2)}R{cell.thin ? '*' : ''}
         </p>
+        <p className="text-[11px] opacity-80">{cell.winRate !== null ? `${Math.round(cell.winRate)}% win` : ''}</p>
         <p className="text-[11px] opacity-70">{cell.count} {cell.count === 1 ? 'trade' : 'trades'}</p>
       </div>
     </td>
@@ -65,7 +66,7 @@ export default function IFVGStopMethodGrid({ rows, bands }: Props) {
   return (
     <Card padding={false}>
       <div className="p-4 pb-0">
-        <h3 className="text-sm font-medium text-slate-300">Average Realized R by Stop Method and iFVG Size</h3>
+        <h3 className="text-sm font-medium text-slate-300">Average R and Win % by Stop Method and iFVG Size</h3>
         <p className="text-xs text-slate-500 mt-1">
           Points made or lost divided by the distance risked. Ringed cell is the best method in that band.
         </p>
