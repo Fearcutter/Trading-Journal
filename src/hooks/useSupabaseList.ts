@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { useView } from '../context/ViewContext';
 import { supabase } from '../lib/supabase';
 import { uploadScreenshot, getSignedUrl, isBase64 } from '../lib/screenshots';
 
@@ -13,6 +14,7 @@ export function useSupabaseList<T extends { id: string }>(
   options?: UseSupabaseListOptions
 ): [T[], (value: T[] | ((prev: T[]) => T[])) => void, boolean] {
   const { user } = useAuth();
+  const { journalOwnerId, readOnly } = useView();
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const loadedRef = useRef(false);
@@ -79,7 +81,7 @@ export function useSupabaseList<T extends { id: string }>(
         const { data, error } = await supabase
           .from(table)
           .select('*')
-          .eq('user_id', user!.id);
+          .eq('user_id', journalOwnerId);
 
         if (!cancelled && error) {
           console.error(`[useSupabaseList] Failed to load "${table}":`, error);
@@ -125,7 +127,7 @@ export function useSupabaseList<T extends { id: string }>(
 
     load();
     return () => { cancelled = true; };
-  }, [user, table]);
+  }, [user, table, journalOwnerId]);
 
   const persist = useCallback(async (newItems: T[]) => {
     if (!user) return;
@@ -238,7 +240,8 @@ export function useSupabaseList<T extends { id: string }>(
   }, [user, table, screenshotFields]);
 
   const updateItems = useCallback((newValue: T[] | ((prev: T[]) => T[])) => {
-    if (!loadedRef.current) return;
+    // Coach view is read-only: never change or persist the owner's data
+    if (!loadedRef.current || readOnly) return;
     setItems(prev => {
       const resolved = newValue instanceof Function ? newValue(prev) : newValue;
 
@@ -249,7 +252,7 @@ export function useSupabaseList<T extends { id: string }>(
 
       return resolved;
     });
-  }, [persist]);
+  }, [persist, readOnly]);
 
   return [items, updateItems, loading];
 }
