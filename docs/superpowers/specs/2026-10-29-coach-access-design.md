@@ -32,7 +32,7 @@ The shareable sections, each a checkbox (all ticked by default on invite):
 
 Never shareable: Analytics, MFE/MAE, Category Analytics, Backtesting, Risk Calculator, Settings page. `backtest_sessions` is never readable by the coach.
 
-`user_settings` is readable by an active coach regardless of ticked sections (needed for dashboard widget layout, timezone, P&L display mode, instruments). It contains preferences only.
+`user_settings` is **not** directly readable by the coach. Settings reach the coach through the security-definer function `get_shared_settings(owner)`, which returns the settings minus `fundedAccountsPasswordHash`. The Funded Accounts password gate is skipped in coach mode (the owner chose to share that section).
 
 ## Data model
 
@@ -85,7 +85,7 @@ New **select-only** policies added alongside the existing "Users own their X" po
 - `habit_checkins`: `coach_can_view(user_id, 'journal') or coach_can_view(user_id, 'calendar')`.
 - `playbook_entries`: `coach_can_view(user_id, 'playbook')`.
 - `apex_accounts`: `coach_can_view(user_id, 'apex_accounts')`.
-- `user_settings`: any active coach_access row for this owner matching the caller.
+- `user_settings`: no coach policy (see `get_shared_settings`).
 - `storage.objects` (bucket `screenshots`): select only, where the path's first folder is an owner the caller coaches and:
   - `trades/<id>/…` → that trade passes the trades rule above (so backtest-trade screenshots stay private);
   - `playbook_entries/<id>/…` → `coach_can_view(owner, 'playbook')`;
