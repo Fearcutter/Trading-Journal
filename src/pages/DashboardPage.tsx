@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useView } from '../context/ViewContext';
 import { Link } from 'react-router-dom';
 import { useTrades } from '../context/TradeContext';
 import { useSettings } from '../context/SettingsContext';
@@ -29,6 +30,7 @@ import { LayoutDashboard, PlusCircle, Settings2 } from 'lucide-react';
 
 export default function DashboardPage() {
   const { trades } = useTrades();
+  const { readOnly } = useView();
   const { sessions: liveSessions } = useLiveSession();
   const { dashboardWidgets } = useSettings();
   const [filters, setFilters] = useState<TradeFilters>(defaultFilters);
@@ -54,11 +56,11 @@ export default function DashboardPage() {
         icon={<LayoutDashboard size={48} />}
         title="No trades yet"
         description="Start logging trades to see your analytics dashboard."
-        action={
+        action={readOnly ? undefined : (
           <Link to="/live-trading">
             <Button><PlusCircle size={16} /> Add First Trade</Button>
           </Link>
-        }
+        )}
       />
     );
   }
@@ -87,13 +89,15 @@ export default function DashboardPage() {
             <OverlapScopeToggle value={overlapScope} onChange={setOverlapScope} />
           </div>
         </div>
-        <button
-          onClick={() => setCustomizerOpen(true)}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700 transition-colors"
-          title="Customize widgets"
-        >
-          <Settings2 size={18} />
-        </button>
+        {!readOnly && (
+          <button
+            onClick={() => setCustomizerOpen(true)}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700 transition-colors"
+            title="Customize widgets"
+          >
+            <Settings2 size={18} />
+          </button>
+        )}
       </div>
       <FilterBar filters={filters} onChange={setFilters} />
       <StatsBar stats={dashboard.stats} />

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useView } from '../context/ViewContext';
 import { format } from 'date-fns';
 import { FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -20,6 +21,7 @@ import AdherenceOverTimeChart from '../components/habits/AdherenceOverTimeChart'
 type Tab = 'checkin' | 'habits' | 'insights';
 
 export default function HabitsPage() {
+  const { readOnly } = useView();
   const [activeTab, setActiveTab] = useState<Tab>('checkin');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -56,7 +58,7 @@ export default function HabitsPage() {
 
       {/* Tab bar */}
       <div className="flex gap-1 bg-slate-800 border border-slate-700 rounded-lg p-1">
-        {tabs.map(tab => (
+        {tabs.filter(t => !readOnly || t.key !== 'habits').map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
@@ -88,12 +90,14 @@ export default function HabitsPage() {
           </div>
           <div className="flex-1 space-y-4">
             <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
-              <UnifiedDailyForm
-                key={selectedDate + (existingCheckIn?.id ?? '') + (existingJournalEntry?.id ?? '')}
-                date={selectedDate}
-                existingCheckIn={existingCheckIn}
-                existingJournalEntry={existingJournalEntry}
-              />
+              <fieldset disabled={readOnly} className="contents">
+                <UnifiedDailyForm
+                  key={selectedDate + (existingCheckIn?.id ?? '') + (existingJournalEntry?.id ?? '')}
+                  date={selectedDate}
+                  existingCheckIn={existingCheckIn}
+                  existingJournalEntry={existingJournalEntry}
+                />
+              </fieldset>
             </div>
 
             {dayTrades.length > 0 && (

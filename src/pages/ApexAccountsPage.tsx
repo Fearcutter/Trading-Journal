@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useView } from '../context/ViewContext';
 import { useApexAccounts } from '../context/ApexAccountContext';
 import { useTrades } from '../context/TradeContext';
 import { useApexPayoutStatus } from '../hooks/useApexPayoutStatus';
@@ -29,6 +30,7 @@ const STATUS_LABELS: Record<ApexAccountStatus, { text: string; color: string }> 
 
 export default function ApexAccountsPage() {
   const { accounts, addAccount, updateAccount, deleteAccount } = useApexAccounts();
+  const { readOnly } = useView();
   const { trades } = useTrades();
   const statuses = useApexPayoutStatus(accounts, trades);
   const [detailAccountId, setDetailAccountId] = useState<string | null>(null);
@@ -117,13 +119,7 @@ export default function ApexAccountsPage() {
     .filter(a => a.status !== 'active')
     .sort((a, b) => a.label.localeCompare(b.label));
 
-  return (
-    <ApexPasswordGate
-      onLockStateChange={(val) => { setUnlocked(val); if (val) setRequestLock(false); }}
-      showChangePassword={showChangePassword}
-      onChangePasswordDone={() => setShowChangePassword(false)}
-      requestLock={requestLock}
-    >
+  const content = (
     <div className="space-y-6 max-w-5xl">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -138,9 +134,11 @@ export default function ApexAccountsPage() {
               onChangePassword={() => setShowChangePassword(true)}
             />
           )}
-          <Button size="sm" onClick={() => { resetForm(); setShowForm(true); }}>
-            <Plus size={14} /> Add Account
-          </Button>
+          {!readOnly && (
+            <Button size="sm" onClick={() => { resetForm(); setShowForm(true); }}>
+              <Plus size={14} /> Add Account
+            </Button>
+          )}
         </div>
       </div>
 
@@ -319,6 +317,7 @@ export default function ApexAccountsPage() {
               </button>
 
               {/* Edit/status controls */}
+              {!readOnly && (
               <div className="absolute bottom-3 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                 <button onClick={(e) => { e.stopPropagation(); startEdit(account.id); }} className="p-1 text-slate-500 hover:text-blue-400">
                   <Edit2 size={14} />
@@ -333,6 +332,7 @@ export default function ApexAccountsPage() {
                   <X size={14} />
                 </button>
               </div>
+              )}
             </Card>
           ))}
         </div>
@@ -344,9 +344,11 @@ export default function ApexAccountsPage() {
           <div className="py-12 text-center">
             <Landmark size={48} className="mx-auto text-slate-600 mb-3" />
             <p className="text-sm text-slate-400 mb-4">No accounts added yet</p>
-            <Button onClick={() => setShowForm(true)}>
-              <Plus size={14} /> Add Your First Account
-            </Button>
+            {!readOnly && (
+              <Button onClick={() => setShowForm(true)}>
+                <Plus size={14} /> Add Your First Account
+              </Button>
+            )}
           </div>
         </Card>
       )}
@@ -365,6 +367,7 @@ export default function ApexAccountsPage() {
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusInfo.color}`}>{statusInfo.text}</span>
                     <span className="text-xs text-slate-500">{acc.payoutsCompleted}/6 payouts</span>
                   </div>
+                  {!readOnly && (
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                     {acc.status === 'blown' && (
                       <button onClick={() => updateAccount(acc.id, { status: 'active' })} className="px-2 py-0.5 text-xs text-slate-500 hover:text-emerald-400">
@@ -381,6 +384,7 @@ export default function ApexAccountsPage() {
                       <X size={14} />
                     </button>
                   </div>
+                  )}
                 </div>
               );
             })}
@@ -397,6 +401,17 @@ export default function ApexAccountsPage() {
         />
       )}
     </div>
+  );
+
+  if (readOnly) return content;  // owner chose to share this section; coach has no password
+  return (
+    <ApexPasswordGate
+      onLockStateChange={(val) => { setUnlocked(val); if (val) setRequestLock(false); }}
+      showChangePassword={showChangePassword}
+      onChangePasswordDone={() => setShowChangePassword(false)}
+      requestLock={requestLock}
+    >
+      {content}
     </ApexPasswordGate>
   );
 }

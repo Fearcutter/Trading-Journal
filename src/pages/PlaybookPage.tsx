@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useView } from '../context/ViewContext';
 import { usePlaybook } from '../context/PlaybookContext';
 import { useTrades } from '../context/TradeContext';
 import PlaybookCard from '../components/playbook/PlaybookCard';
@@ -10,6 +11,7 @@ import { BookMarked, Plus, Search } from 'lucide-react';
 
 export default function PlaybookPage() {
   const { entries, addEntry, updateEntry, deleteEntry } = usePlaybook();
+  const { readOnly } = useView();
   const { trades } = useTrades();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<PlaybookEntry | undefined>();
@@ -57,9 +59,11 @@ export default function PlaybookPage() {
         <h1 className="text-xl font-bold text-slate-50 flex items-center gap-2">
           <BookMarked size={22} /> Strategy Playbook
         </h1>
-        <Button onClick={handleCreate}>
-          <Plus size={16} /> Add Strategy
-        </Button>
+        {!readOnly && (
+          <Button onClick={handleCreate}>
+            <Plus size={16} /> Add Strategy
+          </Button>
+        )}
       </div>
 
       <div className="relative">
@@ -92,16 +96,18 @@ export default function PlaybookPage() {
       <Modal
         open={editorOpen}
         onOpenChange={setEditorOpen}
-        title={editingEntry ? 'Edit Strategy' : 'New Strategy'}
+        title={readOnly ? 'Strategy' : editingEntry ? 'Edit Strategy' : 'New Strategy'}
         wide
       >
-        <PlaybookEditor
-          key={editingEntry?.id ?? 'new'}
-          initialData={editingEntry}
-          onSubmit={handleSubmit}
-          onCancel={() => setEditorOpen(false)}
-        />
-        {editingEntry && (
+        <fieldset disabled={readOnly}>
+          <PlaybookEditor
+            key={editingEntry?.id ?? 'new'}
+            initialData={editingEntry}
+            onSubmit={handleSubmit}
+            onCancel={() => setEditorOpen(false)}
+          />
+        </fieldset>
+        {editingEntry && !readOnly && (
           <div className="mt-4 pt-4 border-t border-slate-700">
             <Button variant="danger" size="sm" onClick={handleDelete}>
               Delete Strategy

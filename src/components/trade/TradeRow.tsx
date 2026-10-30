@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useView } from '../../context/ViewContext';
 import type { Trade } from '../../types/trade';
 import Badge from '../ui/Badge';
 import { formatDate, formatTime, formatPoints, formatCurrency } from '../../utils/formatters';
@@ -24,6 +25,7 @@ interface TradeRowProps {
 
 export default function TradeRow({ trade, selected, onSelect, hiddenColumns, skipped }: TradeRowProps) {
   const pl = usePLFormatter();
+  const { readOnly } = useView();
   const { instruments, plDisplayMode } = useSettings();
 
   return (
@@ -145,13 +147,17 @@ export default function TradeRow({ trade, selected, onSelect, hiddenColumns, ski
         >
           View
         </Link>
-        <span className="text-slate-600 mx-1">·</span>
-        <Link
-          to={`/trades/${trade.id}?edit`}
-          className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-        >
-          Edit
-        </Link>
+        {!readOnly && (
+          <>
+            <span className="text-slate-600 mx-1">·</span>
+            <Link
+              to={`/trades/${trade.id}?edit`}
+              className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              Edit
+            </Link>
+          </>
+        )}
       </td>
     </tr>
   );

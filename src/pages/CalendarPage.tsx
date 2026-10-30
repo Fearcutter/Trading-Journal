@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useView } from '../context/ViewContext';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { useTrades } from '../context/TradeContext';
 import { useHabits } from '../context/HabitContext';
@@ -15,6 +16,7 @@ import { PlusCircle } from 'lucide-react';
 
 export default function CalendarPage() {
   const { trades: allTrades } = useTrades();
+  const { readOnly } = useView();
   const { sessions: liveSessions } = useLiveSession();
   const { checkIns: habitCheckIns } = useHabits();
   const pl = usePLFormatter();
@@ -65,11 +67,11 @@ export default function CalendarPage() {
         icon={<Calendar size={48} />}
         title="No trades yet"
         description="Your calendar heat map will appear here once you log trades."
-        action={
+        action={readOnly ? undefined : (
           <Link to="/live-trading">
             <Button><PlusCircle size={16} /> Add First Trade</Button>
           </Link>
-        }
+        )}
       />
     );
   }

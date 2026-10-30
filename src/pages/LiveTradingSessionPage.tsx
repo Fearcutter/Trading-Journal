@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useView } from '../context/ViewContext';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, TrendingUp, BarChart3, BookOpen, LineChart as LineChartIcon, Target, Layers, PlusCircle, ClipboardPaste, ChevronUp, Download, Trash2, Search, Settings2, Pencil, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -58,6 +59,7 @@ const TABS: { key: Tab; label: string; icon: typeof BarChart3 }[] = [
 
 export default function LiveTradingSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
+  const { readOnly } = useView();
   const { getSession, updateSession, loading } = useLiveSession();
   const { trades, addTrade } = useTrades();
   const { accounts } = useApexAccounts();
@@ -190,7 +192,7 @@ export default function LiveTradingSessionPage() {
           ) : (
             <>
               <h1 className="text-xl font-bold text-slate-50">{session.name}</h1>
-              <button onClick={startEditing} className="p-1 text-slate-500 hover:text-slate-300 transition-colors"><Pencil size={14} /></button>
+              {!readOnly && <button onClick={startEditing} className="p-1 text-slate-500 hover:text-slate-300 transition-colors"><Pencil size={14} /></button>}
             </>
           )}
           <span className="text-sm text-slate-500">{sessionTrades.length} trade{sessionTrades.length !== 1 ? 's' : ''}</span>
@@ -361,6 +363,7 @@ function TradeLogTab({ sessionTrades, sessionId, onTradeSubmit, skippedTradeIds 
   onTradeSubmit: (data: TradeFormData) => void;
   skippedTradeIds?: Set<string>;
 }) {
+  const { readOnly } = useView();
   const [showAddForm, setShowAddForm] = useState(false);
   const [pasteModalOpen, setPasteModalOpen] = useState(false);
   const [pasteInitialData, setPasteInitialData] = useState<Partial<TradeFormData> | undefined>();
@@ -422,6 +425,7 @@ function TradeLogTab({ sessionTrades, sessionId, onTradeSubmit, skippedTradeIds 
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
+        {!readOnly && (<>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
           className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
@@ -436,8 +440,9 @@ function TradeLogTab({ sessionTrades, sessionId, onTradeSubmit, skippedTradeIds 
           <ClipboardPaste size={16} />
           Paste Trade
         </button>
+        </>)}
         <div className="flex-1" />
-        {selectedIds.size > 0 && (
+        {selectedIds.size > 0 && !readOnly && (
           <Button variant="danger" size="sm" onClick={handleBulkDelete}>
             <Trash2 size={14} /> Delete ({selectedIds.size})
           </Button>
@@ -490,7 +495,7 @@ function TradeLogTab({ sessionTrades, sessionId, onTradeSubmit, skippedTradeIds 
       </div>
 
       {sessionTrades.length === 0 ? (
-        <EmptyState icon={<BookOpen size={48} />} title="No trades in this session" description="Click 'Add Trade' or 'Paste Trade' to get started." />
+        <EmptyState icon={<BookOpen size={48} />} title="No trades in this session" description={readOnly ? 'No trades in this session yet.' : "Click 'Add Trade' or 'Paste Trade' to get started."} />
       ) : (
         <>
           <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">

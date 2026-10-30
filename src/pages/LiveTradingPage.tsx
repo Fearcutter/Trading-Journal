@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useView } from '../context/ViewContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { TrendingUp, Trash2, Plus, X, FolderInput } from 'lucide-react';
 import { useLiveSession } from '../context/LiveSessionContext';
@@ -32,6 +33,7 @@ const SESSION_DOT_COLORS: Record<string, string> = {
 
 export default function LiveTradingPage() {
   const { sessions, addSession, deleteSession } = useLiveSession();
+  const { readOnly } = useView();
   const { sessions: backtestSessions } = useBacktest();
   const { trades, updateTrade } = useTrades();
   const settings = useSettings();
@@ -113,9 +115,11 @@ export default function LiveTradingPage() {
           <TrendingUp size={24} className="text-blue-400" />
           <h1 className="text-xl font-bold text-slate-50">Live Trading</h1>
         </div>
-        <Button size="sm" onClick={() => setShowForm(!showForm)}>
-          {showForm ? <><X size={14} /> Cancel</> : <><Plus size={14} /> New Session</>}
-        </Button>
+        {!readOnly && (
+          <Button size="sm" onClick={() => setShowForm(!showForm)}>
+            {showForm ? <><X size={14} /> Cancel</> : <><Plus size={14} /> New Session</>}
+          </Button>
+        )}
       </div>
 
       {showForm && (
@@ -170,12 +174,14 @@ export default function LiveTradingPage() {
                 to={`/live-trading/${session.id}`}
                 className="relative bg-slate-800 border border-slate-700 rounded-xl p-4 hover:border-slate-600 transition-colors group"
               >
-                <button
-                  onClick={e => { e.preventDefault(); e.stopPropagation(); handleDelete(session.id, session.name); }}
-                  className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-700 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Trash2 size={14} />
-                </button>
+                {!readOnly && (
+                  <button
+                    onClick={e => { e.preventDefault(); e.stopPropagation(); handleDelete(session.id, session.name); }}
+                    className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
                 <div className="flex items-center gap-2 mb-2">
                   <span className={`w-2.5 h-2.5 rounded-full ${SESSION_DOT_COLORS[session.color] || 'bg-blue-500'}`} />
                   <h3 className="font-bold text-slate-50 truncate">{session.name}</h3>
@@ -196,7 +202,7 @@ export default function LiveTradingPage() {
         </div>
       )}
 
-      {unsortedCount > 0 && (
+      {unsortedCount > 0 && !readOnly && (
         <div className="bg-slate-800 border border-amber-500/40 rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

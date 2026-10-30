@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useView } from '../context/ViewContext';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTrades } from '../context/TradeContext';
 import { useBacktest } from '../context/BacktestContext';
@@ -15,7 +16,8 @@ export default function TradeDetailPage() {
   const navigate = useNavigate();
   const { trades, updateTrade, deleteTrade } = useTrades();
   const [searchParams] = useSearchParams();
-  const [editing, setEditing] = useState(searchParams.has('edit'));
+  const { readOnly } = useView();
+  const [editing, setEditing] = useState(searchParams.has('edit') && !readOnly);
 
   const { getSession: getBacktestSession } = useBacktest();
   const trade = trades.find(t => t.id === id);
@@ -70,7 +72,7 @@ export default function TradeDetailPage() {
           <ArrowLeft size={16} /> Back
         </Button>
         <div className="flex-1" />
-        {!editing && (
+        {!editing && !readOnly && (
           <>
             <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
               <Pencil size={14} /> Edit
