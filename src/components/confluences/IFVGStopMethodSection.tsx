@@ -3,7 +3,7 @@ import type { Trade } from '../../types/trade';
 import { useSettings } from '../../context/SettingsContext';
 import { categoryExtractors } from '../../utils/confluence-analyzer';
 import {
-  suggestCutoffs, buildBands, buildMatrix, buildScatterPoints, countIneligible, buildSizeRows,
+  suggestCutoffs, buildBands, buildMatrix, buildScatterPoints, countIneligible, buildSizeRows, SIZE_TABLE_BANDS,
 } from '../../utils/ifvg-sl-analyzer';
 import IFVGStopMethodScatter from './IFVGStopMethodScatter';
 import IFVGStopMethodGrid from './IFVGStopMethodGrid';
@@ -69,7 +69,7 @@ export default function IFVGStopMethodSection({ trades }: Props) {
   const points = useMemo(() => buildScatterPoints(trades, extractor), [trades, extractor]);
   const ineligible = useMemo(() => countIneligible(trades, extractor), [trades, extractor]);
   const { plField } = usePLFormatter();
-  const sizeRows = useMemo(() => buildSizeRows(trades, bands, plField), [trades, bands, plField]);
+  const sizeRows = useMemo(() => buildSizeRows(trades, SIZE_TABLE_BANDS, plField), [trades, plField]);
 
   const updateCategory = (id: string) => {
     setChosenId(id);
@@ -136,7 +136,7 @@ export default function IFVGStopMethodSection({ trades }: Props) {
       {sizeRows.some(r => r.trades > 0) && (
         <TimingTable
           title="Win rate by iFVG size"
-          subtitle="Every trade with an iFVG size, all stop methods together. Sizes follow the cutoffs above."
+          subtitle="Every trade with an iFVG size, all stop methods together. Ranges include the lower number, e.g. 2.5 counts in 2.5–5."
           labelHeader="iFVG size"
           rows={sizeRows}
         />

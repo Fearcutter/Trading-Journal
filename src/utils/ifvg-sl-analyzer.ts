@@ -83,6 +83,13 @@ export function buildBands(lo: number, hi: number): SizeBand[] {
   ];
 }
 
+/** Fixed point ranges for the "Win rate by iFVG size" table (lower edge included). */
+const SIZE_TABLE_EDGES = [0, 2.5, 5, 7.5, 10, 15, 20, 30, 40, 50];
+export const SIZE_TABLE_BANDS: SizeBand[] = SIZE_TABLE_EDGES.map((min, i) => {
+  const max = SIZE_TABLE_EDGES[i + 1] ?? null;
+  return { label: max === null ? `${fmt(min)}+` : `${fmt(min)}–${fmt(max)}`, min, max };
+});
+
 function bandIndexOf(size: number, bands: SizeBand[]): number {
   for (let i = 0; i < bands.length; i++) {
     const { min, max } = bands[i];

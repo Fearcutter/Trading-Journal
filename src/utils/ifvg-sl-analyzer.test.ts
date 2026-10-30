@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildBands, buildMatrix, buildSizeRows } from './ifvg-sl-analyzer';
+import { buildBands, buildMatrix, buildSizeRows, SIZE_TABLE_BANDS } from './ifvg-sl-analyzer';
 import type { Trade } from '../types/trade';
 
 let n = 0;
@@ -38,5 +38,13 @@ describe('buildSizeRows', () => {
     expect(rows[0].winRate).toBe(50);
     expect(rows[0].netR).toBe(1);
     expect(rows[2].netR).toBe(-1);
+  });
+});
+
+describe('SIZE_TABLE_BANDS', () => {
+  it('uses the fixed point ranges, lower edge included', () => {
+    expect(SIZE_TABLE_BANDS.map(b => b.label)).toEqual(['0–2.5', '2.5–5', '5–7.5', '7.5–10', '10–15', '15–20', '20–30', '30–40', '40–50', '50+']);
+    const rows = buildSizeRows([loss({ ifvgSize: 2.5 }), loss({ ifvgSize: 2.49 }), loss({ ifvgSize: 50 }), loss({ ifvgSize: 120 })], SIZE_TABLE_BANDS, 'dollarPL');
+    expect(rows.map(r => r.trades)).toEqual([1, 1, 0, 0, 0, 0, 0, 0, 0, 2]);
   });
 });
