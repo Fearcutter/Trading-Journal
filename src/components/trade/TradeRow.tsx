@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useView } from '../../context/ViewContext';
 import type { Trade } from '../../types/trade';
 import Badge from '../ui/Badge';
+import { MessageSquare } from 'lucide-react';
 import { formatDate, formatTime, formatPoints, formatCurrency } from '../../utils/formatters';
 import { usePLFormatter } from '../../hooks/usePLFormatter';
 import { useSettings } from '../../context/SettingsContext';
@@ -21,9 +22,10 @@ interface TradeRowProps {
   onSelect: (id: string) => void;
   hiddenColumns?: HiddenColumns;
   skipped?: boolean;
+  hasUnreadComments?: boolean;
 }
 
-export default function TradeRow({ trade, selected, onSelect, hiddenColumns, skipped }: TradeRowProps) {
+export default function TradeRow({ trade, selected, onSelect, hiddenColumns, skipped, hasUnreadComments }: TradeRowProps) {
   const pl = usePLFormatter();
   const { readOnly } = useView();
   const { instruments, plDisplayMode } = useSettings();
@@ -42,6 +44,9 @@ export default function TradeRow({ trade, selected, onSelect, hiddenColumns, ski
         <div className="flex items-center gap-1.5">
           {formatDate(trade.date)}
           {skipped && <span className="text-[10px] font-medium text-amber-400 bg-amber-400/10 px-1 py-px rounded">Skipped</span>}
+          {hasUnreadComments && (
+            <span title="New coach feedback" className="text-amber-400"><MessageSquare size={13} /></span>
+          )}
         </div>
         {trade.time && <div className="text-xs text-slate-500">{formatTime(trade.time)}</div>}
       </td>

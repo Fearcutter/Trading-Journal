@@ -4,6 +4,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTrades } from '../context/TradeContext';
 import { useBacktest } from '../context/BacktestContext';
 import TradeDetail from '../components/trade/TradeDetail';
+import CoachFeedback from '../components/trade/CoachFeedback';
 import TradeForm from '../components/trade/TradeForm';
 import Button from '../components/ui/Button';
 import EmptyState from '../components/ui/EmptyState';
@@ -130,7 +131,10 @@ export default function TradeDetailPage() {
           hideAccounts={isBacktestTrade}
         />
       ) : (
-        <TradeDetail trade={trade} />
+        <>
+          <TradeDetail trade={trade} />
+          {!isBacktestTrade && <CoachFeedback tradeId={trade.id} />}
+        </>
       )}
     </div>
   );

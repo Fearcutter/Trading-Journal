@@ -37,6 +37,7 @@ import MFEMAEPanel from '../components/analytics/MFEMAEPanel';
 import OverlapScopeToggle, { type OverlapScope } from '../components/filters/OverlapScopeToggle';
 import MultiSelect, { type MultiSelectOption } from '../components/ui/MultiSelect';
 import ConfluencesTab from '../components/confluences/ConfluencesTab';
+import { useUnreadCommentTradeIds } from '../hooks/useUnreadCommentTradeIds';
 
 const SESSION_DOT_COLORS: Record<string, string> = {
   blue: 'bg-blue-500',
@@ -364,6 +365,7 @@ function TradeLogTab({ sessionTrades, sessionId, onTradeSubmit, skippedTradeIds 
   skippedTradeIds?: Set<string>;
 }) {
   const { readOnly } = useView();
+  const unreadCommentIds = useUnreadCommentTradeIds();
   const [showAddForm, setShowAddForm] = useState(false);
   const [pasteModalOpen, setPasteModalOpen] = useState(false);
   const [pasteInitialData, setPasteInitialData] = useState<Partial<TradeFormData> | undefined>();
@@ -530,6 +532,7 @@ function TradeLogTab({ sessionTrades, sessionId, onTradeSubmit, skippedTradeIds 
                       onSelect={toggleSelect}
                       hiddenColumns={hiddenColumns}
                       skipped={skippedTradeIds?.has(trade.id)}
+                      hasUnreadComments={unreadCommentIds.has(trade.id)}
                     />
                   ))}
                 </tbody>
