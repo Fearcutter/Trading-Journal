@@ -1,5 +1,10 @@
 -- Coach Access: one coach can view selected sections of an owner's journal
--- and comment on trades. Run once in the Supabase SQL Editor.
+-- and comment on trades. Run in the Supabase SQL Editor. Safe to re-run.
+--
+-- Helper functions live in the `private` schema, which the Supabase API does not
+-- expose, so they can be used by policies but not called directly by anyone.
+-- Ids are compared as text so this works whether trades.id is uuid or text
+-- (supabase-fix-ids.sql changed it to text).
 
 -- ===== Tables =====
 create table if not exists public.coach_access (
@@ -17,7 +22,7 @@ alter table public.coach_access enable row level security;
 create table if not exists public.trade_comments (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users(id) on delete cascade,
-  trade_id uuid not null references public.trades(id) on delete cascade,
+  trade_id text not null,
   author_id uuid not null references auth.users(id) on delete cascade,
   body text not null check (length(trim(body)) > 0),
   read_by_owner boolean not null default false,
@@ -28,56 +33,62 @@ alter table public.trade_comments enable row level security;
 create index if not exists idx_trade_comments_trade on public.trade_comments(trade_id);
 create index if not exists idx_trade_comments_owner_unread on public.trade_comments(owner_id) where not read_by_owner;
 
--- ===== Helper functions (security definer: they read tables the caller can't) =====
-create or replace function public.current_confirmed_email() returns text
+-- ===== Private helper functions (security definer: they read tables the caller can't) =====
+create schema if not exists private;
+grant usage on schema private to authenticated;
+
+create or replace function private.current_confirmed_email() returns text
 language sql stable security definer set search_path = public, auth as $$
   select lower(email) from auth.users
   where id = auth.uid() and email_confirmed_at is not null
 $$;
 
-create or replace function public.coach_can_view_any(p_owner uuid, p_sections text[]) returns boolean
+create or replace function private.coach_can_view_any(p_owner uuid, p_sections text[]) returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (
     select 1 from public.coach_access ca
     where ca.owner_id = p_owner
       and ca.active
       and ca.sections && p_sections
-      and ca.coach_email = public.current_confirmed_email()
+      and ca.coach_email = private.current_confirmed_email()
   )
 $$;
 
-create or replace function public.coach_can_view(p_owner uuid, p_section text) returns boolean
+create or replace function private.coach_can_view(p_owner uuid, p_section text) returns boolean
 language sql stable security definer set search_path = public as $$
-  select public.coach_can_view_any(p_owner, array[p_section])
+  select private.coach_can_view_any(p_owner, array[p_section])
 $$;
 
-create or replace function public.is_backtest_trade(p_owner uuid, p_data jsonb) returns boolean
+-- Allow-list: a trade is "live" only if it has no session or belongs to one of the
+-- owner's live sessions. Backtest trades, and trades left behind by a deleted
+-- session, are never live.
+create or replace function private.is_live_trade(p_owner uuid, p_data jsonb) returns boolean
 language sql stable security definer set search_path = public as $$
-  select coalesce(p_data->>'sessionId', '') <> ''
-     and exists (
-       select 1 from public.backtest_sessions b
-       where b.user_id = p_owner and b.id::text = p_data->>'sessionId'
-     )
+  select coalesce(p_data->>'sessionId', '') = ''
+      or exists (
+        select 1 from public.live_trading_sessions l
+        where l.user_id = p_owner and l.id::text = p_data->>'sessionId'
+      )
 $$;
 
--- Trade sections: any of these being shared lets the coach read (non-backtest) trades.
-create or replace function public.coach_can_view_trade_row(p_owner uuid, p_data jsonb) returns boolean
+-- Any trade section being shared lets the coach read the owner's live trades.
+create or replace function private.coach_can_view_trade_row(p_owner uuid, p_data jsonb) returns boolean
 language sql stable security definer set search_path = public as $$
-  select public.coach_can_view_any(p_owner, array['dashboard','live_trading','trade_details','calendar'])
-     and not public.is_backtest_trade(p_owner, p_data)
+  select private.coach_can_view_any(p_owner, array['dashboard','live_trading','trade_details','calendar'])
+     and private.is_live_trade(p_owner, p_data)
 $$;
 
-create or replace function public.coach_can_comment_on_trade(p_trade uuid, p_owner uuid) returns boolean
+create or replace function private.coach_can_comment_on_trade(p_trade text, p_owner uuid) returns boolean
 language sql stable security definer set search_path = public as $$
-  select public.coach_can_view(p_owner, 'trade_details')
+  select private.coach_can_view(p_owner, 'trade_details')
      and exists (
        select 1 from public.trades t
-       where t.id = p_trade and t.user_id = p_owner
-         and not public.is_backtest_trade(t.user_id, t.data)
+       where t.id::text = p_trade and t.user_id = p_owner
+         and private.is_live_trade(t.user_id, t.data)
      )
 $$;
 
-create or replace function public.coach_can_view_screenshot(p_name text) returns boolean
+create or replace function private.coach_can_view_screenshot(p_name text) returns boolean
 language plpgsql stable security definer set search_path = public as $$
 declare
   parts text[] := string_to_array(p_name, '/');
@@ -89,19 +100,23 @@ begin
     return exists (
       select 1 from public.trades t
       where t.id::text = parts[3] and t.user_id::text = parts[1]
-        and public.coach_can_view_trade_row(t.user_id, t.data)
+        and private.coach_can_view_trade_row(t.user_id, t.data)
     );
   elsif parts[2] = 'playbook_entries' then
     return exists (
       select 1 from public.coach_access ca
       where ca.owner_id::text = parts[1]
-        and public.coach_can_view(ca.owner_id, 'playbook')
+        and private.coach_can_view(ca.owner_id, 'playbook')
     );
   end if;
   return false;
 end
 $$;
 
+revoke all on all functions in schema private from public;
+grant execute on all functions in schema private to authenticated;
+
+-- ===== Public functions the app calls =====
 -- Settings for a coach, minus the Funded Accounts password hash.
 create or replace function public.get_shared_settings(p_owner uuid) returns jsonb
 language sql stable security definer set search_path = public as $$
@@ -111,62 +126,84 @@ language sql stable security definer set search_path = public as $$
     and exists (
       select 1 from public.coach_access ca
       where ca.owner_id = p_owner and ca.active
-        and ca.coach_email = public.current_confirmed_email()
+        and ca.coach_email = private.current_confirmed_email()
     )
 $$;
 
 -- Owner marks coach comments on one of their trades as read.
-create or replace function public.mark_trade_comments_read(p_trade uuid) returns void
+create or replace function public.mark_trade_comments_read(p_trade text) returns void
 language sql volatile security definer set search_path = public as $$
   update public.trade_comments
   set read_by_owner = true
   where trade_id = p_trade and owner_id = auth.uid() and not read_by_owner
 $$;
 
+revoke all on function public.get_shared_settings(uuid) from public, anon;
+grant execute on function public.get_shared_settings(uuid) to authenticated;
+revoke all on function public.mark_trade_comments_read(text) from public, anon;
+grant execute on function public.mark_trade_comments_read(text) to authenticated;
+
 -- ===== coach_access policies =====
+drop policy if exists "Owner manages coach access" on public.coach_access;
 create policy "Owner manages coach access" on public.coach_access
-  for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+  for all to authenticated using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+drop policy if exists "Coach reads own coach access row" on public.coach_access;
 create policy "Coach reads own coach access row" on public.coach_access
-  for select using (coach_email = public.current_confirmed_email());
+  for select to authenticated using (coach_email = private.current_confirmed_email());
 
 -- ===== Coach read policies on journal tables (existing owner policies untouched) =====
+-- `user_id <> auth.uid()` first: the owner's own queries skip the coach checks.
+drop policy if exists "Coach reads shared trades" on public.trades;
 create policy "Coach reads shared trades" on public.trades
-  for select using (public.coach_can_view_trade_row(user_id, data));
+  for select to authenticated using (user_id <> (select auth.uid()) and private.coach_can_view_trade_row(user_id, data));
+drop policy if exists "Coach reads shared live sessions" on public.live_trading_sessions;
 create policy "Coach reads shared live sessions" on public.live_trading_sessions
-  for select using (public.coach_can_view(user_id, 'live_trading'));
+  for select to authenticated using (user_id <> (select auth.uid()) and private.coach_can_view(user_id, 'live_trading'));
+drop policy if exists "Coach reads shared journal entries" on public.journal_entries;
 create policy "Coach reads shared journal entries" on public.journal_entries
-  for select using (public.coach_can_view(user_id, 'journal'));
+  for select to authenticated using (user_id <> (select auth.uid()) and private.coach_can_view(user_id, 'journal'));
+drop policy if exists "Coach reads shared habit definitions" on public.habit_definitions;
 create policy "Coach reads shared habit definitions" on public.habit_definitions
-  for select using (public.coach_can_view(user_id, 'journal'));
+  for select to authenticated using (user_id <> (select auth.uid()) and private.coach_can_view(user_id, 'journal'));
+drop policy if exists "Coach reads shared habit badges" on public.habit_badges;
 create policy "Coach reads shared habit badges" on public.habit_badges
-  for select using (public.coach_can_view(user_id, 'journal'));
+  for select to authenticated using (user_id <> (select auth.uid()) and private.coach_can_view(user_id, 'journal'));
+drop policy if exists "Coach reads shared habit checkins" on public.habit_checkins;
 create policy "Coach reads shared habit checkins" on public.habit_checkins
-  for select using (public.coach_can_view_any(user_id, array['journal','calendar']));
+  for select to authenticated using (user_id <> (select auth.uid()) and private.coach_can_view_any(user_id, array['journal','calendar']));
+drop policy if exists "Coach reads shared playbook" on public.playbook_entries;
 create policy "Coach reads shared playbook" on public.playbook_entries
-  for select using (public.coach_can_view(user_id, 'playbook'));
+  for select to authenticated using (user_id <> (select auth.uid()) and private.coach_can_view(user_id, 'playbook'));
+drop policy if exists "Coach reads shared apex accounts" on public.apex_accounts;
 create policy "Coach reads shared apex accounts" on public.apex_accounts
-  for select using (public.coach_can_view(user_id, 'apex_accounts'));
+  for select to authenticated using (user_id <> (select auth.uid()) and private.coach_can_view(user_id, 'apex_accounts'));
 -- NOTE: no coach policy on user_settings or backtest_sessions (on purpose).
 
+drop policy if exists "Coach views shared screenshots" on storage.objects;
 create policy "Coach views shared screenshots" on storage.objects
-  for select using (bucket_id = 'screenshots' and public.coach_can_view_screenshot(name));
+  for select to authenticated using (bucket_id = 'screenshots' and private.coach_can_view_screenshot(name));
 
 -- ===== trade_comments policies =====
+drop policy if exists "Owner reads comments on own trades" on public.trade_comments;
 create policy "Owner reads comments on own trades" on public.trade_comments
-  for select using (auth.uid() = owner_id);
+  for select to authenticated using (auth.uid() = owner_id);
+drop policy if exists "Coach reads own comments" on public.trade_comments;
 create policy "Coach reads own comments" on public.trade_comments
-  for select using (author_id = auth.uid() and public.coach_can_view(owner_id, 'trade_details'));
+  for select to authenticated using (author_id = auth.uid() and private.coach_can_view(owner_id, 'trade_details'));
+drop policy if exists "Coach adds comments" on public.trade_comments;
 create policy "Coach adds comments" on public.trade_comments
-  for insert with check (
+  for insert to authenticated with check (
     author_id = auth.uid()
     and read_by_owner = false
-    and public.coach_can_comment_on_trade(trade_id, owner_id)
+    and private.coach_can_comment_on_trade(trade_id, owner_id)
   );
+drop policy if exists "Coach edits own comments" on public.trade_comments;
 create policy "Coach edits own comments" on public.trade_comments
-  for update using (author_id = auth.uid() and public.coach_can_view(owner_id, 'trade_details'))
+  for update to authenticated using (author_id = auth.uid() and private.coach_can_view(owner_id, 'trade_details'))
   with check (author_id = auth.uid());
+drop policy if exists "Coach deletes own comments" on public.trade_comments;
 create policy "Coach deletes own comments" on public.trade_comments
-  for delete using (author_id = auth.uid() and public.coach_can_view(owner_id, 'trade_details'));
+  for delete to authenticated using (author_id = auth.uid() and private.coach_can_view(owner_id, 'trade_details'));
 
 -- Only body/updated_at may be changed by a normal update (read flag goes through the function).
 revoke update on public.trade_comments from authenticated, anon;

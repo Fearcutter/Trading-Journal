@@ -13,6 +13,7 @@ import {
   Landmark,
   Settings,
   LogOut,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useView } from '../../context/ViewContext';
@@ -64,6 +65,15 @@ export default function Sidebar() {
       </nav>
       <div className="p-3 border-t border-slate-700">
         <div className="px-3 py-1 mb-2 text-xs text-slate-500 truncate">{user?.email}</div>
+        {view.otherJournalLabel && (
+          <button
+            onClick={view.switchJournal}
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-50 hover:bg-slate-700/50 transition-colors w-full text-left"
+          >
+            <ArrowLeftRight size={18} className="shrink-0" />
+            <span className="truncate">Switch to {view.otherJournalLabel}</span>
+          </button>
+        )}
         <button
           onClick={signOut}
           className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-50 hover:bg-slate-700/50 transition-colors w-full"

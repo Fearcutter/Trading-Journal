@@ -37,21 +37,24 @@ const ownerId = o.data.user.id;
 // Owner-side ground truth
 const { data: access } = await owner.from('coach_access').select('*').eq('owner_id', ownerId).single();
 const shared = expectRevoked ? [] : (access?.active ? access.sections : []);
-const { data: backtests } = await owner.from('backtest_sessions').select('id').eq('user_id', ownerId);
-const backtestIds = new Set((backtests ?? []).map(b => b.id));
+// Same rule as the database: live = no session, or one of the owner's live sessions.
+// Everything else (backtests, trades left behind by a deleted session) must stay hidden.
+const liveSessions = await fetchAll(owner, 'live_trading_sessions', 'id', ownerId);
+const liveSessionIds = new Set(liveSessions.map(l => String(l.id)));
 const ownerTrades = await fetchAll(owner, 'trades', 'id, data, setup_screenshot_path', ownerId);
-const liveTrades = ownerTrades.filter(t => !backtestIds.has(t.data?.sessionId));
-const btTrades = ownerTrades.filter(t => backtestIds.has(t.data?.sessionId));
+const isLive = t => !t.data?.sessionId || liveSessionIds.has(String(t.data.sessionId));
+const liveTrades = ownerTrades.filter(isLive);
+const btTrades = ownerTrades.filter(t => !isLive(t));
 const tradeShared = ['dashboard', 'live_trading', 'trade_details', 'calendar'].some(s => shared.includes(s));
 
-console.log(`Shared sections: ${shared.join(', ') || '(none)'} | live trades ${liveTrades.length}, backtest trades ${btTrades.length}`);
+console.log(`Shared sections: ${shared.join(', ') || '(none)'} | live trades ${liveTrades.length}, hidden (backtest/orphaned) trades ${btTrades.length}`);
 
 // 1. Backtests never visible
 const { data: cBt } = await coach.from('backtest_sessions').select('id').eq('user_id', ownerId);
 check('backtest_sessions hidden', (cBt ?? []).length === 0);
 if (btTrades.length) {
   const { data } = await coach.from('trades').select('id').in('id', btTrades.slice(0, 50).map(t => t.id));
-  check('backtest trades hidden', (data ?? []).length === 0, `${(data ?? []).length} leaked`);
+  check('backtest/orphaned trades hidden', (data ?? []).length === 0, `${(data ?? []).length} leaked`);
 }
 
 // 2. Trades visible iff a trade section is shared
@@ -81,6 +84,10 @@ check('user_settings not directly readable', (cSettings ?? []).length === 0);
 const { data: shSettings } = await coach.rpc('get_shared_settings', { p_owner: ownerId });
 check('shared settings strip password hash', !shSettings || !('fundedAccountsPasswordHash' in shSettings));
 check('shared settings follow access', expectRevoked || !access?.active ? shSettings === null : shSettings !== null);
+for (const fn of ['is_live_trade', 'coach_can_view', 'coach_can_view_screenshot']) {
+  const { error } = await coach.rpc(fn, {});
+  check(`helper ${fn} not callable through the API`, !!error);
+}
 
 // 5. Writes refused
 if (liveTrades[0]) {
