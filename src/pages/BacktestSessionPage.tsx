@@ -16,6 +16,7 @@ import { useFilteredTrades, defaultFilters } from '../hooks/useFilteredTrades';
 import type { TradeFilters } from '../hooks/useFilteredTrades';
 import FilterBar from '../components/filters/FilterBar';
 import TradeRow from '../components/trade/TradeRow';
+import TimingSection from '../components/analytics/TimingSection';
 import type { HiddenColumns } from '../components/trade/TradeRow';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -198,7 +199,12 @@ export default function BacktestSessionPage() {
           skippedTradeIds={planComparison?.skippedTradeIds}
         />
       )}
-      {activeTab === 'analytics' && <AnalyticsTab advanced={advanced} trades={overlapScopedTrades} tradeCount={overlapScopedTrades.length} planComparison={planComparison} />}
+      {activeTab === 'analytics' && (
+        <>
+          <AnalyticsTab advanced={advanced} trades={overlapScopedTrades} tradeCount={overlapScopedTrades.length} planComparison={planComparison} />
+          {overlapScopedTrades.length > 0 && <TimingSection trades={overlapScopedTrades} showScope={false} />}
+        </>
+      )}
       {activeTab === 'confluences' && <ConfluencesTab trades={overlapScopedTrades} />}
       {activeTab === 'mfe-mae' && (
         overlapScopedTrades.length === 0

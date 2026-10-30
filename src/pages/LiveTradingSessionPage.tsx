@@ -16,6 +16,7 @@ import type { TradeFilters } from '../hooks/useFilteredTrades';
 import FilterBar from '../components/filters/FilterBar';
 import TradeForm from '../components/trade/TradeForm';
 import TradeRow from '../components/trade/TradeRow';
+import TimingSection from '../components/analytics/TimingSection';
 import type { HiddenColumns } from '../components/trade/TradeRow';
 import PasteTradeModal from '../components/trade/PasteTradeModal';
 import Card from '../components/ui/Card';
@@ -247,7 +248,12 @@ export default function LiveTradingSessionPage() {
           skippedTradeIds={planComparison?.skippedTradeIds}
         />
       )}
-      {activeTab === 'analytics' && <AnalyticsTab advanced={advanced} trades={accountScopedTrades} tradeCount={accountScopedTrades.length} planComparison={planComparison} />}
+      {activeTab === 'analytics' && (
+        <>
+          <AnalyticsTab advanced={advanced} trades={accountScopedTrades} tradeCount={accountScopedTrades.length} planComparison={planComparison} />
+          {accountScopedTrades.length > 0 && <TimingSection trades={accountScopedTrades} showScope={false} />}
+        </>
+      )}
       {activeTab === 'confluences' && <ConfluencesTab trades={accountScopedTrades} />}
       {activeTab === 'mfe-mae' && (
         accountScopedTrades.length === 0

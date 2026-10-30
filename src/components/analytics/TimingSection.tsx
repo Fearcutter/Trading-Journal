@@ -5,17 +5,20 @@ import { usePLFormatter } from '../../hooks/usePLFormatter';
 import { byDayOfWeek, byTimeBlock, byDuration, averageHold, formatDuration } from '../../utils/trade-timing';
 import TimingTable from './TimingTable';
 
-/** "When do I trade best?" — results by day, 15-minute entry block, and time held. */
-export default function TimingSection({ trades }: { trades: Trade[] }) {
+/**
+ * "When do I trade best?" — results by day, 15-minute entry block, and time held.
+ * showScope adds the Live/All switch (off inside a session, which holds one kind of trade).
+ */
+export default function TimingSection({ trades, showScope = true }: { trades: Trade[]; showScope?: boolean }) {
   const { sessions: liveSessions } = useLiveSession();
   const { plField } = usePLFormatter();
   const [scope, setScope] = useState<'live' | 'all'>('live');
 
   const scoped = useMemo(() => {
-    if (scope === 'all') return trades;
+    if (!showScope || scope === 'all') return trades;
     const liveIds = new Set(liveSessions.map(s => s.id));
     return trades.filter(t => !t.sessionId || liveIds.has(t.sessionId));
-  }, [trades, scope, liveSessions]);
+  }, [trades, scope, liveSessions, showScope]);
 
   const days = useMemo(() => byDayOfWeek(scoped, plField), [scoped, plField]);
   const blocks = useMemo(() => byTimeBlock(scoped, plField, 15), [scoped, plField]);
@@ -29,7 +32,7 @@ export default function TimingSection({ trades }: { trades: Trade[] }) {
           <h2 className="text-lg font-semibold text-slate-50">When do I trade best?</h2>
           <p className="text-xs text-slate-500">Net R = total R won or lost. Green / red rows = best / worst Net R among rows with 10+ trades.</p>
         </div>
-        <div className="flex rounded-lg overflow-hidden border border-slate-600">
+        {showScope && <div className="flex rounded-lg overflow-hidden border border-slate-600">
           {(['live', 'all'] as const).map(s => (
             <button
               key={s}
@@ -39,7 +42,7 @@ export default function TimingSection({ trades }: { trades: Trade[] }) {
               {s === 'live' ? 'Live' : 'All'}
             </button>
           ))}
-        </div>
+        </div>}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
