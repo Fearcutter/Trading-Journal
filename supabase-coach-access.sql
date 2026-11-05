@@ -59,26 +59,35 @@ language sql stable security definer set search_path = public as $$
   select private.coach_can_view_any(p_owner, array[p_section])
 $$;
 
+-- A session the owner switched off with "Shared with coach" (data.hiddenFromCoach = true).
+create or replace function private.session_shared(p_data jsonb) returns boolean
+language sql immutable as $$
+  select coalesce(p_data->>'hiddenFromCoach', '') <> 'true'
+$$;
+
 -- Allow-list: a trade is "live" only if it has no session or belongs to one of the
--- owner's live sessions. Backtest trades, and trades left behind by a deleted
--- session, are never live.
+-- owner's live sessions that is shared with the coach. Backtest trades, and trades
+-- left behind by a deleted session, are never live.
 create or replace function private.is_live_trade(p_owner uuid, p_data jsonb) returns boolean
 language sql stable security definer set search_path = public as $$
   select coalesce(p_data->>'sessionId', '') = ''
       or exists (
         select 1 from public.live_trading_sessions l
         where l.user_id = p_owner and l.id::text = p_data->>'sessionId'
+          and private.session_shared(l.data)
       )
 $$;
 
 -- A trade is a backtest trade only if its session is one of the owner's existing
--- backtest sessions. Trades left behind by a deleted session are neither, so stay hidden.
+-- backtest sessions shared with the coach. Trades left behind by a deleted session
+-- are neither, so stay hidden.
 create or replace function private.is_backtest_trade(p_owner uuid, p_data jsonb) returns boolean
 language sql stable security definer set search_path = public as $$
   select coalesce(p_data->>'sessionId', '') <> ''
      and exists (
        select 1 from public.backtest_sessions b
        where b.user_id = p_owner and b.id::text = p_data->>'sessionId'
+         and private.session_shared(b.data)
      )
 $$;
 
@@ -174,7 +183,7 @@ create policy "Coach reads shared trades" on public.trades
   for select to authenticated using (user_id <> (select auth.uid()) and private.coach_can_view_trade_row(user_id, data));
 drop policy if exists "Coach reads shared live sessions" on public.live_trading_sessions;
 create policy "Coach reads shared live sessions" on public.live_trading_sessions
-  for select to authenticated using (user_id <> (select auth.uid()) and private.coach_can_view(user_id, 'live_trading'));
+  for select to authenticated using (user_id <> (select auth.uid()) and private.coach_can_view(user_id, 'live_trading') and private.session_shared(data));
 drop policy if exists "Coach reads shared journal entries" on public.journal_entries;
 create policy "Coach reads shared journal entries" on public.journal_entries
   for select to authenticated using (user_id <> (select auth.uid()) and private.coach_can_view(user_id, 'journal'));
@@ -195,7 +204,7 @@ create policy "Coach reads shared apex accounts" on public.apex_accounts
   for select to authenticated using (user_id <> (select auth.uid()) and private.coach_can_view(user_id, 'apex_accounts'));
 drop policy if exists "Coach reads shared backtest sessions" on public.backtest_sessions;
 create policy "Coach reads shared backtest sessions" on public.backtest_sessions
-  for select to authenticated using (user_id <> (select auth.uid()) and private.coach_can_view(user_id, 'backtesting'));
+  for select to authenticated using (user_id <> (select auth.uid()) and private.coach_can_view(user_id, 'backtesting') and private.session_shared(data));
 -- NOTE: no coach policy on user_settings (on purpose; see get_shared_settings).
 
 drop policy if exists "Coach views shared screenshots" on storage.objects;

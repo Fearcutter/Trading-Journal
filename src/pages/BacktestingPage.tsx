@@ -9,6 +9,7 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import EmptyState from '../components/ui/EmptyState';
+import CoachShareToggle from '../components/ui/CoachShareToggle';
 import { formatPercent } from '../utils/formatters';
 import { usePLFormatter, getTradeValue } from '../hooks/usePLFormatter';
 
@@ -31,7 +32,7 @@ const SESSION_DOT_COLORS: Record<string, string> = {
 };
 
 export default function BacktestingPage() {
-  const { sessions, addSession, deleteSession } = useBacktest();
+  const { sessions, addSession, updateSession, deleteSession } = useBacktest();
   const { trades } = useTrades();
   const settings = useSettings();
   const { readOnly } = useView();
@@ -166,6 +167,11 @@ export default function BacktestingPage() {
                     {pl.formatPLValue(stats.totalPL)}
                   </span>
                 </div>
+                {!readOnly && (
+                  <div className="mt-3">
+                    <CoachShareToggle hidden={!!session.hiddenFromCoach} onChange={hidden => updateSession(session.id, { hiddenFromCoach: hidden })} />
+                  </div>
+                )}
               </Link>
             );
           })}

@@ -10,6 +10,7 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import EmptyState from '../components/ui/EmptyState';
+import CoachShareToggle from '../components/ui/CoachShareToggle';
 import { formatPercent } from '../utils/formatters';
 import { usePLFormatter, getTradeValue } from '../hooks/usePLFormatter';
 
@@ -32,7 +33,7 @@ const SESSION_DOT_COLORS: Record<string, string> = {
 };
 
 export default function LiveTradingPage() {
-  const { sessions, addSession, deleteSession } = useLiveSession();
+  const { sessions, addSession, updateSession, deleteSession } = useLiveSession();
   const { readOnly } = useView();
   const { sessions: backtestSessions } = useBacktest();
   const { trades, updateTrade } = useTrades();
@@ -196,6 +197,11 @@ export default function LiveTradingPage() {
                     {pl.formatPLValue(stats.totalPL)}
                   </span>
                 </div>
+                {!readOnly && (
+                  <div className="mt-3">
+                    <CoachShareToggle hidden={!!session.hiddenFromCoach} onChange={hidden => updateSession(session.id, { hiddenFromCoach: hidden })} />
+                  </div>
+                )}
               </Link>
             );
           })}

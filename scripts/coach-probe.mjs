@@ -53,25 +53,36 @@ const { data: access } = await owner.from('coach_access').select('*').eq('owner_
 const shared = expectRevoked ? [] : (access?.active ? access.sections : []);
 // Same rule as the database: live = no session, or one of the owner's live sessions.
 // Backtest = one of the owner's backtest sessions (visible only when Backtesting is shared).
+// Sessions switched to "Hidden from coach" are left out, with all their trades.
 // Trades left behind by a deleted session are neither and must always stay hidden.
-const liveSessions = await fetchAll(owner, 'live_trading_sessions', 'id', ownerId);
-const liveSessionIds = new Set(liveSessions.map(l => String(l.id)));
+const isSessionShared = s => s.data?.hiddenFromCoach !== true;
+const liveSessions = await fetchAll(owner, 'live_trading_sessions', 'id, data', ownerId);
+const sharedLiveSessions = liveSessions.filter(isSessionShared);
+const liveSessionIds = new Set(sharedLiveSessions.map(l => String(l.id)));
 const ownerTrades = await fetchAll(owner, 'trades', 'id, data, setup_screenshot_path', ownerId);
 const isLive = t => !t.data?.sessionId || liveSessionIds.has(String(t.data.sessionId));
-const btSessions = await fetchAll(owner, 'backtest_sessions', 'id', ownerId);
-const btSessionIds = new Set(btSessions.map(b => String(b.id)));
+const btSessions = await fetchAll(owner, 'backtest_sessions', 'id, data', ownerId);
+const sharedBtSessions = btSessions.filter(isSessionShared);
+const btSessionIds = new Set(sharedBtSessions.map(b => String(b.id)));
 const isBacktest = t => !!t.data?.sessionId && btSessionIds.has(String(t.data.sessionId));
+const hiddenSessionIds = new Set([...liveSessions, ...btSessions].filter(s => !isSessionShared(s)).map(s => String(s.id)));
+const isInHiddenSession = t => !!t.data?.sessionId && hiddenSessionIds.has(String(t.data.sessionId));
 const liveTrades = ownerTrades.filter(isLive);
 const btTrades = ownerTrades.filter(isBacktest);
-const orphanTrades = ownerTrades.filter(t => !isLive(t) && !isBacktest(t));
+const hiddenTrades = ownerTrades.filter(isInHiddenSession);
+const orphanTrades = ownerTrades.filter(t => !isLive(t) && !isBacktest(t) && !isInHiddenSession(t));
 const tradeShared = ['dashboard', 'live_trading', 'trade_details', 'calendar'].some(s => shared.includes(s));
 const btShared = shared.includes('backtesting');
 
 console.log(`Shared sections: ${shared.join(', ') || '(none)'} | live trades ${liveTrades.length}, backtest trades ${btTrades.length}, orphaned trades ${orphanTrades.length}`);
+console.log(`Sessions hidden from coach: ${hiddenSessionIds.size} (${hiddenTrades.length} trades)`);
 
 // 1. Backtests follow Backtesting; orphaned trades never visible
 const { data: cBt } = await coach.from('backtest_sessions').select('id').eq('user_id', ownerId);
-check('backtest_sessions follow sharing', (cBt ?? []).length === (btShared ? btSessions.length : 0), `coach ${(cBt ?? []).length}, expected ${btShared ? btSessions.length : 0}`);
+check('backtest_sessions follow sharing', (cBt ?? []).length === (btShared ? sharedBtSessions.length : 0), `coach ${(cBt ?? []).length}, expected ${btShared ? sharedBtSessions.length : 0}`);
+const { data: cLive } = await coach.from('live_trading_sessions').select('id').eq('user_id', ownerId);
+const expectedLive = shared.includes('live_trading') ? sharedLiveSessions.length : 0;
+check('live_trading_sessions follow sharing', (cLive ?? []).length === expectedLive, `coach ${(cLive ?? []).length}, expected ${expectedLive}`);
 if (btTrades.length) {
   const sample = btTrades.slice(0, 50);
   const { data } = await coach.from('trades').select('id').in('id', sample.map(t => t.id));
@@ -81,6 +92,10 @@ if (orphanTrades.length) {
   const { data } = await coach.from('trades').select('id').in('id', orphanTrades.slice(0, 50).map(t => t.id));
   check('orphaned trades hidden', (data ?? []).length === 0, `${(data ?? []).length} leaked`);
 }
+if (hiddenTrades.length) {
+  const { data } = await coach.from('trades').select('id').in('id', hiddenTrades.slice(0, 50).map(t => t.id));
+  check('trades in hidden sessions hidden', (data ?? []).length === 0, `${(data ?? []).length} leaked`);
+}
 
 // 2. Total trades the coach can see
 const expectedTrades = (tradeShared ? liveTrades.length : 0) + (btShared ? btTrades.length : 0);
@@ -89,7 +104,6 @@ check('trade count', cTradeCount === expectedTrades, `coach sees ${cTradeCount},
 
 // 3. Each table follows its section
 const tables = [
-  ['live_trading_sessions', ['live_trading']],
   ['journal_entries', ['journal']],
   ['habit_definitions', ['journal']],
   ['habit_badges', ['journal']],
@@ -136,6 +150,11 @@ if (orphanShot) {
   const { error } = await coach.storage.from('screenshots').createSignedUrl(orphanShot.setup_screenshot_path, 60);
   check('orphaned-trade screenshot hidden', !!error);
 }
+const hiddenShot = hiddenTrades.find(t => t.setup_screenshot_path);
+if (hiddenShot) {
+  const { error } = await coach.storage.from('screenshots').createSignedUrl(hiddenShot.setup_screenshot_path, 60);
+  check('hidden-session screenshot hidden', !!error);
+}
 const liveShot = liveTrades.find(t => t.setup_screenshot_path);
 if (liveShot) {
   const { error } = await coach.storage.from('screenshots').createSignedUrl(liveShot.setup_screenshot_path, 60);
@@ -153,6 +172,10 @@ if (btTrades[0]) {
 if (orphanTrades[0]) {
   const { error } = await coach.from('trade_comments').insert({ trade_id: orphanTrades[0].id, owner_id: ownerId, author_id: coachId, body: 'probe' });
   check('cannot comment on orphaned trade', !!error);
+}
+if (hiddenTrades[0]) {
+  const { error } = await coach.from('trade_comments').insert({ trade_id: hiddenTrades[0].id, owner_id: ownerId, author_id: coachId, body: 'probe' });
+  check('cannot comment on hidden-session trade', !!error);
 }
 if (liveTrades[0]) {
   const { data, error } = await coach.from('trade_comments')

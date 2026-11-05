@@ -38,6 +38,7 @@ import MFEMAEPanel from '../components/analytics/MFEMAEPanel';
 import OverlapScopeToggle, { type OverlapScope } from '../components/filters/OverlapScopeToggle';
 import MultiSelect, { type MultiSelectOption } from '../components/ui/MultiSelect';
 import ConfluencesTab from '../components/confluences/ConfluencesTab';
+import CoachShareToggle from '../components/ui/CoachShareToggle';
 import { useUnreadCommentTradeIds } from '../hooks/useUnreadCommentTradeIds';
 
 const SESSION_DOT_COLORS: Record<string, string> = {
@@ -198,6 +199,9 @@ export default function LiveTradingSessionPage() {
             </>
           )}
           <span className="text-sm text-slate-500">{sessionTrades.length} trade{sessionTrades.length !== 1 ? 's' : ''}</span>
+          {!readOnly && (
+            <CoachShareToggle hidden={!!session.hiddenFromCoach} onChange={hidden => updateSession(sessionId!, { hiddenFromCoach: hidden })} />
+          )}
         </div>
         {session.description && (
           <p className="text-sm text-slate-400 mt-1 ml-6">{session.description}</p>

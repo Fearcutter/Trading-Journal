@@ -179,6 +179,34 @@ await as(O, async () => {
   check('owner sees backtest comment', (await rows(`select * from public.trade_comments where trade_id = 't-backtest'`)).length === 1);
 });
 
+// ---- Sessions hidden from the coach (everything else still shared)
+const hide = (table, on) => db.exec(`update public.${table} set data = data || '{"hiddenFromCoach":${on}}'`);
+await hide('live_trading_sessions', true);
+await hide('backtest_sessions', true);
+await as(C, async () => {
+  const ids = (await rows(`select id from public.trades order by id`)).map(r => r.id);
+  check('hidden sessions: only no-session trades visible', JSON.stringify(ids) === JSON.stringify(['t-nosession']), ids.join(','));
+  check('hidden sessions: no live sessions listed', (await rows(`select * from public.live_trading_sessions`)).length === 0);
+  check('hidden sessions: no backtest sessions listed', (await rows(`select * from public.backtest_sessions`)).length === 0);
+  const shots = (await rows(`select name from storage.objects order by name`)).map(r => r.name);
+  check('hidden sessions: no screenshots from hidden trades', JSON.stringify(shots) === JSON.stringify([`${O}/trades/t-nosession/setupScreenshot.png`]), shots.join(','));
+  const mine = (await rows(`select trade_id from public.trade_comments order by trade_id`)).map(r => r.trade_id);
+  check('hidden sessions: earlier comments on hidden trades not visible', !mine.includes('t-backtest'), mine.join(','));
+  const c = await tryq(`insert into public.trade_comments (owner_id, trade_id, author_id, body) values ('${O}', 't-livesession', '${C}', 'x')`);
+  check('hidden sessions: cannot comment on hidden live-session trade', !!c.error);
+});
+await as(O, async () => {
+  check('hidden sessions: owner still sees all trades', (await rows(`select * from public.trades`)).length === 4);
+  check('hidden sessions: owner still sees backtest comment', (await rows(`select * from public.trade_comments where trade_id = 't-backtest'`)).length === 1);
+});
+await hide('live_trading_sessions', false);
+await hide('backtest_sessions', false);
+await as(C, async () => {
+  const ids = (await rows(`select id from public.trades order by id`)).map(r => r.id);
+  check('re-shared sessions: trades come back', JSON.stringify(ids) === JSON.stringify(['t-backtest', 't-livesession', 't-nosession']), ids.join(','));
+  check('re-shared sessions: comment comes back', (await rows(`select * from public.trade_comments where trade_id = 't-backtest'`)).length === 1);
+});
+
 // ---- Revoke
 await db.exec(`update public.coach_access set active = false where owner_id = '${O}'`);
 await as(C, async () => {
