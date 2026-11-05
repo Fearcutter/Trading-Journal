@@ -7,10 +7,15 @@ import { timingRow, type TimingRow } from './trade-timing';
 export const THIN_SAMPLE_THRESHOLD = 5;
 
 /** Used when there is too little size data to derive sensible cutoffs. */
-const FALLBACK_CUTOFFS: Cutoffs = [8, 15, 25];
+const FALLBACK_CUTOFFS: [number, number] = [8, 15];
 
-/** Upper limits for Small, Medium and Large; anything bigger is Extra large. */
-export type Cutoffs = [number, number, number];
+/** One size group: `from` included, `to` not; `to: null` = no upper limit. */
+export interface SizeRange {
+  from: number;
+  to: number | null;
+}
+
+const RANGE_NAMES = ['Small', 'Medium', 'Large'];
 
 export interface SizeBand {
   /** Group name, e.g. "Small" (stop method grid only). */
@@ -57,36 +62,38 @@ function percentile(sorted: number[], fraction: number): number {
 }
 
 /**
- * Starting Small / Medium / Large limits derived from the trader's own gap
- * sizes, splitting them into four roughly even groups.
+ * Starting Small / Medium / Large ranges derived from the trader's own gap
+ * sizes, splitting them into three roughly even groups: 0 to the first third,
+ * then to the second third, then no upper limit.
  *
- * Deliberately ignores the selected stop-method category: the bands describe
+ * Deliberately ignores the selected stop-method category: the groups describe
  * the size axis alone, and making them category-dependent would shift the
  * columns every time the dropdown changed.
  */
-export function suggestCutoffs(trades: Trade[]): Cutoffs {
+export function suggestRanges(trades: Trade[]): SizeRange[] {
   const sizes = trades
     .map(t => t.ifvgSize)
     .filter((s): s is number => s != null)
     .sort((a, b) => a - b);
 
-  if (sizes.length < 4) return FALLBACK_CUTOFFS;
-  return [round1(percentile(sizes, 1 / 4)), round1(percentile(sizes, 2 / 4)), round1(percentile(sizes, 3 / 4))];
+  const [a, b] = sizes.length < 3
+    ? FALLBACK_CUTOFFS
+    : [round1(percentile(sizes, 1 / 3)), round1(percentile(sizes, 2 / 3))];
+  return [{ from: 0, to: a }, { from: a, to: b }, { from: b, to: null }];
 }
 
 /**
- * Small / Medium / Large / Extra large from the three upper limits. The limits
- * are sorted, so entering them in any order gives the same result. Equal limits
- * leave a group empty — a valid state the UI explains rather than rejects.
+ * Small / Medium / Large from the trader's own from–to ranges. Gaps are allowed
+ * (sizes in a gap are left out) and so are overlaps (a size counts in each group
+ * it fits).
  */
-export function buildBands(cutoffs: readonly number[]): SizeBand[] {
-  const [a, b, c] = [...cutoffs].sort((x, y) => x - y);
-  return [
-    { name: 'Small', label: `< ${fmt(a)}`, min: null, max: a },
-    { name: 'Medium', label: `${fmt(a)} – ${fmt(b)}`, min: a, max: b },
-    { name: 'Large', label: `${fmt(b)} – ${fmt(c)}`, min: b, max: c },
-    { name: 'Extra large', label: `≥ ${fmt(c)}`, min: c, max: null },
-  ];
+export function buildRangeBands(ranges: readonly SizeRange[]): SizeBand[] {
+  return ranges.map((r, i) => ({
+    name: RANGE_NAMES[i],
+    label: r.to === null ? `${fmt(r.from)}+` : `${fmt(r.from)} – ${fmt(r.to)}`,
+    min: r.from,
+    max: r.to,
+  }));
 }
 
 /** Fixed point ranges for the "Win rate by iFVG size" table (lower edge included). */
@@ -95,6 +102,15 @@ export const SIZE_TABLE_BANDS: SizeBand[] = SIZE_TABLE_EDGES.map((min, i) => {
   const max = SIZE_TABLE_EDGES[i + 1] ?? null;
   return { label: max === null ? `${fmt(min)}+` : `${fmt(min)}–${fmt(max)}`, min, max };
 });
+
+function inBand(size: number, { min, max }: SizeBand): boolean {
+  return (min === null || size >= min) && (max === null || size < max);
+}
+
+/** Trades with an iFVG size that fit none of the groups. */
+export function countOutsideBands(trades: Trade[], bands: SizeBand[]): number {
+  return trades.filter(t => t.ifvgSize != null && !bands.some(b => inBand(t.ifvgSize!, b))).length;
+}
 
 function bandIndexOf(size: number, bands: SizeBand[]): number {
   for (let i = 0; i < bands.length; i++) {
@@ -117,7 +133,8 @@ function toCell(a: Acc): MatrixCell {
 }
 
 /**
- * Average realized R per stop method per size band.
+ * Average realized R per stop method per size band. A trade fitting several
+ * (overlapping) bands counts in each; the "all" column counts it once.
  *
  * A trade carrying several methods is counted under each of them, matching
  * how analyzeConfluences treats multi-value fields. Counts across a row can
@@ -134,8 +151,9 @@ export function buildMatrix(
     if (trade.ifvgSize == null) continue;
     const r = getRealizedR(trade);
     if (r === null) continue;
-    const idx = bandIndexOf(trade.ifvgSize, bands);
-    if (idx < 0) continue;
+    const size = trade.ifvgSize;
+    const fits = bands.map((b, i) => (inBand(size, b) ? i : -1)).filter(i => i >= 0);
+    if (fits.length === 0) continue;
 
     for (const method of extractor(trade)) {
       let entry = methods.get(method);
@@ -144,9 +162,11 @@ export function buildMatrix(
         methods.set(method, entry);
       }
       const won = trade.result === 'win' ? 1 : 0;
-      entry.bands[idx].sum += r;
-      entry.bands[idx].count++;
-      entry.bands[idx].wins += won;
+      for (const idx of fits) {
+        entry.bands[idx].sum += r;
+        entry.bands[idx].count++;
+        entry.bands[idx].wins += won;
+      }
       entry.all.sum += r;
       entry.all.count++;
       entry.all.wins += won;

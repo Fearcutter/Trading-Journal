@@ -3,7 +3,7 @@ import type { Trade } from '../../types/trade';
 import { useSettings } from '../../context/SettingsContext';
 import { categoryExtractors } from '../../utils/confluence-analyzer';
 import {
-  suggestCutoffs, buildBands, type Cutoffs, buildMatrix, buildScatterPoints, countIneligible, buildSizeRows, SIZE_TABLE_BANDS,
+  suggestRanges, buildRangeBands, countOutsideBands, type SizeRange, buildMatrix, buildScatterPoints, countIneligible, buildSizeRows, SIZE_TABLE_BANDS,
 } from '../../utils/ifvg-sl-analyzer';
 import IFVGStopMethodScatter from './IFVGStopMethodScatter';
 import IFVGStopMethodGrid from './IFVGStopMethodGrid';
@@ -12,8 +12,14 @@ import TimingTable from '../analytics/TimingTable';
 import { usePLFormatter } from '../../hooks/usePLFormatter';
 
 const CATEGORY_KEY = 'ifvg-sl-category';
-const BANDS_KEY = 'ifvg-sl-cutoffs';
+const RANGES_KEY = 'ifvg-sl-ranges';
 const SIZE_NAMES = ['Small', 'Medium', 'Large'] as const;
+const boxClass = 'w-24 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm font-mono text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500';
+
+/** A typed number, or the fallback when the box is blank or not a number. */
+function numberOr<T>(text: string, fallback: T): number | T {
+  return text.trim() === '' || Number.isNaN(Number(text)) ? fallback : Number(text);
+}
 
 interface Props {
   trades: Trade[];
@@ -45,9 +51,10 @@ export default function IFVGStopMethodSection({ trades }: Props) {
   // rather than synced into state, which would cascade renders as the fetch
   // resolves.
   const [chosenId, setChosenId] = useState<string | null>(() => loadStored(CATEGORY_KEY));
-  const [cutoffInputs, setCutoffInputs] = useState<string[]>(() => {
-    const saved = loadStored(BANDS_KEY)?.split(',') ?? [];
-    return [0, 1, 2].map(i => saved[i] ?? '');
+  // Six boxes: Small from/to, Medium from/to, Large from/to.
+  const [rangeInputs, setRangeInputs] = useState<string[]>(() => {
+    const saved = loadStored(RANGES_KEY)?.split(',') ?? [];
+    return [0, 1, 2, 3, 4, 5].map(i => saved[i] ?? '');
   });
 
   // The trader's own pick wins whenever it is still a real category; otherwise
@@ -56,20 +63,25 @@ export default function IFVGStopMethodSection({ trades }: Props) {
     ? chosenId
     : (categories[0]?.id ?? '');
 
-  const suggested = useMemo(() => suggestCutoffs(trades), [trades]);
+  const suggested = useMemo(() => suggestRanges(trades), [trades]);
 
   // A blank box falls back to the suggestion, which is also its placeholder.
-  const cutoffs = cutoffInputs.map((v, i) =>
-    v.trim() === '' || Number.isNaN(Number(v)) ? suggested[i] : Number(v)) as Cutoffs;
-  const cutoffsKey = cutoffs.join(',');
+  const ranges: SizeRange[] = suggested.map((sug, i) => ({
+    from: numberOr(rangeInputs[i * 2], sug.from),
+    to: numberOr(rangeInputs[i * 2 + 1], sug.to),
+  }));
+  const rangesKey = JSON.stringify(ranges);
 
   const extractor = useMemo(
     () => categoryId ? categoryExtractors.customField(categoryId) : () => [],
     [categoryId]
   );
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- cutoffsKey stands in for the cutoffs array
-  const bands = useMemo(() => buildBands(cutoffs), [cutoffsKey]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- rangesKey stands in for the ranges array
+  const bands = useMemo(() => buildRangeBands(ranges), [rangesKey]);
+  const outside = useMemo(() => countOutsideBands(trades, bands), [trades, bands]);
+  const backwards = ranges.map((r, i) => (r.to !== null && r.to <= r.from ? SIZE_NAMES[i] : null)).filter(Boolean);
+  const edges = [...new Set(ranges.flatMap(r => (r.to === null ? [r.from] : [r.from, r.to])).filter(x => x > 0))];
   const rows = useMemo(() => buildMatrix(trades, extractor, bands), [trades, extractor, bands]);
   const points = useMemo(() => buildScatterPoints(trades, extractor), [trades, extractor]);
   const ineligible = useMemo(() => countIneligible(trades, extractor), [trades, extractor]);
@@ -80,10 +92,10 @@ export default function IFVGStopMethodSection({ trades }: Props) {
     setChosenId(id);
     store(CATEGORY_KEY, id);
   };
-  const updateCutoff = (index: number, value: string) => {
-    const next = cutoffInputs.map((v, i) => (i === index ? value : v));
-    setCutoffInputs(next);
-    store(BANDS_KEY, next.join(','));
+  const updateRange = (index: number, value: string) => {
+    const next = rangeInputs.map((v, i) => (i === index ? value : v));
+    setRangeInputs(next);
+    store(RANGES_KEY, next.join(','));
   };
 
   if (categories.length === 0) {
@@ -116,20 +128,37 @@ export default function IFVGStopMethodSection({ trades }: Props) {
         </div>
         {SIZE_NAMES.map((name, i) => (
           <div key={name}>
-            <label className="block text-sm font-medium text-slate-400 mb-1">{name} up to (pts)</label>
-            <input
-              type="number" step="any" value={cutoffInputs[i]} placeholder={String(suggested[i])}
-              onChange={e => updateCutoff(i, e.target.value)}
-              className="w-28 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm font-mono text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <label className="block text-sm font-medium text-slate-400 mb-1">{name} (pts)</label>
+            <div className="flex items-center gap-1.5 text-sm text-slate-500">
+              <input
+                type="number" step="any" aria-label={`${name} from`} value={rangeInputs[i * 2]}
+                placeholder={String(suggested[i].from)}
+                onChange={e => updateRange(i * 2, e.target.value)}
+                className={boxClass}
+              />
+              to
+              <input
+                type="number" step="any" aria-label={`${name} to`} value={rangeInputs[i * 2 + 1]}
+                placeholder={suggested[i].to === null ? 'no limit' : String(suggested[i].to)}
+                onChange={e => updateRange(i * 2 + 1, e.target.value)}
+                className={boxClass}
+              />
+            </div>
           </div>
         ))}
-        <p className="text-xs text-slate-500 pb-2.5">Anything bigger than Large is Extra large.</p>
       </div>
+      <p className="text-xs text-slate-500 -mt-2">
+        "From" is included, "to" is not: 0 to 8 holds 7.9 but not 8. An empty "to" box for Large means no upper limit.
+      </p>
 
-      {new Set(cutoffs).size < 3 && (
+      {backwards.length > 0 && (
         <p className="text-xs text-amber-400">
-          Two of your limits are the same number, so one group is empty. Change one to open it up.
+          {backwards.join(' and ')}: the "to" number needs to be bigger than the "from" number.
+        </p>
+      )}
+      {outside > 0 && (
+        <p className="text-xs text-slate-400">
+          {outside} {outside === 1 ? 'trade has an iFVG size' : 'trades have an iFVG size'} outside all three ranges, so {outside === 1 ? "it isn't" : "they aren't"} in the grid below.
         </p>
       )}
 
@@ -157,7 +186,7 @@ export default function IFVGStopMethodSection({ trades }: Props) {
       ) : (
         <>
           <IFVGStopMethodGrid rows={rows} bands={bands} />
-          <IFVGStopMethodScatter points={points} cutoffs={cutoffs} />
+          <IFVGStopMethodScatter points={points} cutoffs={edges} />
         </>
       )}
     </div>

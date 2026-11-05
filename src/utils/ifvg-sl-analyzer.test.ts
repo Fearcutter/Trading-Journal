@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildBands, buildMatrix, buildSizeRows, suggestCutoffs, SIZE_TABLE_BANDS } from './ifvg-sl-analyzer';
+import { buildRangeBands, buildMatrix, buildSizeRows, countOutsideBands, suggestRanges, SIZE_TABLE_BANDS } from './ifvg-sl-analyzer';
 import type { Trade } from '../types/trade';
 
 let n = 0;
@@ -9,7 +9,7 @@ const t = (p: Partial<Trade>): Trade => ({
 const win = (r: number, p: Partial<Trade> = {}) => t({ result: 'win', pointsPL: r * 10, dollarPL: r * 100, ...p });
 const loss = (p: Partial<Trade> = {}) => t({ result: 'loss', pointsPL: -10, dollarPL: -100, ...p });
 const methodOf = (x: Trade) => x.customFields?.sl ?? [];
-const bands = buildBands([8, 15, 25]); // < 8 | 8 – 15 | 15 – 25 | ≥ 25
+const bands = buildRangeBands([{ from: 0, to: 8 }, { from: 8, to: 15 }, { from: 15, to: 25 }, { from: 25, to: null }]);
 
 describe('buildMatrix win rate', () => {
   it('gives each method × size square a win rate', () => {
@@ -34,7 +34,7 @@ describe('buildSizeRows', () => {
       loss({ ifvgSize: 30 }),
       win(3, {}), // no iFVG size: left out
     ], bands, 'dollarPL');
-    expect(rows.map(r => r.label)).toEqual(['< 8 pts', '8 – 15 pts', '15 – 25 pts', '≥ 25 pts']);
+    expect(rows.map(r => r.label)).toEqual(['0 – 8 pts', '8 – 15 pts', '15 – 25 pts', '25+ pts']);
     expect(rows.map(r => r.trades)).toEqual([2, 1, 0, 1]);
     expect(rows[0].winRate).toBe(50);
     expect(rows[0].netR).toBe(1);
@@ -50,29 +50,43 @@ describe('SIZE_TABLE_BANDS', () => {
   });
 });
 
-describe('buildBands', () => {
-  it('turns Small / Medium / Large limits into four groups, the last one Extra large', () => {
-    const b = buildBands([8, 20, 50]);
-    expect(b.map(x => x.name)).toEqual(['Small', 'Medium', 'Large', 'Extra large']);
-    expect(b.map(x => x.label)).toEqual(['< 8', '8 – 20', '20 – 50', '≥ 50']);
-    const rows = buildSizeRows([loss({ ifvgSize: 7.9 }), loss({ ifvgSize: 8 }), loss({ ifvgSize: 50 }), loss({ ifvgSize: 90 })], b, 'dollarPL');
-    expect(rows.map(r => r.trades)).toEqual([1, 1, 0, 2]);
+describe('buildRangeBands', () => {
+  it('names the groups Small / Medium / Large and leaves gaps out', () => {
+    const b = buildRangeBands([{ from: 0, to: 8 }, { from: 10, to: 20 }, { from: 20, to: 50 }]);
+    expect(b.map(x => x.name)).toEqual(['Small', 'Medium', 'Large']);
+    expect(b.map(x => x.label)).toEqual(['0 – 8', '10 – 20', '20 – 50']);
+    const sized = [7.9, 8, 9, 10, 20, 49, 50, 60].map(s => loss({ ifvgSize: s, customFields: { sl: ['Hard'] } }));
+    const rows = buildMatrix(sized, methodOf, b);
+    expect(rows[0].cells.map(c => c.count)).toEqual([1, 1, 2]);
+    expect(rows[0].all.count).toBe(4);
+    expect(countOutsideBands(sized, b)).toBe(4); // 8, 9, 50, 60
   });
 
-  it('sorts the limits, so typing them out of order still works', () => {
-    expect(buildBands([50, 8, 20]).map(x => x.label)).toEqual(['< 8', '8 – 20', '20 – 50', '≥ 50']);
+  it('a blank "to" means no upper limit', () => {
+    const b = buildRangeBands([{ from: 0, to: 8 }, { from: 8, to: 20 }, { from: 20, to: null }]);
+    expect(b[2].label).toBe('20+');
+    expect(countOutsideBands([loss({ ifvgSize: 500 })], b)).toBe(0);
+  });
+
+  it('counts a trade in every group it fits when ranges overlap', () => {
+    const b = buildRangeBands([{ from: 0, to: 10 }, { from: 5, to: 20 }, { from: 20, to: null }]);
+    const rows = buildMatrix([loss({ ifvgSize: 7, customFields: { sl: ['Hard'] } })], methodOf, b);
+    expect(rows[0].cells.map(c => c.count)).toEqual([1, 1, 0]);
+    expect(rows[0].all.count).toBe(1);
   });
 });
 
-describe('suggestCutoffs', () => {
-  it('suggests three limits from your own iFVG sizes, smallest first', () => {
-    const sizes = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26];
-    const [a, b, c] = suggestCutoffs(sizes.map(s => loss({ ifvgSize: s })));
-    expect(a).toBeLessThan(b);
-    expect(b).toBeLessThan(c);
+describe('suggestRanges', () => {
+  it('splits your own iFVG sizes into three groups, the last with no upper limit', () => {
+    const r = suggestRanges([2, 4, 6, 8, 10, 12, 14, 16, 18].map(s => loss({ ifvgSize: s })));
+    expect(r[0].from).toBe(0);
+    expect(r[0].to).toBe(r[1].from);
+    expect(r[1].to).toBe(r[2].from);
+    expect(r[2].to).toBeNull();
+    expect(r[0].to!).toBeLessThan(r[1].to!);
   });
 
-  it('falls back to 8 / 15 / 25 with too few sizes', () => {
-    expect(suggestCutoffs([loss({ ifvgSize: 3 })])).toEqual([8, 15, 25]);
+  it('falls back to 0–8 / 8–15 / 15+ with too few sizes', () => {
+    expect(suggestRanges([loss({ ifvgSize: 3 })])).toEqual([{ from: 0, to: 8 }, { from: 8, to: 15 }, { from: 15, to: null }]);
   });
 });

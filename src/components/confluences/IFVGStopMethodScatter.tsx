@@ -4,7 +4,7 @@ import type { ScatterPoint } from '../../utils/ifvg-sl-analyzer';
 
 interface Props {
   points: ScatterPoint[];
-  /** Small / Medium / Large upper limits, drawn as dashed lines. */
+  /** Edges of the Small / Medium / Large ranges, drawn as dashed lines. */
   cutoffs: readonly number[];
 }
 
@@ -33,7 +33,7 @@ export default function IFVGStopMethodScatter({ points, cutoffs }: Props) {
     <Card>
       <h3 className="text-sm font-medium text-slate-300">Every Trade by Gap Size and Realized R</h3>
       <p className="text-xs text-slate-500 mt-1 mb-3">
-        Each dot is one trade. Dashed lines are your Small / Medium / Large limits.
+        Each dot is one trade. Dashed lines are the edges of your Small / Medium / Large ranges.
       </p>
       <ResponsiveContainer width="100%" height={320}>
         <ScatterChart margin={{ top: 8, right: 16, bottom: 16, left: 0 }}>
