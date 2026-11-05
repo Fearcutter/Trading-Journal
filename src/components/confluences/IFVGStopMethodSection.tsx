@@ -3,7 +3,7 @@ import type { Trade } from '../../types/trade';
 import { useSettings } from '../../context/SettingsContext';
 import { categoryExtractors } from '../../utils/confluence-analyzer';
 import {
-  suggestCutoffs, buildBands, buildMatrix, buildScatterPoints, countIneligible, buildSizeRows, SIZE_TABLE_BANDS,
+  suggestCutoffs, buildBands, type Cutoffs, buildMatrix, buildScatterPoints, countIneligible, buildSizeRows, SIZE_TABLE_BANDS,
 } from '../../utils/ifvg-sl-analyzer';
 import IFVGStopMethodScatter from './IFVGStopMethodScatter';
 import IFVGStopMethodGrid from './IFVGStopMethodGrid';
@@ -12,7 +12,8 @@ import TimingTable from '../analytics/TimingTable';
 import { usePLFormatter } from '../../hooks/usePLFormatter';
 
 const CATEGORY_KEY = 'ifvg-sl-category';
-const BANDS_KEY = 'ifvg-sl-bands';
+const BANDS_KEY = 'ifvg-sl-cutoffs';
+const SIZE_NAMES = ['Small', 'Medium', 'Large'] as const;
 
 interface Props {
   trades: Trade[];
@@ -44,8 +45,10 @@ export default function IFVGStopMethodSection({ trades }: Props) {
   // rather than synced into state, which would cascade renders as the fetch
   // resolves.
   const [chosenId, setChosenId] = useState<string | null>(() => loadStored(CATEGORY_KEY));
-  const [loInput, setLoInput] = useState<string>(() => loadStored(BANDS_KEY)?.split(',')[0] ?? '');
-  const [hiInput, setHiInput] = useState<string>(() => loadStored(BANDS_KEY)?.split(',')[1] ?? '');
+  const [cutoffInputs, setCutoffInputs] = useState<string[]>(() => {
+    const saved = loadStored(BANDS_KEY)?.split(',') ?? [];
+    return [0, 1, 2].map(i => saved[i] ?? '');
+  });
 
   // The trader's own pick wins whenever it is still a real category; otherwise
   // fall back to the first one, which also covers the pre-fetch empty list.
@@ -56,15 +59,17 @@ export default function IFVGStopMethodSection({ trades }: Props) {
   const suggested = useMemo(() => suggestCutoffs(trades), [trades]);
 
   // A blank box falls back to the suggestion, which is also its placeholder.
-  const lo = loInput.trim() === '' || Number.isNaN(Number(loInput)) ? suggested[0] : Number(loInput);
-  const hi = hiInput.trim() === '' || Number.isNaN(Number(hiInput)) ? suggested[1] : Number(hiInput);
+  const cutoffs = cutoffInputs.map((v, i) =>
+    v.trim() === '' || Number.isNaN(Number(v)) ? suggested[i] : Number(v)) as Cutoffs;
+  const cutoffsKey = cutoffs.join(',');
 
   const extractor = useMemo(
     () => categoryId ? categoryExtractors.customField(categoryId) : () => [],
     [categoryId]
   );
 
-  const bands = useMemo(() => buildBands(lo, hi), [lo, hi]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- cutoffsKey stands in for the cutoffs array
+  const bands = useMemo(() => buildBands(cutoffs), [cutoffsKey]);
   const rows = useMemo(() => buildMatrix(trades, extractor, bands), [trades, extractor, bands]);
   const points = useMemo(() => buildScatterPoints(trades, extractor), [trades, extractor]);
   const ineligible = useMemo(() => countIneligible(trades, extractor), [trades, extractor]);
@@ -75,10 +80,10 @@ export default function IFVGStopMethodSection({ trades }: Props) {
     setChosenId(id);
     store(CATEGORY_KEY, id);
   };
-  const updateBands = (nextLo: string, nextHi: string) => {
-    setLoInput(nextLo);
-    setHiInput(nextHi);
-    store(BANDS_KEY, `${nextLo},${nextHi}`);
+  const updateCutoff = (index: number, value: string) => {
+    const next = cutoffInputs.map((v, i) => (i === index ? value : v));
+    setCutoffInputs(next);
+    store(BANDS_KEY, next.join(','));
   };
 
   if (categories.length === 0) {
@@ -109,27 +114,22 @@ export default function IFVGStopMethodSection({ trades }: Props) {
             ))}
           </select>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-400 mb-1">Small / medium cutoff</label>
-          <input
-            type="number" step="any" value={loInput} placeholder={String(suggested[0])}
-            onChange={e => updateBands(e.target.value, hiInput)}
-            className="w-32 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm font-mono text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-400 mb-1">Medium / large cutoff</label>
-          <input
-            type="number" step="any" value={hiInput} placeholder={String(suggested[1])}
-            onChange={e => updateBands(loInput, e.target.value)}
-            className="w-32 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm font-mono text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+        {SIZE_NAMES.map((name, i) => (
+          <div key={name}>
+            <label className="block text-sm font-medium text-slate-400 mb-1">{name} up to (pts)</label>
+            <input
+              type="number" step="any" value={cutoffInputs[i]} placeholder={String(suggested[i])}
+              onChange={e => updateCutoff(i, e.target.value)}
+              className="w-28 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm font-mono text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        ))}
+        <p className="text-xs text-slate-500 pb-2.5">Anything bigger than Large is Extra large.</p>
       </div>
 
-      {lo === hi && (
+      {new Set(cutoffs).size < 3 && (
         <p className="text-xs text-amber-400">
-          Both cutoffs are {lo}, so the middle band is empty. Move one to open it up.
+          Two of your limits are the same number, so one group is empty. Change one to open it up.
         </p>
       )}
 
@@ -157,7 +157,7 @@ export default function IFVGStopMethodSection({ trades }: Props) {
       ) : (
         <>
           <IFVGStopMethodGrid rows={rows} bands={bands} />
-          <IFVGStopMethodScatter points={points} lo={lo} hi={hi} />
+          <IFVGStopMethodScatter points={points} cutoffs={cutoffs} />
         </>
       )}
     </div>

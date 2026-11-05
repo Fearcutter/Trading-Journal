@@ -4,8 +4,8 @@ import type { ScatterPoint } from '../../utils/ifvg-sl-analyzer';
 
 interface Props {
   points: ScatterPoint[];
-  lo: number;
-  hi: number;
+  /** Small / Medium / Large upper limits, drawn as dashed lines. */
+  cutoffs: readonly number[];
 }
 
 const METHOD_COLOURS = ['#38bdf8', '#f472b6', '#a78bfa', '#fbbf24', '#34d399', '#fb7185', '#60a5fa', '#f97316'];
@@ -26,15 +26,14 @@ function PointTooltip({ active, payload }: { active?: boolean; payload?: Tooltip
   );
 }
 
-export default function IFVGStopMethodScatter({ points, lo, hi }: Props) {
+export default function IFVGStopMethodScatter({ points, cutoffs }: Props) {
   const methods = [...new Set(points.map(p => p.method))].sort();
-  const [low, high] = lo <= hi ? [lo, hi] : [hi, lo];
 
   return (
     <Card>
       <h3 className="text-sm font-medium text-slate-300">Every Trade by Gap Size and Realized R</h3>
       <p className="text-xs text-slate-500 mt-1 mb-3">
-        Each dot is one trade. Dashed lines are your cutoffs — check the dots actually separate before trusting a band.
+        Each dot is one trade. Dashed lines are your Small / Medium / Large limits.
       </p>
       <ResponsiveContainer width="100%" height={320}>
         <ScatterChart margin={{ top: 8, right: 16, bottom: 16, left: 0 }}>
@@ -57,8 +56,9 @@ export default function IFVGStopMethodScatter({ points, lo, hi }: Props) {
           <Tooltip content={<PointTooltip />} cursor={{ strokeDasharray: '3 3' }} />
           <Legend wrapperStyle={{ fontSize: 12, color: '#94a3b8' }} />
           <ReferenceLine y={0} stroke="#64748b" />
-          <ReferenceLine x={low} stroke="#94a3b8" strokeDasharray="4 4" label={{ value: String(low), fill: '#94a3b8', fontSize: 11, position: 'top' }} />
-          <ReferenceLine x={high} stroke="#94a3b8" strokeDasharray="4 4" label={{ value: String(high), fill: '#94a3b8', fontSize: 11, position: 'top' }} />
+          {[...new Set(cutoffs)].map(x => (
+            <ReferenceLine key={x} x={x} stroke="#94a3b8" strokeDasharray="4 4" label={{ value: String(x), fill: '#94a3b8', fontSize: 11, position: 'top' }} />
+          ))}
           {methods.map((method, i) => (
             <Scatter
               key={method}

@@ -3,13 +3,18 @@ import { getRealizedR, getStopDistance } from './r-multiple';
 import type { PLField } from './pl-helpers';
 import { timingRow, type TimingRow } from './trade-timing';
 
-/** Cells built on fewer trades than this are flagged as unreliable. */
+/** Cells built on fewer trades than this can't be ringed as the best method. */
 export const THIN_SAMPLE_THRESHOLD = 5;
 
 /** Used when there is too little size data to derive sensible cutoffs. */
-const FALLBACK_CUTOFFS: [number, number] = [8, 15];
+const FALLBACK_CUTOFFS: Cutoffs = [8, 15, 25];
+
+/** Upper limits for Small, Medium and Large; anything bigger is Extra large. */
+export type Cutoffs = [number, number, number];
 
 export interface SizeBand {
+  /** Group name, e.g. "Small" (stop method grid only). */
+  name?: string;
   label: string;
   min: number | null; // null = unbounded below (first band)
   max: number | null; // null = unbounded above (last band)
@@ -52,34 +57,35 @@ function percentile(sorted: number[], fraction: number): number {
 }
 
 /**
- * Starting cutoffs derived from the trader's own gap sizes, splitting them
- * into three roughly even groups.
+ * Starting Small / Medium / Large limits derived from the trader's own gap
+ * sizes, splitting them into four roughly even groups.
  *
  * Deliberately ignores the selected stop-method category: the bands describe
  * the size axis alone, and making them category-dependent would shift the
  * columns every time the dropdown changed.
  */
-export function suggestCutoffs(trades: Trade[]): [number, number] {
+export function suggestCutoffs(trades: Trade[]): Cutoffs {
   const sizes = trades
     .map(t => t.ifvgSize)
     .filter((s): s is number => s != null)
     .sort((a, b) => a - b);
 
-  if (sizes.length < 3) return FALLBACK_CUTOFFS;
-  return [round1(percentile(sizes, 1 / 3)), round1(percentile(sizes, 2 / 3))];
+  if (sizes.length < 4) return FALLBACK_CUTOFFS;
+  return [round1(percentile(sizes, 1 / 4)), round1(percentile(sizes, 2 / 4)), round1(percentile(sizes, 3 / 4))];
 }
 
 /**
- * Three bands from two cutoffs. The inputs are sorted, so entering them in
- * either order gives the same result. Equal cutoffs produce an empty middle
- * band — a valid state the UI explains rather than rejects.
+ * Small / Medium / Large / Extra large from the three upper limits. The limits
+ * are sorted, so entering them in any order gives the same result. Equal limits
+ * leave a group empty — a valid state the UI explains rather than rejects.
  */
-export function buildBands(lo: number, hi: number): SizeBand[] {
-  const [a, b] = lo <= hi ? [lo, hi] : [hi, lo];
+export function buildBands(cutoffs: readonly number[]): SizeBand[] {
+  const [a, b, c] = [...cutoffs].sort((x, y) => x - y);
   return [
-    { label: `< ${fmt(a)}`, min: null, max: a },
-    { label: `${fmt(a)} – ${fmt(b)}`, min: a, max: b },
-    { label: `≥ ${fmt(b)}`, min: b, max: null },
+    { name: 'Small', label: `< ${fmt(a)}`, min: null, max: a },
+    { name: 'Medium', label: `${fmt(a)} – ${fmt(b)}`, min: a, max: b },
+    { name: 'Large', label: `${fmt(b)} – ${fmt(c)}`, min: b, max: c },
+    { name: 'Extra large', label: `≥ ${fmt(c)}`, min: c, max: null },
   ];
 }
 

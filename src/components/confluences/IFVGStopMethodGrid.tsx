@@ -1,5 +1,5 @@
 import Card from '../ui/Card';
-import { THIN_SAMPLE_THRESHOLD, type MatrixRow, type MatrixCell, type SizeBand } from '../../utils/ifvg-sl-analyzer';
+import { type MatrixRow, type MatrixCell, type SizeBand } from '../../utils/ifvg-sl-analyzer';
 
 interface Props {
   rows: MatrixRow[];
@@ -35,10 +35,10 @@ function Cell({ cell, best }: { cell: MatrixCell; best: boolean }) {
   return (
     <td className="px-2 py-2">
       <div
-        className={`rounded-lg px-3 py-2 text-center ${cellColour(cell.avgR)} ${cell.thin ? 'opacity-50' : ''} ${best ? 'ring-2 ring-sky-400' : ''}`}
+        className={`rounded-lg px-3 py-2 text-center ${cellColour(cell.avgR)} ${best ? 'ring-2 ring-sky-400' : ''}`}
       >
         <p className="font-mono text-sm font-semibold">
-          {cell.avgR > 0 ? '+' : ''}{cell.avgR.toFixed(2)}R{cell.thin ? '*' : ''}
+          {cell.avgR > 0 ? '+' : ''}{cell.avgR.toFixed(2)}R
         </p>
         <p className="text-[11px] opacity-80">{cell.winRate !== null ? `${Math.round(cell.winRate)}% win` : ''}</p>
         <p className="text-[11px] opacity-70">{cell.count} {cell.count === 1 ? 'trade' : 'trades'}</p>
@@ -68,7 +68,7 @@ export default function IFVGStopMethodGrid({ rows, bands }: Props) {
       <div className="p-4 pb-0">
         <h3 className="text-sm font-medium text-slate-300">Average R and Win % by Stop Method and iFVG Size</h3>
         <p className="text-xs text-slate-500 mt-1">
-          Points made or lost divided by the distance risked. Ringed cell is the best method in that band.
+          Points made or lost divided by the distance risked. Ringed cell is the best method in that size group (needs 5+ trades).
         </p>
       </div>
       <div className="overflow-x-auto p-4">
@@ -78,6 +78,7 @@ export default function IFVGStopMethodGrid({ rows, bands }: Props) {
               <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Stop Method</th>
               {bands.map(band => (
                 <th key={band.label} className="px-4 py-3 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">
+                  {band.name && <span className="block normal-case text-slate-300">{band.name}</span>}
                   {band.label} pts
                 </th>
               ))}
@@ -96,9 +97,6 @@ export default function IFVGStopMethodGrid({ rows, bands }: Props) {
             ))}
           </tbody>
         </table>
-        <p className="text-xs text-slate-500 mt-3">
-          * Fewer than {THIN_SAMPLE_THRESHOLD} trades — shown faded, and never ringed as best. Treat as not yet meaningful.
-        </p>
       </div>
     </Card>
   );

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildBands, buildMatrix, buildSizeRows, SIZE_TABLE_BANDS } from './ifvg-sl-analyzer';
+import { buildBands, buildMatrix, buildSizeRows, suggestCutoffs, SIZE_TABLE_BANDS } from './ifvg-sl-analyzer';
 import type { Trade } from '../types/trade';
 
 let n = 0;
@@ -9,7 +9,7 @@ const t = (p: Partial<Trade>): Trade => ({
 const win = (r: number, p: Partial<Trade> = {}) => t({ result: 'win', pointsPL: r * 10, dollarPL: r * 100, ...p });
 const loss = (p: Partial<Trade> = {}) => t({ result: 'loss', pointsPL: -10, dollarPL: -100, ...p });
 const methodOf = (x: Trade) => x.customFields?.sl ?? [];
-const bands = buildBands(8, 15); // < 8 | 8 – 15 | ≥ 15
+const bands = buildBands([8, 15, 25]); // < 8 | 8 – 15 | 15 – 25 | ≥ 25
 
 describe('buildMatrix win rate', () => {
   it('gives each method × size square a win rate', () => {
@@ -21,6 +21,7 @@ describe('buildMatrix win rate', () => {
     expect(rows[0].cells[0].winRate).toBe(50);
     expect(rows[0].cells[1].winRate).toBeNull();
     expect(rows[0].cells[2].winRate).toBe(0);
+    expect(rows[0].cells[3].winRate).toBeNull();
     expect(rows[0].all.winRate).toBeCloseTo(33.33, 1);
   });
 });
@@ -33,11 +34,11 @@ describe('buildSizeRows', () => {
       loss({ ifvgSize: 30 }),
       win(3, {}), // no iFVG size: left out
     ], bands, 'dollarPL');
-    expect(rows.map(r => r.label)).toEqual(['< 8 pts', '8 – 15 pts', '≥ 15 pts']);
-    expect(rows.map(r => r.trades)).toEqual([2, 1, 1]);
+    expect(rows.map(r => r.label)).toEqual(['< 8 pts', '8 – 15 pts', '15 – 25 pts', '≥ 25 pts']);
+    expect(rows.map(r => r.trades)).toEqual([2, 1, 0, 1]);
     expect(rows[0].winRate).toBe(50);
     expect(rows[0].netR).toBe(1);
-    expect(rows[2].netR).toBe(-1);
+    expect(rows[3].netR).toBe(-1);
   });
 });
 
@@ -46,5 +47,32 @@ describe('SIZE_TABLE_BANDS', () => {
     expect(SIZE_TABLE_BANDS.map(b => b.label)).toEqual(['0–2.5', '2.5–5', '5–7.5', '7.5–10', '10–15', '15–20', '20–30', '30–40', '40–50', '50+']);
     const rows = buildSizeRows([loss({ ifvgSize: 2.5 }), loss({ ifvgSize: 2.49 }), loss({ ifvgSize: 50 }), loss({ ifvgSize: 120 })], SIZE_TABLE_BANDS, 'dollarPL');
     expect(rows.map(r => r.trades)).toEqual([1, 1, 0, 0, 0, 0, 0, 0, 0, 2]);
+  });
+});
+
+describe('buildBands', () => {
+  it('turns Small / Medium / Large limits into four groups, the last one Extra large', () => {
+    const b = buildBands([8, 20, 50]);
+    expect(b.map(x => x.name)).toEqual(['Small', 'Medium', 'Large', 'Extra large']);
+    expect(b.map(x => x.label)).toEqual(['< 8', '8 – 20', '20 – 50', '≥ 50']);
+    const rows = buildSizeRows([loss({ ifvgSize: 7.9 }), loss({ ifvgSize: 8 }), loss({ ifvgSize: 50 }), loss({ ifvgSize: 90 })], b, 'dollarPL');
+    expect(rows.map(r => r.trades)).toEqual([1, 1, 0, 2]);
+  });
+
+  it('sorts the limits, so typing them out of order still works', () => {
+    expect(buildBands([50, 8, 20]).map(x => x.label)).toEqual(['< 8', '8 – 20', '20 – 50', '≥ 50']);
+  });
+});
+
+describe('suggestCutoffs', () => {
+  it('suggests three limits from your own iFVG sizes, smallest first', () => {
+    const sizes = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26];
+    const [a, b, c] = suggestCutoffs(sizes.map(s => loss({ ifvgSize: s })));
+    expect(a).toBeLessThan(b);
+    expect(b).toBeLessThan(c);
+  });
+
+  it('falls back to 8 / 15 / 25 with too few sizes', () => {
+    expect(suggestCutoffs([loss({ ifvgSize: 3 })])).toEqual([8, 15, 25]);
   });
 });
