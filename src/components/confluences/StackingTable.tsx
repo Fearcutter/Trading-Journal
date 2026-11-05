@@ -1,7 +1,6 @@
-import { AlertTriangle } from 'lucide-react';
 import { formatPercent } from '../../utils/formatters';
 import { usePLFormatter } from '../../hooks/usePLFormatter';
-import { formatR, MIN_SAMPLE, type BucketRow } from '../../utils/confluence-insights';
+import { formatR, type BucketRow } from '../../utils/confluence-insights';
 
 export default function StackingTable({ rows, title, subtitle, labelHeader }: { rows: BucketRow[]; title: string; subtitle: string; labelHeader: string }) {
   const pl = usePLFormatter();
@@ -25,16 +24,14 @@ export default function StackingTable({ rows, title, subtitle, labelHeader }: { 
         </thead>
         <tbody>
           {rows.map(({ label, stats }) => {
-            const thin = stats.trades > 0 && stats.trades < MIN_SAMPLE;
             return (
               <tr key={label} className={`border-b border-slate-700/50 ${stats.trades === 0 ? 'opacity-40' : ''}`}>
                 <td className="px-4 py-2.5 text-sm font-mono text-slate-200">{label}</td>
                 <td className="px-4 py-2.5 text-sm font-mono text-slate-300 text-right">
                   {stats.trades}
-                  {thin && <AlertTriangle size={12} className="inline ml-1 text-amber-400" aria-label="small sample" />}
                 </td>
                 <td className="px-4 py-2.5 text-sm font-mono text-slate-300 text-right">{stats.trades ? formatPercent(stats.winRate) : '—'}</td>
-                <td className={`px-4 py-2.5 text-sm font-mono text-right ${stats.rPerTrade === null || thin ? 'text-slate-400' : stats.rPerTrade >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                <td className={`px-4 py-2.5 text-sm font-mono text-right ${stats.rPerTrade === null ? 'text-slate-400' : stats.rPerTrade >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {formatR(stats.rPerTrade)}
                 </td>
                 <td className="px-4 py-2.5 text-sm font-mono text-right text-slate-300">{stats.trades ? pl.formatPLValue(stats.totalPL) : '—'}</td>

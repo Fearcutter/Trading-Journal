@@ -1,18 +1,15 @@
-import { AlertTriangle } from 'lucide-react';
 import { formatPercent } from '../../utils/formatters';
-import { formatR, MIN_SAMPLE, type Summary, type analyzeAgainstCost } from '../../utils/confluence-insights';
+import { formatR, type Summary, type analyzeAgainstCost } from '../../utils/confluence-insights';
 
 function Panel({ title, stats }: { title: string; stats: Summary }) {
-  const thin = stats.trades > 0 && stats.trades < MIN_SAMPLE;
   return (
     <div className="bg-slate-900/50 border border-slate-700 rounded-lg p-3">
       <p className="text-xs text-slate-500 mb-1">{title}</p>
-      <p className={`text-lg font-bold font-mono ${stats.rPerTrade === null || thin ? 'text-slate-400' : stats.rPerTrade >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+      <p className={`text-lg font-bold font-mono ${stats.rPerTrade === null ? 'text-slate-400' : stats.rPerTrade >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
         {formatR(stats.rPerTrade)} <span className="text-xs font-normal text-slate-500">per trade</span>
       </p>
       <p className="text-xs text-slate-400 mt-1">
         {stats.trades} trades · {stats.trades ? formatPercent(stats.winRate) : '—'} win
-        {thin && <AlertTriangle size={12} className="inline ml-1 text-amber-400" aria-label="small sample" />}
       </p>
     </div>
   );
@@ -33,9 +30,8 @@ export default function AgainstCost({ data }: { data: ReturnType<typeof analyzeA
       {data.costR !== null && data.anyAgainst.trades > 0 && (
         <p className="text-sm text-slate-300">
           Trades taken against a warning:{' '}
-          <span className={`font-mono font-semibold ${!data.sufficient ? 'text-slate-400' : data.costR < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>{formatR(data.costR)} per trade</span>{' '}
+          <span className={`font-mono font-semibold ${data.costR < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>{formatR(data.costR)} per trade</span>{' '}
           compared with trades that had none.
-          {!data.sufficient && <span className="text-amber-400 text-xs ml-1">(small sample — could be luck)</span>}
         </p>
       )}
     </div>

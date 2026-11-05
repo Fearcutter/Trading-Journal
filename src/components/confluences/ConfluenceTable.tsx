@@ -1,7 +1,6 @@
 import type { ConfluenceStats } from '../../utils/confluence-analyzer';
 import { formatPercent } from '../../utils/formatters';
 import { usePLFormatter } from '../../hooks/usePLFormatter';
-import { AlertTriangle } from 'lucide-react';
 
 interface ConfluenceTableProps {
   data: ConfluenceStats[];
@@ -26,7 +25,6 @@ export default function ConfluenceTable({ data, title = 'Individual Confluence P
               <th className="px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider text-right">Avg P&L</th>
               <th className="px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider text-right">Total P&L</th>
               <th className="px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider text-right">Avg R:R</th>
-              <th className="px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider text-center">Sample</th>
             </tr>
           </thead>
           <tbody>
@@ -51,17 +49,6 @@ export default function ConfluenceTable({ data, title = 'Individual Confluence P
                 </td>
                 <td className="px-4 py-3 text-sm font-mono text-slate-300 text-right">
                   {row.avgRR > 0 ? `1:${Number.isInteger(row.avgRR) ? row.avgRR : row.avgRR.toFixed(2)}` : '—'}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  {!row.hasSufficientData && (
-                    <span className="inline-flex items-center gap-1 text-xs text-amber-400" title="Less than 10 trades — limited statistical significance">
-                      <AlertTriangle size={12} />
-                      Low
-                    </span>
-                  )}
-                  {row.hasSufficientData && (
-                    <span className="text-xs text-emerald-400">OK</span>
-                  )}
                 </td>
               </tr>
             ))}

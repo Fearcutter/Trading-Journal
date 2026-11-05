@@ -1,11 +1,10 @@
-import { AlertTriangle } from 'lucide-react';
 import { formatPercent } from '../../utils/formatters';
 import { usePLFormatter } from '../../hooks/usePLFormatter';
-import { formatR, MIN_SAMPLE, type EdgeRow } from '../../utils/confluence-insights';
+import { formatR, type EdgeRow } from '../../utils/confluence-insights';
 
-/** Green/red only when there's enough data; grey otherwise. */
-function edgeColor(value: number | null, sufficient: boolean) {
-  if (value === null || !sufficient) return 'text-slate-500';
+/** Green for positive edge, red for negative; grey when there is no R. */
+function edgeColor(value: number | null) {
+  if (value === null) return 'text-slate-500';
   return value > 0 ? 'text-emerald-400' : value < 0 ? 'text-rose-400' : 'text-slate-300';
 }
 
@@ -45,12 +44,7 @@ export default function EdgeTable({ data, title, subtitle }: { data: EdgeRow[]; 
                   <span className="text-slate-500"> / {formatR(row.without.rPerTrade)}</span>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <span className={`font-mono text-sm font-semibold ${edgeColor(row.edgeR, row.sufficient)}`}>{formatR(row.edgeR)}</span>
-                  {!row.sufficient && (
-                    <span className="ml-1.5 inline-flex items-center gap-1 text-xs text-amber-400" title={`Fewer than ${MIN_SAMPLE} trades with or without it — could be luck`}>
-                      <AlertTriangle size={12} /> small sample
-                    </span>
-                  )}
+                  <span className={`font-mono text-sm font-semibold ${edgeColor(row.edgeR)}`}>{formatR(row.edgeR)}</span>
                 </td>
                 <td className="px-4 py-3 text-right">
                   <span className={`font-mono text-sm ${row.with.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{pl.formatPLValue(row.with.totalPL)}</span>
