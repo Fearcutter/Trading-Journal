@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useView } from '../context/ViewContext';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { useTrades } from '../context/TradeContext';
 import { useHabits } from '../context/HabitContext';
 import { useLiveSession } from '../context/LiveSessionContext';
 import OverlapScopeToggle, { type OverlapScope } from '../components/filters/OverlapScopeToggle';
+import MultiSelect from '../components/ui/MultiSelect';
 import { usePLFormatter } from '../hooks/usePLFormatter';
 import CalendarGrid from '../components/calendar/CalendarGrid';
 import DayTradesPanel from '../components/calendar/DayTradesPanel';
@@ -14,16 +15,36 @@ import Button from '../components/ui/Button';
 import { Link } from 'react-router-dom';
 import { PlusCircle } from 'lucide-react';
 
+const SESSION_FILTER_KEY = 'calendar.sessionIds';
+
+function loadSessionFilter(): string[] {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SESSION_FILTER_KEY) ?? '[]');
+    return Array.isArray(saved) ? saved.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function CalendarPage() {
   const { trades: allTrades } = useTrades();
   const { readOnly } = useView();
   const { sessions: liveSessions } = useLiveSession();
   const { checkIns: habitCheckIns } = useHabits();
   const pl = usePLFormatter();
+  // Sessions picked in the filter; none picked = all live sessions. Ids of deleted sessions are ignored.
+  const [pickedSessionIds, setPickedSessionIds] = useState<string[]>(loadSessionFilter);
+  useEffect(() => {
+    try { localStorage.setItem(SESSION_FILTER_KEY, JSON.stringify(pickedSessionIds)); } catch { /* storage unavailable */ }
+  }, [pickedSessionIds]);
+  const selectedSessionIds = useMemo(
+    () => pickedSessionIds.filter(id => liveSessions.some(s => s.id === id)),
+    [pickedSessionIds, liveSessions]
+  );
   const liveTrades = useMemo(() => {
-    const liveIds = new Set(liveSessions.map(s => s.id));
+    const liveIds = new Set(selectedSessionIds.length ? selectedSessionIds : liveSessions.map(s => s.id));
     return allTrades.filter(t => t.sessionId && liveIds.has(t.sessionId));
-  }, [allTrades, liveSessions]);
+  }, [allTrades, liveSessions, selectedSessionIds]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [overlapScope, setOverlapScope] = useState<OverlapScope>('exclude');
@@ -61,7 +82,9 @@ export default function CalendarPage() {
     return scopedLiveTrades.filter(t => t.date === selectedDate).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
   }, [scopedLiveTrades, selectedDate]);
 
-  if (scopedLiveTrades.length === 0) {
+  // Empty state only when there are no live-session trades at all, so the session filter stays reachable.
+  const hasAnyLiveTrades = allTrades.some(t => t.sessionId && liveSessions.some(s => s.id === t.sessionId));
+  if (!hasAnyLiveTrades) {
     return (
       <EmptyState
         icon={<Calendar size={48} />}
@@ -79,7 +102,15 @@ export default function CalendarPage() {
   return (
     <div className="space-y-4">
       {/* Scope toggle */}
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end gap-3">
+        {liveSessions.length > 1 && (
+          <MultiSelect
+            value={selectedSessionIds}
+            onChange={setPickedSessionIds}
+            options={liveSessions.map(s => ({ value: s.id, label: s.name }))}
+            placeholder="All sessions"
+          />
+        )}
         <OverlapScopeToggle value={overlapScope} onChange={setOverlapScope} />
       </div>
       {/* Month navigation */}
