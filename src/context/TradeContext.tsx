@@ -24,6 +24,11 @@ interface TradeContextValue {
   clearAllTrades: () => void;
 }
 
+/** A form number field: blank stays unset, but 0 is kept (an MFE of 0 is real data). */
+function optionalNumber(value: number | '' | undefined): number | undefined {
+  return value === '' || value == null ? undefined : Number(value);
+}
+
 const TradeContext = createContext<TradeContextValue | null>(null);
 
 export function TradeProvider({ children }: { children: ReactNode }) {
@@ -62,10 +67,10 @@ export function TradeProvider({ children }: { children: ReactNode }) {
       tags: data.tags,
       customFields: data.customFields || {},
       ifvgSize: data.ifvgSize ? Number(data.ifvgSize) : undefined,
-      mae: data.mae ? Number(data.mae) : undefined,
-      mfe: data.mfe ? Number(data.mfe) : undefined,
-      drawback1R: data.drawback1R ? Number(data.drawback1R) : undefined,
-      drawback2R: data.drawback2R ? Number(data.drawback2R) : undefined,
+      mae: optionalNumber(data.mae),
+      mfe: optionalNumber(data.mfe),
+      drawback1R: optionalNumber(data.drawback1R),
+      drawback2R: optionalNumber(data.drawback2R),
       returnedToBE: data.returnedToBE,
       afterBeOutcome: data.afterBeOutcome,
       overlap: data.overlap,

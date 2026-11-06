@@ -14,7 +14,25 @@ describe('replayR', () => {
     expect(replayR(t(-10, 8), 1)).toBe(-1);     // only got to 0.8R, stopped out → keeps -1R
     expect(replayR(t(0, 8), 1)).toBe(0);        // got to 0.8R, breakeven → keeps 0R
     expect(replayR(t(-10, 10), 1)).toBe(1);     // touched exactly 1R → counts as hit
-    expect(replayR(t(5, 6), 2)).toBe(0.5);      // manual exit at +0.5R before 2R → keeps it
+  });
+
+  it('a trade you took profit on early does not stay a win at a bigger target', () => {
+    // Went 1.2R in favour, you took +1R. With a 3R target you'd still be in when it turned:
+    // it had reached 1R, so the stop was at breakeven → 0R.
+    expect(replayR(t(10, 12), 3)).toBe(0);
+    // Went 0.6R, you took +0.5R. With a 2R target it never reached 1R → stopped out, -1R.
+    expect(replayR(t(5, 6), 2)).toBe(-1);
+    // Same trade at a 0.5R target: reached it → +0.5R.
+    expect(replayR(t(5, 6), 0.5)).toBe(0.5);
+  });
+
+  it('win rate drops as the target grows when winners exit early', () => {
+    const trades = [t(10, 12), t(10, 15), t(20, 25), t(-10, 3)];
+    const { rows } = analyzeLowerRR(trades);
+    const wr = (label: string) => rows.find(r => r.label === label)!.winRate;
+    expect(wr('1R')).toBe(75);
+    expect(wr('1.5R')).toBe(50);
+    expect(wr('3R')).toBe(0);
   });
 
   it('is null without MFE or a stop', () => {

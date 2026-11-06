@@ -5,13 +5,20 @@ import { getRealizedR, getStopDistance } from './r-multiple';
 export const RR_TARGETS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3];
 
 /**
- * The trade's result in R had the target been `target` R: if price reached it
- * (MFE), exactly `target`; otherwise what really happened. Null without MFE or a stop.
+ * The trade's result in R had the target been `target` R. Null without MFE or a stop.
+ * - Price reached the target (MFE): exactly `target`.
+ * - It didn't, and the trade really lost or broke even: keeps its real result.
+ * - It didn't, but you really took profit (below this target): you'd still have been
+ *   in when it turned, so breakeven if it had reached 1R (stop moved to BE), else -1R.
  */
 export function replayR(t: Trade, target: number): number | null {
   const risk = getStopDistance(t);
   if (t.mfe == null || risk <= 0) return null;
-  return t.mfe / risk >= target ? target : getRealizedR(t);
+  const mfeR = t.mfe / risk;
+  if (mfeR >= target) return target;
+  const actual = getRealizedR(t)!;
+  if (actual <= 0) return actual;
+  return mfeR >= 1 ? 0 : -1;
 }
 
 export interface RRVarianceRow {

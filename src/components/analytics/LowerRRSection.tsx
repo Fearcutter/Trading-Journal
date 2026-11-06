@@ -35,7 +35,7 @@ export default function LowerRRSection({ trades, showScope = true }: { trades: T
         <div>
           <h2 className="text-lg font-semibold text-slate-50">Lower RR: win rate and variance</h2>
           <p className="text-xs text-slate-500">
-            Each row replays your trades with that profit target. If price reached it (your MFE), the trade counts as exactly that many R; if not, it keeps its real result.
+            Each row replays your trades with that profit target. Reached it (your MFE): exactly that many R. Didn't reach it: losses and breakevens keep their real result; trades you took profit on early become breakeven if they'd reached 1R, otherwise −1R.
           </p>
         </div>
         {showScope && <div className="flex rounded-lg overflow-hidden border border-slate-600">
