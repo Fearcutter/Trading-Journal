@@ -13,6 +13,7 @@ import PlanComplianceWidget from '../components/trading-plan/PlanComplianceWidge
 import OverlapScopeToggle, { type OverlapScope } from '../components/filters/OverlapScopeToggle';
 import MultiSelect, { type MultiSelectOption } from '../components/ui/MultiSelect';
 import TimingSection from '../components/analytics/TimingSection';
+import LowerRRSection from '../components/analytics/LowerRRSection';
 
 export default function AnalyticsPage() {
   const { trades } = useTrades();
@@ -119,6 +120,7 @@ export default function AnalyticsPage() {
       </div>
 
       <TimingSection trades={accountScopedTrades} />
+      <LowerRRSection trades={accountScopedTrades} />
     </div>
   );
 }

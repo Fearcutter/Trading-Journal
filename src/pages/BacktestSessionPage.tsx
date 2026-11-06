@@ -17,6 +17,7 @@ import type { TradeFilters } from '../hooks/useFilteredTrades';
 import FilterBar from '../components/filters/FilterBar';
 import TradeRow from '../components/trade/TradeRow';
 import TimingSection from '../components/analytics/TimingSection';
+import LowerRRSection from '../components/analytics/LowerRRSection';
 import type { HiddenColumns } from '../components/trade/TradeRow';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -207,6 +208,7 @@ export default function BacktestSessionPage() {
         <>
           <AnalyticsTab advanced={advanced} trades={overlapScopedTrades} tradeCount={overlapScopedTrades.length} planComparison={planComparison} />
           {overlapScopedTrades.length > 0 && <TimingSection trades={overlapScopedTrades} showScope={false} />}
+          {overlapScopedTrades.length > 0 && <LowerRRSection trades={overlapScopedTrades} showScope={false} />}
         </>
       )}
       {activeTab === 'confluences' && <ConfluencesTab trades={overlapScopedTrades} />}

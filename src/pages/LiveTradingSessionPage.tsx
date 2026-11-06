@@ -17,6 +17,7 @@ import FilterBar from '../components/filters/FilterBar';
 import TradeForm from '../components/trade/TradeForm';
 import TradeRow from '../components/trade/TradeRow';
 import TimingSection from '../components/analytics/TimingSection';
+import LowerRRSection from '../components/analytics/LowerRRSection';
 import type { HiddenColumns } from '../components/trade/TradeRow';
 import PasteTradeModal from '../components/trade/PasteTradeModal';
 import Card from '../components/ui/Card';
@@ -256,6 +257,7 @@ export default function LiveTradingSessionPage() {
         <>
           <AnalyticsTab advanced={advanced} trades={accountScopedTrades} tradeCount={accountScopedTrades.length} planComparison={planComparison} />
           {accountScopedTrades.length > 0 && <TimingSection trades={accountScopedTrades} showScope={false} />}
+          {accountScopedTrades.length > 0 && <LowerRRSection trades={accountScopedTrades} showScope={false} />}
         </>
       )}
       {activeTab === 'confluences' && <ConfluencesTab trades={accountScopedTrades} />}
