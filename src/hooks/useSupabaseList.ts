@@ -1,13 +1,16 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useView } from '../context/ViewContext';
 import { supabase } from '../lib/supabase';
-import { uploadScreenshot, getSignedUrl, isBase64 } from '../lib/screenshots';
+import { uploadScreenshot, getSignedUrls, isBase64, storagePathOf, SIGNED_URL_EXPIRY } from '../lib/screenshots';
 
 interface UseSupabaseListOptions {
   screenshotFields?: string[];
 }
+
+/** Re-sign screenshot links once they're half way to expiring, so an open tab never shows a dead link. */
+const RESIGN_AFTER_MS = (SIGNED_URL_EXPIRY * 1000) / 2;
 
 export function useSupabaseList<T extends { id: string }>(
   table: string,
@@ -20,57 +23,82 @@ export function useSupabaseList<T extends { id: string }>(
   const loadedRef = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevItemsRef = useRef<T[]>([]);
-  const signedUrlCache = useRef<Map<string, string>>(new Map());
+  const signedAtRef = useRef(0);
+  const itemsRef = useRef<T[]>([]);
+  useEffect(() => { itemsRef.current = items; }, [items]);
 
-  const screenshotFields = options?.screenshotFields ?? [];
+  // Callers pass a fresh array each render; key on its contents so callbacks below stay stable
+  const fieldsKey = (options?.screenshotFields ?? []).join(',');
+  const screenshotFields = useMemo(() => (fieldsKey ? fieldsKey.split(',') : []), [fieldsKey]);
 
-  // Resolve screenshot paths to signed URLs
-  const resolveScreenshots = useCallback(async (item: T): Promise<T> => {
-    if (screenshotFields.length === 0) return item;
-
-    const resolved = { ...item } as Record<string, unknown>;
-    for (const field of screenshotFields) {
-      const val = resolved[field];
-      if (typeof val === 'string' && val && !isBase64(val) && !val.startsWith('http')) {
-        // It's a storage path — get signed URL
-        const cached = signedUrlCache.current.get(val);
-        if (cached) {
-          resolved[field] = cached;
-        } else {
-          try {
-            const url = await getSignedUrl(val);
-            signedUrlCache.current.set(val, url);
-            resolved[field] = url;
-          } catch {
-            // Leave as-is if signing fails
-          }
+  // Every storage path behind the items' screenshot fields (stored paths or our signed links)
+  const screenshotPaths = useCallback((list: T[]): string[] => {
+    const paths: string[] = [];
+    for (const item of list) {
+      for (const field of screenshotFields) {
+        const val = (item as Record<string, unknown>)[field];
+        for (const v of Array.isArray(val) ? val : [val]) {
+          const path = storagePathOf(v);
+          if (path) paths.push(path);
         }
-      } else if (Array.isArray(val)) {
-        // Handle array of screenshot paths (e.g. playbook exampleScreenshots)
-        const urls: string[] = [];
-        for (const v of val) {
-          if (typeof v === 'string' && v && !isBase64(v) && !v.startsWith('http')) {
-            const cached = signedUrlCache.current.get(v);
-            if (cached) {
-              urls.push(cached);
-            } else {
-              try {
-                const url = await getSignedUrl(v);
-                signedUrlCache.current.set(v, url);
-                urls.push(url);
-              } catch {
-                urls.push(v);
-              }
-            }
-          } else {
-            urls.push(v);
-          }
-        }
-        resolved[field] = urls;
       }
     }
-    return resolved as T;
+    return paths;
   }, [screenshotFields]);
+
+  // Swap each screenshot value for its fresh signed link; anything without one is left as-is
+  const withSignedUrls = useCallback((list: T[], urls: Map<string, string>): T[] => {
+    if (urls.size === 0) return list;
+    const swap = (v: unknown) => {
+      const path = storagePathOf(v);
+      return (path && urls.get(path)) || v;
+    };
+    return list.map(item => {
+      const next = { ...item } as Record<string, unknown>;
+      for (const field of screenshotFields) {
+        const val = next[field];
+        next[field] = Array.isArray(val) ? val.map(swap) : swap(val);
+      }
+      return next as T;
+    });
+  }, [screenshotFields]);
+
+  const signAll = useCallback(async (list: T[]): Promise<Map<string, string>> => {
+    const paths = screenshotPaths(list);
+    if (paths.length === 0) return new Map();
+    try {
+      const urls = await getSignedUrls(paths);
+      signedAtRef.current = Date.now();
+      return urls;
+    } catch (e) {
+      console.error(`[useSupabaseList] Failed to sign screenshot links for "${table}":`, e);
+      return new Map();
+    }
+  }, [screenshotPaths, table]);
+
+  // Links last 24h; when the tab is open (or comes back from sleep) past the half-way mark, sign them again
+  useEffect(() => {
+    if (screenshotFields.length === 0) return;
+    let running = false;
+    const refresh = async () => {
+      if (running || !loadedRef.current || document.visibilityState !== 'visible') return;
+      if (Date.now() - signedAtRef.current < RESIGN_AFTER_MS) return;
+      running = true;
+      const urls = await signAll(itemsRef.current);
+      running = false;
+      if (urls.size === 0) return;
+      prevItemsRef.current = withSignedUrls(prevItemsRef.current, urls);
+      setItems(prev => withSignedUrls(prev, urls));
+    };
+    const timer = setInterval(refresh, 5 * 60 * 1000);
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [signAll, withSignedUrls, screenshotFields.length]);
 
   useEffect(() => {
     if (!user) return;
@@ -106,7 +134,7 @@ export function useSupabaseList<T extends { id: string }>(
           });
 
           // Resolve signed URLs
-          const withUrls = await Promise.all(reconstructed.map(resolveScreenshots));
+          const withUrls = withSignedUrls(reconstructed, await signAll(reconstructed));
           if (!cancelled) {
             setItems(withUrls);
             prevItemsRef.current = withUrls;
@@ -198,19 +226,19 @@ export function useSupabaseList<T extends { id: string }>(
                   paths.push(v);
                 }
               } else {
-                paths.push(v);
+                // Store the path, never a signed link (those expire)
+                paths.push(storagePathOf(v) ?? v);
               }
             }
             const pathsCol = field.replace(/([A-Z])/g, '_$1').toLowerCase() + '_paths';
             row[pathsCol] = paths;
             delete dataObj[field];
           } else if (typeof val === 'string' && val && !isBase64(val)) {
-            // It's already a storage path or signed URL — keep path in column
-            // If it's a signed URL, we need to extract the original path
-            // For now, remove from data and let the path column handle it
-            if (!val.startsWith('http')) {
+            // Already uploaded: a storage path or our signed link — keep the path in its column
+            const path = storagePathOf(val);
+            if (path) {
               const pathCol = field.replace(/([A-Z])/g, '_$1').toLowerCase() + '_path';
-              row[pathCol] = val;
+              row[pathCol] = path;
             }
             delete dataObj[field];
           }
