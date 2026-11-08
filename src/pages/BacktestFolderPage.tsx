@@ -13,6 +13,7 @@ import { StatusBadge } from '../components/backtest/EvalTrackerCard';
 import FirmRulesEditor from '../components/prop-ev/FirmRulesEditor';
 import { usePracticeAttempts, useSessionStats } from '../components/backtest/usePractice';
 import { firmLabel } from '../components/backtest/usePropFirms';
+import { useMoveSession } from '../components/backtest/useMoveSession';
 import { scorePractice } from '../utils/prop-tracker';
 import type { BacktestSession } from '../types/backtest';
 
@@ -34,6 +35,7 @@ export default function BacktestFolderPage() {
   const navigate = useNavigate();
   const { sessions, folders, getSession, addSession, updateSession, deleteSession, loading } = useBacktest();
   const { readOnly } = useView();
+  const moveSession = useMoveSession();
   const statsFor = useSessionStats();
   const folder = folderId ? getSession(folderId) : undefined;
   const attempts = usePracticeAttempts(folder);
@@ -198,7 +200,8 @@ export default function BacktestFolderPage() {
                 session={session}
                 stats={statsFor(session.id)}
                 readOnly={readOnly}
-                folders={rules ? undefined : folders.filter(f => !f.firmRules)}
+                folders={folders}
+                onMove={target => moveSession(session, target)}
                 onDelete={() => remove(session)}
                 onUpdate={updates => updateSession(session.id, updates)}
               />

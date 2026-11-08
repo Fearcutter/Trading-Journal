@@ -11,12 +11,14 @@ import { SESSION_DOT_COLORS } from '../components/backtest/colors';
 import SessionCard from '../components/backtest/SessionCard';
 import { useSessionStats, useTradesBySession } from '../components/backtest/usePractice';
 import { firmLabel } from '../components/backtest/usePropFirms';
+import { useMoveSession } from '../components/backtest/useMoveSession';
 import { trackEval } from '../utils/prop-tracker';
 import type { BacktestSession } from '../types/backtest';
 
 export default function BacktestingPage() {
   const { sessions, folders, addSession, updateSession, deleteSession } = useBacktest();
   const { readOnly } = useView();
+  const moveSession = useMoveSession();
   const statsFor = useSessionStats();
   const bySession = useTradesBySession();
   const [showForm, setShowForm] = useState<'session' | 'folder' | null>(null);
@@ -129,7 +131,8 @@ export default function BacktestingPage() {
                 session={session}
                 stats={statsFor(session.id)}
                 readOnly={readOnly}
-                folders={folders.filter(f => !f.firmRules)}
+                folders={folders}
+                onMove={target => moveSession(session, target)}
                 onDelete={() => handleDelete(session)}
                 onUpdate={updates => updateSession(session.id, updates)}
               />

@@ -20,6 +20,8 @@ import TimingSection from '../components/analytics/TimingSection';
 import LowerRRSection from '../components/analytics/LowerRRSection';
 import EvalTrackerCard from '../components/backtest/EvalTrackerCard';
 import FundedTrackerCard from '../components/backtest/FundedTrackerCard';
+import FolderMoveSelect from '../components/backtest/FolderMoveSelect';
+import { useMoveSession } from '../components/backtest/useMoveSession';
 import { trackEval, trackFunded } from '../utils/prop-tracker';
 import type { HiddenColumns } from '../components/trade/TradeRow';
 import Card from '../components/ui/Card';
@@ -63,7 +65,8 @@ const TABS: { key: Tab; label: string; icon: typeof BarChart3 }[] = [
 
 export default function BacktestSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
-  const { getSession, updateSession, addSession, sessions: allSessions, loading } = useBacktest();
+  const { getSession, updateSession, addSession, sessions: allSessions, folders, loading } = useBacktest();
+  const moveSession = useMoveSession();
   const navigate = useNavigate();
   const { trades, addTrade } = useTrades();
   const { readOnly } = useView();
@@ -185,6 +188,9 @@ export default function BacktestSessionPage() {
           <span className="text-sm text-slate-500">{sessionTrades.length} trade{sessionTrades.length !== 1 ? 's' : ''}</span>
           {!readOnly && (
             <CoachShareToggle hidden={!!session.hiddenFromCoach} onChange={hidden => updateSession(sessionId!, { hiddenFromCoach: hidden })} />
+          )}
+          {!readOnly && session.stage !== 'funded' && (
+            <FolderMoveSelect session={session} folders={folders} onMove={target => moveSession(session, target)} />
           )}
         </div>
         {session.description && (

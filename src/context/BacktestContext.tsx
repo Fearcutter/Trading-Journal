@@ -11,6 +11,11 @@ interface BacktestContextValue {
   addSession: (name: string, description: string, instrument: string | undefined, color: string, extra?: Partial<BacktestSession>) => BacktestSession;
   updateSession: (id: string, updates: Partial<BacktestSession>) => void;
   deleteSession: (id: string) => void;
+  /**
+   * Move a session into a folder (or out with null). Into a practice folder it becomes the next
+   * attempt; leaving one, it goes back to a normal session.
+   */
+  moveToFolder: (id: string, folderId: string | null) => void;
   getSession: (id: string) => BacktestSession | undefined;
 }
 
@@ -52,12 +57,32 @@ export function BacktestProvider({ children }: { children: ReactNode }) {
       .map(s => (s.folderId === id ? { ...s, folderId: undefined } : s)));
   }, [setSessions]);
 
+  const moveToFolder = useCallback((id: string, folderId: string | null) => {
+    setSessions(prev => {
+      const target = folderId ? prev.find(s => s.id === folderId) : undefined;
+      const nextAttempt = Math.max(0, ...prev.filter(s => s.folderId === folderId).map(s => s.attempt ?? 0)) + 1;
+      return prev.map(s => {
+        // An attempt's funded stage moves with it, and stays funded only inside a practice folder
+        if (s.evalSessionId === id) {
+          return target?.firmRules
+            ? { ...s, folderId: folderId ?? undefined, attempt: nextAttempt }
+            : { ...s, folderId: folderId ?? undefined, stage: undefined, attempt: undefined };
+        }
+        if (s.id !== id) return s;
+        const { stage: _stage, attempt: _attempt, ...plain } = s;
+        void _stage; void _attempt;
+        const base = { ...plain, folderId: folderId ?? undefined, updatedAt: new Date().toISOString() };
+        return target?.firmRules ? { ...base, stage: 'eval' as const, attempt: nextAttempt } : base;
+      });
+    });
+  }, [setSessions]);
+
   const getSession = useCallback((id: string) => {
     return all.find(s => s.id === id);
   }, [all]);
 
   return (
-    <BacktestContext.Provider value={{ sessions, folders, loading, addSession, updateSession, deleteSession, getSession }}>
+    <BacktestContext.Provider value={{ sessions, folders, loading, addSession, updateSession, deleteSession, moveToFolder, getSession }}>
       {children}
     </BacktestContext.Provider>
   );

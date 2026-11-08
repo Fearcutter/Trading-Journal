@@ -6,6 +6,7 @@ import type { BacktestSession } from '../../types/backtest';
 import { formatPercent } from '../../utils/formatters';
 import { usePLFormatter } from '../../hooks/usePLFormatter';
 import { SESSION_DOT_COLORS } from './colors';
+import FolderMoveSelect from './FolderMoveSelect';
 
 export interface SessionStats { count: number; wins: number; totalPL: number }
 
@@ -15,6 +16,8 @@ interface Props {
   readOnly: boolean;
   /** Folders it can be moved to; omit to hide the mover. */
   folders?: BacktestSession[];
+  /** Move to a folder id, out of folders (null), or into a new folder ('new'). */
+  onMove?: (target: string | null | 'new') => void;
   onDelete: () => void;
   onUpdate: (updates: Partial<BacktestSession>) => void;
   /** Extra line under the title, e.g. a practice status. */
@@ -23,7 +26,7 @@ interface Props {
 
 const stop = (e: React.SyntheticEvent) => { e.preventDefault(); e.stopPropagation(); };
 
-export default function SessionCard({ session, stats, readOnly, folders, onDelete, onUpdate, badge }: Props) {
+export default function SessionCard({ session, stats, readOnly, folders, onMove, onDelete, onUpdate, badge }: Props) {
   const pl = usePLFormatter();
   const winRate = stats.count > 0 ? (stats.wins / stats.count) * 100 : 0;
 
@@ -56,18 +59,7 @@ export default function SessionCard({ session, stats, readOnly, folders, onDelet
       {!readOnly && (
         <div className="mt-3 flex items-center gap-2 flex-wrap">
           <CoachShareToggle hidden={!!session.hiddenFromCoach} onChange={hidden => onUpdate({ hiddenFromCoach: hidden })} />
-          {folders && folders.length > 0 && (
-            <select
-              value={session.folderId ?? ''}
-              onClick={stop}
-              onChange={e => onUpdate({ folderId: e.target.value || undefined })}
-              className="px-2 py-1 bg-slate-900 border border-slate-600 rounded-md text-xs text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              title="Move to folder"
-            >
-              <option value="">No folder</option>
-              {folders.map(f => <option key={f.id} value={f.id}>Move to: {f.name}</option>)}
-            </select>
-          )}
+          {folders && onMove && <FolderMoveSelect session={session} folders={folders} onMove={onMove} />}
         </div>
       )}
     </Link>
