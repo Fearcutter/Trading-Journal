@@ -27,6 +27,7 @@ import RiskCalculatorPage from './pages/RiskCalculatorPage';
 import PlaybookPage from './pages/PlaybookPage';
 import BacktestingPage from './pages/BacktestingPage';
 import BacktestSessionPage from './pages/BacktestSessionPage';
+import BacktestFolderPage from './pages/BacktestFolderPage';
 import HabitsPage from './pages/HabitsPage';
 import ApexAccountsPage from './pages/ApexAccountsPage';
 import PropFirmEVPage from './pages/PropFirmEVPage';
@@ -91,6 +92,7 @@ function AuthGate() {
                 <Route path="/category-analytics" element={<ConfluencesPage />} />
                 <Route path="/risk-calculator" element={<RiskCalculatorPage />} />
                 <Route path="/backtesting" element={<BacktestingPage />} />
+                <Route path="/backtesting/folder/:folderId" element={<BacktestFolderPage />} />
                 <Route path="/backtesting/:sessionId" element={<BacktestSessionPage />} />
                 <Route path="/apex-accounts" element={<ApexAccountsPage />} />
                 <Route path="/prop-ev" element={<PropFirmEVPage />} />

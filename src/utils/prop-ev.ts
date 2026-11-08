@@ -241,7 +241,7 @@ export interface SimOptions {
 }
 
 /** A running account balance with a drawdown floor. */
-class Account {
+export class Account {
   balance: number;
   high: number;
   floor: number;
@@ -278,25 +278,28 @@ class Account {
  * Play one day on an account. Returns the day's P&L and whether the account was blown.
  * Losses past the daily limit are cut at the limit (the firm flattens you there).
  */
-function playDay(acct: Account, day: number[], risk: number, cost: number, dll: number | null): { pl: number; blown: boolean } {
+export function playDay(acct: Account, day: number[], toDollars: (x: number) => number, dll: number | null): { pl: number; blown: boolean; stoppedAt: number | null } {
   let pl = 0;
-  for (const r of day) {
-    let tradePL = r * risk - cost;
+  for (let i = 0; i < day.length; i++) {
+    let tradePL = toDollars(day[i]);
     if (dll !== null && pl + tradePL <= -dll) tradePL = -dll - pl;
     pl += tradePL;
     acct.balance += tradePL;
     if (acct.balance <= acct.floor) {
       acct.balance = acct.floor;
-      return { pl, blown: true };
+      return { pl, blown: true, stoppedAt: i };
     }
     if (acct.rule.type === 'intraday_trailing') acct.trail();
-    if (dll !== null && pl <= -dll) break;
+    if (dll !== null && pl <= -dll) {
+      if (acct.rule.type === 'eod_trailing') acct.trail();
+      return { pl, blown: false, stoppedAt: i };
+    }
   }
   if (acct.rule.type === 'eod_trailing') acct.trail();
-  return { pl, blown: false };
+  return { pl, blown: false, stoppedAt: null };
 }
 
-function consistencyOk(bestDay: number, profit: number, pct: number | null): boolean {
+export function consistencyOk(bestDay: number, profit: number, pct: number | null): boolean {
   if (pct === null) return true;
   if (profit <= 0) return false;
   return bestDay <= (pct / 100) * profit + 1e-9;
@@ -315,6 +318,7 @@ export interface RunResult {
 /** One evaluation bought, then (if passed) the funded account until it blows, ends or the cap is reached. */
 export function simulateRun(days: number[][], cfg: FirmConfig, opts: Omit<SimOptions, 'runs' | 'seed'>, rand: () => number): RunResult {
   const { riskPerTrade: risk, costPerTrade: cost } = opts;
+  const toDollars = (r: number) => r * risk - cost;
   const pick = () => days[Math.floor(rand() * days.length)];
   const ev = cfg.eval;
   let fees = ev.fee;
@@ -328,7 +332,7 @@ export function simulateRun(days: number[][], cfg: FirmConfig, opts: Omit<SimOpt
   let day = 0;
   while (day < maxDays) {
     if (ev.billing === 'monthly' && day > 0 && day % TRADING_DAYS_PER_MONTH === 0) fees += ev.fee;
-    const { pl, blown } = playDay(evalAcct, pick(), risk, cost, ev.dailyLossLimit);
+    const { pl, blown } = playDay(evalAcct, pick(), toDollars, ev.dailyLossLimit);
     day++;
     if (blown) { evalBlown = true; break; }
     bestDay = Math.max(bestDay, pl);
@@ -351,7 +355,7 @@ export function simulateRun(days: number[][], cfg: FirmConfig, opts: Omit<SimOpt
   let cycleProfit = 0;
   let cycleBest = 0;
   for (let d = 0; d < FUNDED_DAY_CAP; d++) {
-    const { pl, blown } = playDay(acct, pick(), risk, cost, f.dailyLossLimit);
+    const { pl, blown } = playDay(acct, pick(), toDollars, f.dailyLossLimit);
     if (blown) { fundedBlown = true; break; }
     cycleProfit += pl;
     cycleBest = Math.max(cycleBest, pl);

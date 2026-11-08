@@ -1,83 +1,60 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FlaskConical, Trash2, Plus, X } from 'lucide-react';
+import { FlaskConical, Trash2, Plus, X, Folder, FolderPlus } from 'lucide-react';
 import { useBacktest } from '../context/BacktestContext';
-import { useTrades } from '../context/TradeContext';
-import { useSettings } from '../context/SettingsContext';
 import { useView } from '../context/ViewContext';
 import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import Select from '../components/ui/Select';
 import EmptyState from '../components/ui/EmptyState';
 import CoachShareToggle from '../components/ui/CoachShareToggle';
-import { formatPercent } from '../utils/formatters';
-import { usePLFormatter, getTradeValue } from '../hooks/usePLFormatter';
-
-const COLOR_OPTIONS = [
-  { name: 'blue', bg: 'bg-blue-500', ring: 'ring-blue-500' },
-  { name: 'emerald', bg: 'bg-emerald-500', ring: 'ring-emerald-500' },
-  { name: 'violet', bg: 'bg-violet-500', ring: 'ring-violet-500' },
-  { name: 'amber', bg: 'bg-amber-500', ring: 'ring-amber-500' },
-  { name: 'rose', bg: 'bg-rose-500', ring: 'ring-rose-500' },
-  { name: 'cyan', bg: 'bg-cyan-500', ring: 'ring-cyan-500' },
-];
-
-const SESSION_DOT_COLORS: Record<string, string> = {
-  blue: 'bg-blue-500',
-  emerald: 'bg-emerald-500',
-  violet: 'bg-violet-500',
-  amber: 'bg-amber-500',
-  rose: 'bg-rose-500',
-  cyan: 'bg-cyan-500',
-};
+import SessionForm, { type SessionFormValues } from '../components/backtest/SessionForm';
+import { SESSION_DOT_COLORS } from '../components/backtest/colors';
+import SessionCard from '../components/backtest/SessionCard';
+import { useSessionStats, useTradesBySession } from '../components/backtest/usePractice';
+import { firmLabel } from '../components/backtest/usePropFirms';
+import { trackEval } from '../utils/prop-tracker';
+import type { BacktestSession } from '../types/backtest';
 
 export default function BacktestingPage() {
-  const { sessions, addSession, updateSession, deleteSession } = useBacktest();
-  const { trades } = useTrades();
-  const settings = useSettings();
+  const { sessions, folders, addSession, updateSession, deleteSession } = useBacktest();
   const { readOnly } = useView();
-  const pl = usePLFormatter();
-  const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [instrument, setInstrument] = useState('');
-  const [color, setColor] = useState('blue');
+  const statsFor = useSessionStats();
+  const bySession = useTradesBySession();
+  const [showForm, setShowForm] = useState<'session' | 'folder' | null>(null);
 
-  const sessionStats = useMemo(() => {
-    const map: Record<string, { count: number; wins: number; totalPL: number }> = {};
-    for (const session of sessions) {
-      map[session.id] = { count: 0, wins: 0, totalPL: 0 };
-    }
-    for (const trade of trades) {
-      if (trade.sessionId && map[trade.sessionId]) {
-        map[trade.sessionId].count++;
-        if (trade.result === 'win') map[trade.sessionId].wins++;
-        map[trade.sessionId].totalPL += getTradeValue(trade, pl.plField);
-      }
-    }
-    return map;
-  }, [sessions, trades, pl.plField]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-    addSession(name.trim(), description.trim(), instrument || undefined, color);
-    setName('');
-    setDescription('');
-    setInstrument('');
-    setColor('blue');
-    setShowForm(false);
+  const create = (kind: 'session' | 'folder') => (v: SessionFormValues) => {
+    addSession(v.name, v.description, v.instrument, v.color, kind === 'folder'
+      ? { kind: 'folder', ...(v.firmRules ? { firmRules: v.firmRules, attemptGoal: v.attemptGoal } : {}) }
+      : {});
+    setShowForm(null);
   };
 
-  const handleDelete = (id: string, sessionName: string) => {
-    if (!confirm(`Delete session "${sessionName}"? Trades in this session will not be deleted.`)) return;
-    deleteSession(id);
+  const handleDelete = (s: BacktestSession) => {
+    if (!confirm(`Delete session "${s.name}"? Trades in this session will not be deleted.`)) return;
+    deleteSession(s.id);
   };
 
-  const instrumentOptions = [
-    { value: '', label: 'Any Instrument' },
-    ...settings.instruments.map(i => ({ value: i.symbol, label: `${i.symbol} - ${i.name}` })),
-  ];
+  const handleDeleteFolder = (f: BacktestSession) => {
+    if (!confirm(`Delete folder "${f.name}"? Its sessions move back to the main list; no sessions or trades are deleted.`)) return;
+    deleteSession(f.id);
+  };
+
+  // Sharing a folder with the coach shares (or hides) everything inside it
+  const setFolderHidden = (f: BacktestSession, hidden: boolean) => {
+    updateSession(f.id, { hiddenFromCoach: hidden });
+    for (const s of sessions) if (s.folderId === f.id) updateSession(s.id, { hiddenFromCoach: hidden });
+  };
+
+  const looseSessions = sessions.filter(s => !s.folderId || !folders.some(f => f.id === s.folderId));
+
+  const folderSummary = (f: BacktestSession) => {
+    const inside = sessions.filter(s => s.folderId === f.id);
+    if (!f.firmRules) return `${inside.length} session${inside.length === 1 ? '' : 's'}`;
+    const attempts = inside.filter(s => s.stage === 'eval');
+    const statuses = attempts.map(s => trackEval(bySession.get(s.id) ?? [], f.firmRules!).status);
+    const passed = statuses.filter(s => s === 'passed').length;
+    const blown = statuses.filter(s => s === 'blown').length;
+    return `${attempts.length} of ${f.attemptGoal ?? '?'} attempts · ${passed} passed · ${blown} blown`;
+  };
 
   return (
     <div className="space-y-6">
@@ -87,94 +64,77 @@ export default function BacktestingPage() {
           <h1 className="text-xl font-bold text-slate-50">Backtesting</h1>
         </div>
         {!readOnly && (
-          <Button size="sm" onClick={() => setShowForm(!showForm)}>
-            {showForm ? <><X size={14} /> Cancel</> : <><Plus size={14} /> New Session</>}
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setShowForm(showForm === 'folder' ? null : 'folder')}>
+              {showForm === 'folder' ? <><X size={14} /> Cancel</> : <><FolderPlus size={14} /> New Folder</>}
+            </Button>
+            <Button size="sm" onClick={() => setShowForm(showForm === 'session' ? null : 'session')}>
+              {showForm === 'session' ? <><X size={14} /> Cancel</> : <><Plus size={14} /> New Session</>}
+            </Button>
+          </div>
         )}
       </div>
 
-      {showForm && !readOnly && (
-        <form onSubmit={handleSubmit} className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Input label="Session Name" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. NQ Breakout Strategy" required />
-            <Select label="Instrument (optional)" value={instrument} onValueChange={setInstrument} options={instrumentOptions} />
-          </div>
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-300">Description</label>
-            <textarea
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              rows={2}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              placeholder="Describe what you're testing..."
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-300">Color</label>
-            <div className="flex gap-2">
-              {COLOR_OPTIONS.map(c => (
-                <button
-                  key={c.name}
-                  type="button"
-                  onClick={() => setColor(c.name)}
-                  className={`w-7 h-7 rounded-full ${c.bg} transition-all ${color === c.name ? `ring-2 ${c.ring} ring-offset-2 ring-offset-slate-800` : 'opacity-50 hover:opacity-75'}`}
-                />
-              ))}
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Button type="submit" size="sm">Create Session</Button>
-          </div>
-        </form>
-      )}
+      {showForm && !readOnly && <SessionForm key={showForm} kind={showForm} onCreate={create(showForm)} />}
 
-      {sessions.length === 0 && !showForm ? (
-        <EmptyState
-          icon={<FlaskConical size={48} />}
-          title="No backtest sessions"
-          description={readOnly ? 'No backtest sessions yet.' : 'Create a backtesting session to start testing strategies with simulated trades.'}
-        />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sessions.map(session => {
-            const stats = sessionStats[session.id] || { count: 0, wins: 0, totalPL: 0 };
-            const winRate = stats.count > 0 ? (stats.wins / stats.count) * 100 : 0;
-            return (
+      {folders.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Folders</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {folders.map(f => (
               <Link
-                key={session.id}
-                to={`/backtesting/${session.id}`}
+                key={f.id}
+                to={`/backtesting/folder/${f.id}`}
                 className="relative bg-slate-800 border border-slate-700 rounded-xl p-4 hover:border-slate-600 transition-colors group"
               >
                 {!readOnly && (
                   <button
-                    onClick={e => { e.preventDefault(); e.stopPropagation(); handleDelete(session.id, session.name); }}
+                    onClick={e => { e.preventDefault(); e.stopPropagation(); handleDeleteFolder(f); }}
                     className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-700 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <Trash2 size={14} />
                   </button>
                 )}
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={`w-2.5 h-2.5 rounded-full ${SESSION_DOT_COLORS[session.color] || 'bg-blue-500'}`} />
-                  <h3 className="font-bold text-slate-50 truncate">{session.name}</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <Folder size={16} className="text-slate-400" />
+                  <span className={`w-2.5 h-2.5 rounded-full ${SESSION_DOT_COLORS[f.color] || 'bg-blue-500'}`} />
+                  <h3 className="font-bold text-slate-50 truncate">{f.name}</h3>
                 </div>
-                {session.description && (
-                  <p className="text-sm text-slate-400 truncate mb-3">{session.description}</p>
-                )}
-                <div className="flex items-center gap-4 text-xs text-slate-400">
-                  <span>{stats.count} trade{stats.count !== 1 ? 's' : ''}</span>
-                  <span>{formatPercent(winRate)} win</span>
-                  <span className={stats.totalPL > 0 ? 'text-emerald-400' : stats.totalPL < 0 ? 'text-rose-400' : ''}>
-                    {pl.formatPLValue(stats.totalPL)}
-                  </span>
-                </div>
+                {f.firmRules && <p className="text-xs text-sky-300 mb-1">Practice: {firmLabel(f.firmRules)}</p>}
+                <p className="text-xs text-slate-400">{folderSummary(f)}</p>
                 {!readOnly && (
                   <div className="mt-3">
-                    <CoachShareToggle hidden={!!session.hiddenFromCoach} onChange={hidden => updateSession(session.id, { hiddenFromCoach: hidden })} />
+                    <CoachShareToggle hidden={!!f.hiddenFromCoach} onChange={hidden => setFolderHidden(f, hidden)} />
                   </div>
                 )}
               </Link>
-            );
-          })}
+            ))}
+          </div>
+        </div>
+      )}
+
+      {sessions.length === 0 && folders.length === 0 && !showForm ? (
+        <EmptyState
+          icon={<FlaskConical size={48} />}
+          title="No backtest sessions"
+          description={readOnly ? 'No backtest sessions yet.' : 'Create a backtesting session to start testing strategies with simulated trades.'}
+        />
+      ) : looseSessions.length > 0 && (
+        <div className="space-y-2">
+          {folders.length > 0 && <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Sessions</h2>}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {looseSessions.map(session => (
+              <SessionCard
+                key={session.id}
+                session={session}
+                stats={statsFor(session.id)}
+                readOnly={readOnly}
+                folders={folders.filter(f => !f.firmRules)}
+                onDelete={() => handleDelete(session)}
+                onUpdate={updates => updateSession(session.id, updates)}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>

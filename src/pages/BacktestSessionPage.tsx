@@ -18,6 +18,8 @@ import FilterBar from '../components/filters/FilterBar';
 import TradeRow from '../components/trade/TradeRow';
 import TimingSection from '../components/analytics/TimingSection';
 import LowerRRSection from '../components/analytics/LowerRRSection';
+import EvalTrackerCard from '../components/backtest/EvalTrackerCard';
+import { trackEval } from '../utils/prop-tracker';
 import type { HiddenColumns } from '../components/trade/TradeRow';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -69,6 +71,8 @@ export default function BacktestSessionPage() {
   const setActiveTab = (tab: Tab) => setSearchParams(tab === 'dashboard' ? {} : { tab }, { replace: true });
 
   const session = sessionId ? getSession(sessionId) : undefined;
+  const folder = session?.folderId ? getSession(session.folderId) : undefined;
+  const practiceRules = session?.stage === 'eval' ? folder?.firmRules : undefined;
 
   const sessionTrades = useMemo(
     () => trades.filter(t => t.sessionId === sessionId).sort((a, b) => {
@@ -91,6 +95,14 @@ export default function BacktestSessionPage() {
   const dashboard = useDashboardStats(overlapScopedTrades, plField);
   const advanced = useAdvancedStats(overlapScopedTrades, plField);
   const mfeStats = useMFEMAEStats(overlapScopedTrades, plField);
+
+  const evalTrack = useMemo(
+    () => (practiceRules ? trackEval(sessionTrades, practiceRules) : null),
+    [practiceRules, sessionTrades]
+  );
+  const lockedReason = evalTrack && evalTrack.status !== 'active'
+    ? `This attempt is ${evalTrack.status === 'passed' ? 'passed' : evalTrack.status === 'blown' ? 'blown' : 'out of days'}, so new trades are locked. Fix or delete a wrong trade to reopen it.`
+    : undefined;
 
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState('');
@@ -137,8 +149,8 @@ export default function BacktestSessionPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <Link to="/backtesting" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors mb-3">
-          <ArrowLeft size={16} /> Backtesting
+        <Link to={folder ? `/backtesting/folder/${folder.id}` : '/backtesting'} className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors mb-3">
+          <ArrowLeft size={16} /> {folder ? folder.name : 'Backtesting'}
         </Link>
         <div className="flex items-center gap-3">
           <span className={`w-3 h-3 rounded-full ${SESSION_DOT_COLORS[session.color] || 'bg-blue-500'}`} />
@@ -171,6 +183,8 @@ export default function BacktestSessionPage() {
         <TradingPlanToggle planState={planState} onToggle={setEnabled} onChangeN={setTradesPerDay} />
       </div>
 
+      {evalTrack && practiceRules && <EvalTrackerCard track={evalTrack} rules={practiceRules} />}
+
       {/* Tab bar */}
       <div className="flex items-center justify-between gap-3 border-b border-slate-700 pb-px">
         <div className="flex gap-1">
@@ -202,6 +216,7 @@ export default function BacktestSessionPage() {
           sessionId={sessionId!}
           onTradeSubmit={handleTradeSubmit}
           skippedTradeIds={planComparison?.skippedTradeIds}
+          lockedReason={lockedReason}
         />
       )}
       {activeTab === 'analytics' && (
@@ -321,11 +336,13 @@ function StatMini({ label, value, color }: { label: string; value: string; color
   );
 }
 
-function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
+function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds, lockedReason }: {
   trades: ReturnType<typeof useTrades>['trades'];
   sessionId: string;
   onTradeSubmit: (data: TradeFormData) => void;
   skippedTradeIds?: Set<string>;
+  /** Practice attempt that's finished: no new trades. */
+  lockedReason?: string;
 }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [pasteModalOpen, setPasteModalOpen] = useState(false);
@@ -394,7 +411,8 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
     <div className="space-y-4">
       {/* Action buttons */}
       <div className="flex gap-2">
-        {!readOnly && (<>
+        {lockedReason && !readOnly && <p className="text-sm text-slate-400 self-center">{lockedReason}</p>}
+        {!readOnly && !lockedReason && (<>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
           className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
@@ -455,7 +473,7 @@ function TradeLogTab({ trades, sessionId, onTradeSubmit, skippedTradeIds }: {
       </div>
 
       {/* Inline trade form */}
-      {showAddForm && !readOnly && (
+      {showAddForm && !readOnly && !lockedReason && (
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
           <TradeForm
             key={JSON.stringify(pasteInitialData)}
