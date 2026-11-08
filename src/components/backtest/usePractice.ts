@@ -30,6 +30,13 @@ export function useTradesBySession(): Map<string, Trade[]> {
   }, [trades]);
 }
 
+/** Trades copied into a funded account from the accounts it was linked to, while linked. */
+export function copiedTrades(session: BacktestSession, bySession: Map<string, Trade[]>): Trade[] {
+  return (session.copyLinks ?? []).flatMap(link =>
+    (bySession.get(link.sessionId) ?? []).filter(t => t.createdAt >= link.from && (!link.until || t.createdAt < link.until)),
+  );
+}
+
 /** A practice folder's attempts (evaluation plus funded stage), run through its firm rules. */
 export function buildPracticeAttempts(folder: BacktestSession, sessions: BacktestSession[], bySession: Map<string, Trade[]>): PracticeAttempt[] {
   const rules = folder.firmRules;
@@ -47,7 +54,7 @@ export function buildPracticeAttempts(folder: BacktestSession, sessions: Backtes
         trades,
         track: trackEval(trades, rules),
         funded: fundedSession
-          ? { session: fundedSession, trades: fundedTrades, track: trackFunded(fundedTrades, rules, fundedSession.payouts) }
+          ? { session: fundedSession, trades: fundedTrades, track: trackFunded(fundedTrades, rules, fundedSession.payouts, copiedTrades(fundedSession, bySession)) }
           : undefined,
       };
     });

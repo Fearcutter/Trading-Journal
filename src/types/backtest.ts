@@ -26,6 +26,8 @@ export interface BacktestSession {
   evalSessionId?: string;
   /** Practice attempt only: copy-traded accounts (same trades on each); missing = 1. */
   copies?: number;
+  /** Funded stage only: other funded accounts whose trades also count here, from `from` until `until` (ISO times). */
+  copyLinks?: CopyLink[];
   /** Funded stage only: payouts taken, oldest first. */
   payouts?: PracticePayout[];
 }
@@ -38,4 +40,15 @@ export interface PracticePayout {
   received: number;
   /** When it was recorded (ISO timestamp), for the practice bank's statement. */
   recordedAt?: string;
+  /** Trading days played on the account when it was taken (used once trades are copied in). */
+  dayIndex?: number;
+}
+
+export interface CopyLink {
+  /** The funded session whose trades are copied. */
+  sessionId: string;
+  /** Trades logged there from this moment on count here (ISO timestamp). */
+  from: string;
+  /** Unlinked at this moment; missing = still copying. */
+  until?: string;
 }

@@ -158,13 +158,21 @@ export interface FundedTrack {
 }
 
 /**
- * The funded account: trades and recorded payouts in date order (a payout counts at the end of its day).
+ * The funded account: its own trades in date order, then any trades copied from another
+ * account after linking (in their date order). A payout counts at the end of its trading day:
+ * `dayIndex` when recorded on a copy-traded account, otherwise its date among the account's own days.
  * Payout eligibility uses the same rules as the simulator.
  */
-export function trackFunded(trades: Trade[], cfg: FirmConfig, payouts: PracticePayout[] = []): FundedTrack {
+export function trackFunded(trades: Trade[], cfg: FirmConfig, payouts: PracticePayout[] = [], copied: Trade[] = []): FundedTrack {
   const f = cfg.funded;
   const acct = new Account(cfg.size, f.drawdown);
-  const sortedPayouts = [...payouts].sort((a, b) => a.date.localeCompare(b.date));
+  const ownDays = groupTradesByDay(trades);
+  const allDays = [...ownDays, ...groupTradesByDay(copied)];
+  // Trading days played before each payout
+  const at = (po: PracticePayout) => (copied.length && po.dayIndex !== undefined
+    ? po.dayIndex
+    : ownDays.filter(d => d.date <= po.date).length);
+  const queue = payouts.map((po, i) => ({ po, idx: at(po), i })).sort((a, b) => a.idx - b.idx || a.i - b.i);
   let status: FundedStatus = 'active';
   let endedOn: string | null = null;
   let ignoredTrades = 0;
@@ -175,10 +183,10 @@ export function trackFunded(trades: Trade[], cfg: FirmConfig, payouts: PracticeP
   let received = 0;
   let p = 0;
 
-  // Apply recorded payouts dated on or before `date` (or strictly before it, when `before` is set)
-  const applyPayouts = (date: string, before = false) => {
-    while (p < sortedPayouts.length && (before ? sortedPayouts[p].date < date : sortedPayouts[p].date <= date)) {
-      const po = sortedPayouts[p++];
+  // Apply recorded payouts due after `played` trading days
+  const applyPayouts = (played: number) => {
+    while (status === 'active' && p < queue.length && queue[p].idx <= played) {
+      const po = queue[p++].po;
       acct.balance -= po.gross;
       acct.freeze();
       received += po.received;
@@ -188,8 +196,8 @@ export function trackFunded(trades: Trade[], cfg: FirmConfig, payouts: PracticeP
     }
   };
 
-  for (const { date, trades: dayTrades } of groupTradesByDay(trades)) {
-    applyPayouts(date, true);
+  for (const { date, trades: dayTrades } of allDays) {
+    applyPayouts(days);
     if (status !== 'active') { ignoredTrades += dayTrades.length; continue; }
     const { pl, blown, stoppedAt } = playDay(acct, dayTrades.map(t => t.dollarPL || 0), x => x, f.dailyLossLimit);
     const ignored = stoppedAt === null ? 0 : dayTrades.length - stoppedAt - 1;
@@ -200,9 +208,8 @@ export function trackFunded(trades: Trade[], cfg: FirmConfig, payouts: PracticeP
     cycleProfit += pl;
     cycleBest = Math.max(cycleBest, pl);
     if (countsTowardPayout(pl, f)) cycleDays++;
-    applyPayouts(date);
   }
-  if (status === 'active') applyPayouts('9999-12-31');
+  applyPayouts(Infinity);
 
   const available = status === 'active' ? payoutAvailable(acct.balance, acct.floor, cfg.size, f, taken) : 0;
   const ready = payoutCycleReady(cycleDays, cycleProfit, cycleBest, f, taken);

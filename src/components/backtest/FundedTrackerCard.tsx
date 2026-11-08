@@ -39,7 +39,7 @@ export default function FundedTrackerCard({ track, rules, payouts, readOnly, pay
 
   const take = () => {
     if (!canTake || !payoutDate) return;
-    onPayoutsChange([...payouts, { date: payoutDate, gross, received: Math.round(gross * split * 100) / 100, recordedAt: new Date().toISOString() }]);
+    onPayoutsChange([...payouts, { date: payoutDate, gross, received: Math.round(gross * split * 100) / 100, recordedAt: new Date().toISOString(), dayIndex: track.days }]);
     setAmount('');
   };
 

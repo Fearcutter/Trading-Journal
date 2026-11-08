@@ -169,3 +169,38 @@ describe('copy-traded attempts', () => {
     expect(s.fees).toBe(400);
   });
 });
+
+describe('copy-traded funded accounts', () => {
+  const funded = (): FirmConfig => {
+    const f = firm();
+    return { ...f, funded: { ...f.funded, minDaysPerPayout: 1, minDayProfit: 0, payoutCaps: [1000], split: 0.9 } };
+  };
+
+  it('copied trades come after the account\'s own days, even with earlier chart dates', () => {
+    const own = [t('2026-05-01', 600), t('2026-05-02', 600)];
+    const copied = [t('2026-01-10', -300), t('2026-01-11', 400)];
+    const tr = trackFunded(own, funded(), [], copied);
+    expect(tr.days).toBe(4);
+    expect(tr.lastDay!.date).toBe('2026-01-11');
+    expect(tr.balance).toBe(51300);
+  });
+
+  it('a payout taken before linking (by date) and one after (by trading day) land in the right place', () => {
+    const own = [t('2026-05-01', 1200), t('2026-05-02', 300)];
+    const copied = [t('2026-01-10', 1000), t('2026-01-11', -200)];
+    const payouts = [
+      { date: '2026-05-01', gross: 1000, received: 900 },              // older payout: end of 05-01
+      { date: '2026-01-10', gross: 500, received: 450, dayIndex: 3 },  // after the 3rd trading day
+    ];
+    const tr = trackFunded(own, funded(), payouts, copied);
+    expect(tr.payoutsTaken).toBe(2);
+    expect(tr.balance).toBe(50000 + 1200 - 1000 + 300 + 1000 - 500 - 200);
+    expect(tr.cycleProfit).toBe(-200);        // new cycle after the 2nd payout
+  });
+
+  it('a copied trade that hits the floor blows only this account', () => {
+    const tr = trackFunded([t('2026-05-01', 100)], funded(), [], [t('2026-01-10', -2200)]);
+    expect(tr.status).toBe('blown');
+    expect(tr.endedOn).toBe('2026-01-10');
+  });
+});

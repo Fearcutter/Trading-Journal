@@ -43,6 +43,8 @@ import MFEMAEPanel from '../components/analytics/MFEMAEPanel';
 import ConfluencesTab from '../components/confluences/ConfluencesTab';
 import CoachShareToggle from '../components/ui/CoachShareToggle';
 import { usePracticeBank } from '../components/backtest/usePracticeBank';
+import CopyTradingCard from '../components/backtest/CopyTradingCard';
+import { useTradesBySession, copiedTrades } from '../components/backtest/usePractice';
 import { bankMoney, copiesOf } from '../utils/practice-bank';
 import OverlapScopeToggle, { type OverlapScope } from '../components/filters/OverlapScopeToggle';
 
@@ -69,6 +71,7 @@ export default function BacktestSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const { getSession, updateSession, addSession, sessions: allSessions, folders, loading } = useBacktest();
   const bank = usePracticeBank();
+  const bySession = useTradesBySession();
   const moveSession = useMoveSession();
   const navigate = useNavigate();
   const { trades, addTrade } = useTrades();
@@ -111,8 +114,8 @@ export default function BacktestSessionPage() {
     [practiceRules, sessionTrades]
   );
   const fundedTrack = useMemo(
-    () => (fundedRules ? trackFunded(sessionTrades, fundedRules, session?.payouts) : null),
-    [fundedRules, sessionTrades, session?.payouts]
+    () => (fundedRules && session ? trackFunded(sessionTrades, fundedRules, session.payouts, copiedTrades(session, bySession)) : null),
+    [fundedRules, sessionTrades, session, bySession]
   );
   const lockedReason = evalTrack && evalTrack.status !== 'active'
     ? `This attempt is ${evalTrack.status === 'passed' ? 'passed' : evalTrack.status === 'blown' ? 'blown' : 'out of days'}, so new trades are locked. Fix or delete a wrong trade to reopen it.`
@@ -251,6 +254,7 @@ export default function BacktestSessionPage() {
           onPayoutsChange={payouts => updateSession(session.id, { payouts })}
         />
       )}
+      {session.stage === 'funded' && fundedRules && <CopyTradingCard session={session} readOnly={readOnly} />}
 
       {/* Tab bar */}
       <div className="flex items-center justify-between gap-3 border-b border-slate-700 pb-px">
