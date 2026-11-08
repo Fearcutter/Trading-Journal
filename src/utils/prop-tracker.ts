@@ -282,7 +282,9 @@ export interface PracticeScore extends FolderScore {
   evPerAttempt: number | null;
 }
 
-export function scorePractice(attempts: { evalTrack: EvalTrack; funded?: FundedTrack }[]): PracticeScore {
+/** Copy-traded attempts count once per copy: same trades, so same result on each account. */
+export function scorePractice(input: { evalTrack: EvalTrack; funded?: FundedTrack; copies?: number }[]): PracticeScore {
+  const attempts = input.flatMap(a => Array.from({ length: Math.max(1, Math.round(a.copies ?? 1)) }, () => a));
   const base = scoreEvals(attempts.map(a => a.evalTrack));
   const funded = attempts.map(a => a.funded).filter((f): f is FundedTrack => !!f);
   const received = funded.reduce((s, f) => s + f.received, 0);

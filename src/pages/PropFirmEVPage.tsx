@@ -5,65 +5,21 @@ import MultiSelect from '../components/ui/MultiSelect';
 import EdgeSummary from '../components/prop-ev/EdgeSummary';
 import FirmDetail from '../components/prop-ev/FirmDetail';
 import { usePropEvResults } from '../components/prop-ev/usePropEvResults';
-import { useTrades } from '../context/TradeContext';
-import { useLiveSession } from '../context/LiveSessionContext';
-import { useBacktest } from '../context/BacktestContext';
+import { usePropEvInputs } from '../components/prop-ev/usePropEvInputs';
 import { useSettings } from '../context/SettingsContext';
 import { DEFAULT_PROP_FIRMS } from '../constants/prop-firms';
-import { edgeStats, tradesToDays, type FirmConfig, type SimSummary } from '../utils/prop-ev';
-import { getRealizedR } from '../utils/r-multiple';
+import { edgeStats, type FirmConfig, type SimSummary } from '../utils/prop-ev';
 import { scorePractice, type PracticeScore } from '../utils/prop-tracker';
 import { useAllPractice } from '../components/backtest/usePractice';
 import { firmLabel } from '../components/backtest/usePropFirms';
-
-const STANDALONE = '__standalone__';
-const STORE_KEY = 'propEv.inputs';
-
-interface Inputs {
-  sessionIds: string[] | null; risk: number | null; cost: number; accounts: number; mode: 'best' | 'yours';
-  /** Firm to show ('' = all firms) and the plans picked to compare (null = all of them). */
-  firm: string; planIds: string[] | null;
-}
-const DEFAULT_INPUTS: Inputs = { sessionIds: null, risk: null, cost: 0, accounts: 2, mode: 'best', firm: '', planIds: null };
-
-function loadInputs(): Inputs {
-  try {
-    const raw = localStorage.getItem(STORE_KEY);
-    return raw ? { ...DEFAULT_INPUTS, ...JSON.parse(raw) } : DEFAULT_INPUTS;
-  } catch {
-    return DEFAULT_INPUTS;
-  }
-}
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 const money = (x: number) => `${x < 0 ? '-' : ''}$${Math.abs(Math.round(x)).toLocaleString('en-US')}`;
 
 export default function PropFirmEVPage() {
-  const { trades } = useTrades();
-  const { sessions: liveSessions } = useLiveSession();
-  const { sessions: btSessions, folders } = useBacktest();
   const practice = useAllPractice();
   const { propFirmOverrides, updateSettings } = useSettings();
-  const [inputs, setInputsState] = useState<Inputs>(loadInputs);
   const [openId, setOpenId] = useState<string | null>(null);
-
-  const setInputs = (patch: Partial<Inputs>) => {
-    setInputsState(prev => {
-      const next = { ...prev, ...patch };
-      try { localStorage.setItem(STORE_KEY, JSON.stringify(next)); } catch { /* storage unavailable */ }
-      return next;
-    });
-  };
-
-  const hasStandalone = trades.some(t => !t.sessionId);
-  const options = useMemo(() => [
-    ...(hasStandalone ? [{ value: STANDALONE, label: 'Live trades not in a session', sublabel: 'Live' }] : []),
-    ...liveSessions.map(s => ({ value: s.id, label: s.name, sublabel: 'Live' })),
-    ...btSessions.map(s => {
-      const folder = s.folderId ? folders.find(f => f.id === s.folderId) : undefined;
-      return { value: s.id, label: s.name, sublabel: folder ? `Backtest · ${folder.name}` : 'Backtest' };
-    }),
-  ], [hasStandalone, liveSessions, btSessions, folders]);
 
   // Practice folders' real results, combined per firm
   const practiceByFirm = useMemo(() => {
@@ -71,36 +27,14 @@ export default function PropFirmEVPage() {
     const groups = new Map<string, Parameters<typeof scorePractice>[0]>();
     for (const { folder, attempts } of practice) {
       const id = folder.firmRules!.id;
-      groups.set(id, [...(groups.get(id) ?? []), ...attempts.map(a => ({ evalTrack: a.track, funded: a.funded?.track }))]);
+      groups.set(id, [...(groups.get(id) ?? []), ...attempts.map(a => ({ evalTrack: a.track, funded: a.funded?.track, copies: a.session.copies }))]);
     }
     for (const [id, list] of groups) if (list.length) map.set(id, scorePractice(list));
     return map;
   }, [practice]);
 
-  // Default: every live session (and live trades outside sessions). Deleted sessions drop out.
-  const validIds = new Set(options.map(o => o.value));
-  const selected = (inputs.sessionIds ?? [STANDALONE, ...liveSessions.map(s => s.id)]).filter(id => validIds.has(id));
-  const selectedKey = selected.join(',');
-  const btIds = useMemo(() => new Set(btSessions.map(s => s.id)), [btSessions]);
-  const hasBacktest = selected.some(id => btIds.has(id));
-
-  const picked = useMemo(() => {
-    const ids = new Set(selectedKey.split(','));
-    return trades.filter(t => (t.sessionId ? ids.has(t.sessionId) : ids.has(STANDALONE)));
-  }, [trades, selectedKey]);
-
-  const { days, used, skipped } = useMemo(() => tradesToDays(picked), [picked]);
+  const { inputs, setInputs, options, selected, hasBacktest, days, used, skipped, suggestedRisk, yourRisk } = usePropEvInputs();
   const stats = useMemo(() => edgeStats(days.flat()), [days]);
-
-  // What you usually risk: median $ per 1R on the picked trades
-  const suggestedRisk = useMemo(() => {
-    const perR = picked
-      .map(t => { const r = getRealizedR(t); return r && t.dollarPL ? Math.abs(t.dollarPL / r) : null; })
-      .filter((x): x is number => x !== null && Number.isFinite(x) && x > 0)
-      .sort((a, b) => a - b);
-    return perR.length ? Math.round(perR[Math.floor(perR.length / 2)] / 10) * 10 || 10 : 200;
-  }, [picked]);
-  const yourRisk = inputs.risk ?? suggestedRisk;
 
   const firms = useMemo(
     () => DEFAULT_PROP_FIRMS.map(f => propFirmOverrides?.[f.id] ?? f),

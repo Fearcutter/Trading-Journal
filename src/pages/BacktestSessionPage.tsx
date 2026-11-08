@@ -42,6 +42,8 @@ import { calculateAfterBEAnalysis } from '../utils/mfe-mae-analyzer';
 import MFEMAEPanel from '../components/analytics/MFEMAEPanel';
 import ConfluencesTab from '../components/confluences/ConfluencesTab';
 import CoachShareToggle from '../components/ui/CoachShareToggle';
+import { usePracticeBank } from '../components/backtest/usePracticeBank';
+import { bankMoney, copiesOf } from '../utils/practice-bank';
 import OverlapScopeToggle, { type OverlapScope } from '../components/filters/OverlapScopeToggle';
 
 const SESSION_DOT_COLORS: Record<string, string> = {
@@ -66,6 +68,7 @@ const TABS: { key: Tab; label: string; icon: typeof BarChart3 }[] = [
 export default function BacktestSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const { getSession, updateSession, addSession, sessions: allSessions, folders, loading } = useBacktest();
+  const bank = usePracticeBank();
   const moveSession = useMoveSession();
   const navigate = useNavigate();
   const { trades, addTrade } = useTrades();
@@ -203,24 +206,38 @@ export default function BacktestSessionPage() {
         <EvalTrackerCard
           track={evalTrack}
           rules={practiceRules}
+          copies={copiesOf(session)}
           action={evalTrack.status === 'passed' && (fundedSession ? (
             <Link to={`/backtesting/${fundedSession.id}`} className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white">
               Open funded account
             </Link>
-          ) : !readOnly && (
+          ) : !readOnly && (() => {
+            const activation = practiceRules.funded.activationFee * copiesOf(session);
+            const wallet = bank.spendable(session.folderId ?? '');
+            const short = bank.started && activation > 0 && wallet.amount + 1e-9 < activation;
+            return (
+            <div className="space-y-1">
             <button
+              disabled={short}
               onClick={() => {
                 const s = addSession(`${session.name} (funded)`, '', session.instrument, session.color, {
                   folderId: session.folderId, stage: 'funded', attempt: session.attempt, evalSessionId: session.id,
-                  hiddenFromCoach: session.hiddenFromCoach, payouts: [],
+                  hiddenFromCoach: session.hiddenFromCoach, payouts: [], ...(session.copies ? { copies: session.copies } : {}),
                 });
                 navigate(`/backtesting/${s.id}`);
               }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white"
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40"
             >
-              Start funded account
+              Start funded account{activation > 0 ? ` · ${bankMoney(activation)} activation` : ''}
             </button>
-          ))}
+            {short && (
+              <p className="text-xs text-amber-300">
+                Not enough money for the activation fee: {wallet.fromMain ? 'the main bank' : 'this folder'} has {bankMoney(wallet.amount)}. Add or allocate money on the folder page.
+              </p>
+            )}
+            </div>
+            );
+          })())}
         />
       )}
       {fundedTrack && fundedRules && (
@@ -230,6 +247,7 @@ export default function BacktestSessionPage() {
           payouts={session.payouts ?? []}
           readOnly={readOnly}
           payoutDate={fundedTrack.lastDay?.date ?? null}
+          copies={copiesOf(session)}
           onPayoutsChange={payouts => updateSession(session.id, { payouts })}
         />
       )}

@@ -158,3 +158,14 @@ describe('instant funded accounts', () => {
     expect(tr.fees).toBe(100);
   });
 });
+
+describe('copy-traded attempts', () => {
+  it('count once per copy in the score', () => {
+    const passed = trackEval([t('2026-01-01', 3100)], firm());
+    const blown = trackEval([t('2026-01-01', -2100)], firm());
+    const s = scorePractice([{ evalTrack: passed, copies: 3 }, { evalTrack: blown }]);
+    expect(s.attempts).toBe(4);
+    expect(s.passed).toBe(3);
+    expect(s.fees).toBe(400);
+  });
+});

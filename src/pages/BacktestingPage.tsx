@@ -13,6 +13,9 @@ import { useSessionStats, useTradesBySession } from '../components/backtest/useP
 import { firmLabel } from '../components/backtest/usePropFirms';
 import { useMoveSession } from '../components/backtest/useMoveSession';
 import { trackEval } from '../utils/prop-tracker';
+import PracticeBankCard from '../components/backtest/PracticeBankCard';
+import { usePracticeBank } from '../components/backtest/usePracticeBank';
+import { bankMoney, copiesOf } from '../utils/practice-bank';
 import type { BacktestSession } from '../types/backtest';
 
 export default function BacktestingPage() {
@@ -21,6 +24,7 @@ export default function BacktestingPage() {
   const moveSession = useMoveSession();
   const statsFor = useSessionStats();
   const bySession = useTradesBySession();
+  const bank = usePracticeBank();
   const [showForm, setShowForm] = useState<'session' | 'folder' | null>(null);
 
   const create = (kind: 'session' | 'folder') => (v: SessionFormValues) => {
@@ -55,7 +59,8 @@ export default function BacktestingPage() {
     const statuses = attempts.map(s => trackEval(bySession.get(s.id) ?? [], f.firmRules!).status);
     const passed = statuses.filter(s => s === 'passed').length;
     const blown = statuses.filter(s => s === 'blown').length;
-    return `${attempts.length} of ${f.attemptGoal ?? '?'} attempts · ${passed} passed · ${blown} blown`;
+    const money = bank.started && f.id in bank.folders ? ` · ${bankMoney(bank.folders[f.id])} in folder` : '';
+    return `${attempts.reduce((n, s) => n + copiesOf(s), 0)} of ${f.attemptGoal ?? '?'} attempts · ${passed} passed · ${blown} blown${money}`;
   };
 
   return (
@@ -78,6 +83,8 @@ export default function BacktestingPage() {
       </div>
 
       {showForm && !readOnly && <SessionForm key={showForm} kind={showForm} onCreate={create(showForm)} />}
+
+      {(bank.started || folders.some(f => f.firmRules)) && <PracticeBankCard bank={bank} readOnly={readOnly} />}
 
       {folders.length > 0 && (
         <div className="space-y-2">

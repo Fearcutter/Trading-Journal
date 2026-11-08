@@ -24,10 +24,12 @@ interface Props {
   /** Date to record a payout on: the last trading day. */
   payoutDate: string | null;
   onPayoutsChange: (next: PracticePayout[]) => void;
+  /** Copy-traded accounts: each payout happens on every copy. */
+  copies?: number;
 }
 
 /** Live rule check and payout tracker for a practice funded account. */
-export default function FundedTrackerCard({ track, rules, payouts, readOnly, payoutDate, onPayoutsChange }: Props) {
+export default function FundedTrackerCard({ track, rules, payouts, readOnly, payoutDate, onPayoutsChange, copies = 1 }: Props) {
   const [amount, setAmount] = useState('');
   const ddAmount = rules.funded.drawdown.amount;
   const cushion = track.balance - track.floor;
@@ -37,7 +39,7 @@ export default function FundedTrackerCard({ track, rules, payouts, readOnly, pay
 
   const take = () => {
     if (!canTake || !payoutDate) return;
-    onPayoutsChange([...payouts, { date: payoutDate, gross, received: Math.round(gross * split * 100) / 100 }]);
+    onPayoutsChange([...payouts, { date: payoutDate, gross, received: Math.round(gross * split * 100) / 100, recordedAt: new Date().toISOString() }]);
     setAmount('');
   };
 
@@ -52,7 +54,9 @@ export default function FundedTrackerCard({ track, rules, payouts, readOnly, pay
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h3 className="text-sm font-semibold text-slate-50">{firmLabel(rules)} funded account</h3>
-          <p className="text-xs text-slate-500">Uses each trade's real $ P&L. A payout counts at the end of the day it's dated.</p>
+          <p className="text-xs text-slate-500">
+            Uses each trade's real $ P&L. A payout counts at the end of the day it's dated.{copies > 1 ? ` Copy-traded on ${copies} accounts: the numbers below are for one.` : ''}
+          </p>
         </div>
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
           track.status === 'active' ? 'bg-sky-500/15 text-sky-300' : track.status === 'blown' ? 'bg-rose-500/15 text-rose-300' : 'bg-emerald-500/15 text-emerald-300'
@@ -113,7 +117,9 @@ export default function FundedTrackerCard({ track, rules, payouts, readOnly, pay
             <div className="flex items-end gap-3 flex-wrap">
               <div className="text-sm text-emerald-200">
                 <p className="font-medium">Payout available: up to {money(track.available)}</p>
-                <p className="text-xs text-emerald-200/80">You keep {Math.round(split * 100)}%: {money(gross * split)}{payoutDate ? `, dated ${payoutDate}` : ''}.</p>
+                <p className="text-xs text-emerald-200/80">
+                  You keep {Math.round(split * 100)}%: {money(gross * split)}{copies > 1 ? ` on each of ${copies} copied accounts (${money(gross * split * copies)} in all)` : ''}{payoutDate ? `, dated ${payoutDate}` : ''}.
+                </p>
               </div>
               {!readOnly && (
                 <>

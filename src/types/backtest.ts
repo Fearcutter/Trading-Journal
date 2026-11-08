@@ -24,6 +24,8 @@ export interface BacktestSession {
   stage?: 'eval' | 'funded';
   /** Funded stage only: the evaluation session it came from. */
   evalSessionId?: string;
+  /** Practice attempt only: copy-traded accounts (same trades on each); missing = 1. */
+  copies?: number;
   /** Funded stage only: payouts taken, oldest first. */
   payouts?: PracticePayout[];
 }
@@ -34,4 +36,6 @@ export interface PracticePayout {
   gross: number;
   /** What the trader keeps after the split. */
   received: number;
+  /** When it was recorded (ISO timestamp), for the practice bank's statement. */
+  recordedAt?: string;
 }

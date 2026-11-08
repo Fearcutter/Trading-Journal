@@ -27,7 +27,7 @@ export function StatusBadge({ status }: { status: EvalTrack['status'] }) {
 }
 
 /** Live rule check for one practice evaluation. */
-export default function EvalTrackerCard({ track, rules, action }: { track: EvalTrack; rules: FirmConfig; action?: ReactNode }) {
+export default function EvalTrackerCard({ track, rules, action, copies = 1 }: { track: EvalTrack; rules: FirmConfig; action?: ReactNode; copies?: number }) {
   const cushion = track.balance - track.floor;
   const ddAmount = rules.eval.drawdown.amount;
   const today = track.lastDay;
@@ -51,7 +51,7 @@ export default function EvalTrackerCard({ track, rules, action }: { track: EvalT
     <Card className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h3 className="text-sm font-semibold text-slate-50">{firmLabel(rules)} evaluation</h3>
+          <h3 className="text-sm font-semibold text-slate-50">{firmLabel(rules)} evaluation{copies > 1 ? ` · ${copies} copied accounts` : ''}</h3>
           <p className="text-xs text-slate-500">Uses each trade's real $ P&L, in date and time order.</p>
         </div>
         <StatusBadge status={track.status} />
@@ -116,7 +116,9 @@ export default function EvalTrackerCard({ track, rules, action }: { track: EvalT
           {track.ignoredTrades} trade{track.ignoredTrades === 1 ? '' : 's'} don't count: taken after a daily loss limit stop or after the attempt ended.
         </p>
       )}
-      <p className="text-xs text-slate-500">Fees so far: {money(track.fees)}{rules.eval.billing === 'monthly' ? ' (renews every 20 trading days)' : ''}.</p>
+      <p className="text-xs text-slate-500">
+        Fees so far: {money(track.fees)}{copies > 1 ? ` per account, ${money(track.fees * copies)} for all ${copies}` : ''}{rules.eval.billing === 'monthly' ? ' (renews every 20 trading days)' : ''}.
+      </p>
     </Card>
   );
 }

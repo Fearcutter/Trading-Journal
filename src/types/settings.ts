@@ -1,5 +1,6 @@
 import type { Instrument } from './instrument';
 import type { FirmConfig } from '../utils/prop-ev';
+import type { PracticeBankState } from '../utils/practice-bank';
 
 export interface CustomCategory {
   id: string;
@@ -31,4 +32,6 @@ export interface Settings {
   categorySectionOrder: string[];
   /** Prop Firm EV page: the user's edits to the built-in firm rules, by firm id. */
   propFirmOverrides?: Record<string, FirmConfig>;
+  /** Practice bank: money moved in, allocated to and returned from practice folders. */
+  practiceBank?: PracticeBankState;
 }
