@@ -14,6 +14,7 @@ const pageTitles: Record<string, string> = {
   '/confluences': 'Category Analytics',
   '/category-analytics': 'Category Analytics',
   '/apex-accounts': 'Funded Accounts',
+  '/prop-ev': 'Prop Firm EV',
   '/settings': 'Settings',
 };
 

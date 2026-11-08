@@ -29,6 +29,7 @@ import BacktestingPage from './pages/BacktestingPage';
 import BacktestSessionPage from './pages/BacktestSessionPage';
 import HabitsPage from './pages/HabitsPage';
 import ApexAccountsPage from './pages/ApexAccountsPage';
+import PropFirmEVPage from './pages/PropFirmEVPage';
 
 /** Local-data migration only ever runs for the owner's own journal. */
 function OwnerMigrationGate({ children }: { children: ReactNode }) {
@@ -92,6 +93,7 @@ function AuthGate() {
                 <Route path="/backtesting" element={<BacktestingPage />} />
                 <Route path="/backtesting/:sessionId" element={<BacktestSessionPage />} />
                 <Route path="/apex-accounts" element={<ApexAccountsPage />} />
+                <Route path="/prop-ev" element={<PropFirmEVPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Route>
             </Routes>

@@ -14,6 +14,7 @@ import {
   Settings,
   LogOut,
   ArrowLeftRight,
+  Dices,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useView } from '../../context/ViewContext';
@@ -31,6 +32,7 @@ const navItems = [
   { to: '/confluences', icon: Layers, label: 'Category Analytics' },
   { to: '/risk-calculator', icon: Calculator, label: 'Risk Calculator' },
   { to: '/apex-accounts', icon: Landmark, label: 'Funded Accounts' },
+  { to: '/prop-ev', icon: Dices, label: 'Prop Firm EV' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 

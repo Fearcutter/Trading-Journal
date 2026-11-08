@@ -1,4 +1,5 @@
 import type { Instrument } from './instrument';
+import type { FirmConfig } from '../utils/prop-ev';
 
 export interface CustomCategory {
   id: string;
@@ -28,4 +29,6 @@ export interface Settings {
   customHabitCategories: { key: string; label: string }[];
   tradingTimezone: string;
   categorySectionOrder: string[];
+  /** Prop Firm EV page: the user's edits to the built-in firm rules, by firm id. */
+  propFirmOverrides?: Record<string, FirmConfig>;
 }
