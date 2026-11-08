@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { Dices, AlertTriangle, Loader2 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import MultiSelect from '../components/ui/MultiSelect';
@@ -12,6 +12,8 @@ import { useSettings } from '../context/SettingsContext';
 import { DEFAULT_PROP_FIRMS } from '../constants/prop-firms';
 import { edgeStats, tradesToDays, type FirmConfig, type SimSummary } from '../utils/prop-ev';
 import { getRealizedR } from '../utils/r-multiple';
+import { scorePractice, type PracticeScore } from '../utils/prop-tracker';
+import { useAllPractice } from '../components/backtest/usePractice';
 
 const STANDALONE = '__standalone__';
 const STORE_KEY = 'propEv.inputs';
@@ -34,7 +36,8 @@ const money = (x: number) => `${x < 0 ? '-' : ''}$${Math.abs(Math.round(x)).toLo
 export default function PropFirmEVPage() {
   const { trades } = useTrades();
   const { sessions: liveSessions } = useLiveSession();
-  const { sessions: btSessions } = useBacktest();
+  const { sessions: btSessions, folders } = useBacktest();
+  const practice = useAllPractice();
   const { propFirmOverrides, updateSettings } = useSettings();
   const [inputs, setInputsState] = useState<Inputs>(loadInputs);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -51,8 +54,23 @@ export default function PropFirmEVPage() {
   const options = useMemo(() => [
     ...(hasStandalone ? [{ value: STANDALONE, label: 'Live trades not in a session', sublabel: 'Live' }] : []),
     ...liveSessions.map(s => ({ value: s.id, label: s.name, sublabel: 'Live' })),
-    ...btSessions.map(s => ({ value: s.id, label: s.name, sublabel: 'Backtest' })),
-  ], [hasStandalone, liveSessions, btSessions]);
+    ...btSessions.map(s => {
+      const folder = s.folderId ? folders.find(f => f.id === s.folderId) : undefined;
+      return { value: s.id, label: s.name, sublabel: folder ? `Backtest · ${folder.name}` : 'Backtest' };
+    }),
+  ], [hasStandalone, liveSessions, btSessions, folders]);
+
+  // Practice folders' real results, combined per firm
+  const practiceByFirm = useMemo(() => {
+    const map = new Map<string, PracticeScore>();
+    const groups = new Map<string, Parameters<typeof scorePractice>[0]>();
+    for (const { folder, attempts } of practice) {
+      const id = folder.firmRules!.id;
+      groups.set(id, [...(groups.get(id) ?? []), ...attempts.map(a => ({ evalTrack: a.track, funded: a.funded?.track }))]);
+    }
+    for (const [id, list] of groups) if (list.length) map.set(id, scorePractice(list));
+    return map;
+  }, [practice]);
 
   // Default: every live session (and live trades outside sessions). Deleted sessions drop out.
   const validIds = new Set(options.map(o => o.value));
@@ -209,9 +227,10 @@ export default function PropFirmEVPage() {
                   {rows.map(f => {
                     const s = shownFor(f.id);
                     const edited = !!propFirmOverrides?.[f.id];
+                    const mine = practiceByFirm.get(f.id);
                     return (
+                      <Fragment key={f.id}>
                       <tr
-                        key={f.id}
                         onClick={() => setOpenId(openId === f.id ? null : f.id)}
                         className={`border-b border-slate-700/50 cursor-pointer hover:bg-slate-700/30 ${openId === f.id ? 'bg-slate-700/40' : ''}`}
                       >
@@ -235,6 +254,20 @@ export default function PropFirmEVPage() {
                           <td colSpan={8} className="px-3 py-2 text-sm text-slate-500 text-right">Working it out…</td>
                         )}
                       </tr>
+                      {mine && (
+                        <tr className="border-b border-slate-700/50 bg-sky-950/30 text-xs">
+                          <td className="px-3 py-1.5 pl-6 text-sky-300 whitespace-nowrap">↳ Your practice ({mine.attempts} attempt{mine.attempts === 1 ? '' : 's'})</td>
+                          <td className="px-3 py-1.5 text-right text-slate-500">real $</td>
+                          <td className="px-3 py-1.5 text-right font-mono text-slate-300">{mine.passRate === null ? '—' : pct(mine.passRate)}</td>
+                          <td className="px-3 py-1.5 text-right font-mono text-rose-300">{pct(mine.attempts ? mine.blown / mine.attempts : 0)}</td>
+                          <td className="px-3 py-1.5 text-right font-mono text-slate-300">{mine.paidRate === null ? '—' : pct(mine.paidRate)}</td>
+                          <td className="px-3 py-1.5 text-right font-mono text-slate-300">{money(mine.received / mine.attempts)}</td>
+                          <td className="px-3 py-1.5 text-right font-mono text-slate-400">{money(mine.totalFees / mine.attempts)}</td>
+                          <td className={`px-3 py-1.5 text-right font-mono font-semibold ${(mine.evPerAttempt ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{money(mine.evPerAttempt ?? 0)}</td>
+                          <td className="px-3 py-1.5 text-right font-mono text-slate-400">{money((mine.evPerAttempt ?? 0) * inputs.accounts)}</td>
+                        </tr>
+                      )}
+                      </Fragment>
                     );
                   })}
                 </tbody>
@@ -254,6 +287,12 @@ export default function PropFirmEVPage() {
             )}
 
             <div className="text-xs text-slate-500 space-y-1">
+              {practiceByFirm.size > 0 && (
+                <p>
+                  "Your practice" rows are your real results from practice folders in Backtesting (pass rate is of finished evaluations; got paid and EV are per attempt, including attempts still running).
+                  Few attempts swing a lot: 25+ gives a much steadier number.
+                </p>
+              )}
               <p>
                 How it works: each simulated evaluation picks your real trading days at random (whole days, so daily limits and best-day rules behave like they would for you), at a fixed $ risk per trade.
                 It trades until it passes, blows, or runs out of days (60 trading days, monthly fees every 20), then trades the funded account for up to 120 trading days, taking the biggest payout allowed each time it qualifies.

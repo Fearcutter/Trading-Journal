@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Trade } from '../types/trade';
-import { trackEval, scoreEvals, evalFees, groupTradesByDay } from './prop-tracker';
+import { trackEval, scoreEvals, evalFees, groupTradesByDay, trackFunded, scorePractice } from './prop-tracker';
 import type { FirmConfig, DrawdownRule } from './prop-ev';
 
 const dd = (amount: number, type: DrawdownRule['type'] = 'eod_trailing', lockAboveStart: number | null = null): DrawdownRule =>
@@ -87,5 +87,65 @@ describe('scoreEvals', () => {
     const active = trackEval([t('2026-01-01', 100)], cfg);
     const s = scoreEvals([passed, blown, active]);
     expect(s).toMatchObject({ attempts: 3, passed: 1, blown: 1, active: 1, passRate: 0.5, medianDaysToPass: 1, fees: 300 });
+  });
+});
+
+describe('trackFunded', () => {
+  const funded = (over: Partial<FirmConfig['funded']> = {}): FirmConfig => {
+    const f = firm();
+    return { ...f, funded: { ...f.funded, drawdown: dd(2000, 'eod_trailing', 100), minDaysPerPayout: 2, minDayProfit: 150, payoutCaps: [1000], split: 0.9, activationFee: 50, ...over } };
+  };
+
+  it('counts qualifying days and works out the payout available', () => {
+    const tr = trackFunded([t('2026-02-01', 1200), t('2026-02-02', 100), t('2026-02-03', 900)], funded());
+    expect(tr.cycleDays).toBe(2);              // the $100 day is below the $150 minimum
+    expect(tr.balance).toBe(52200);
+    expect(tr.floor).toBe(50100);             // trailed to 50,200 then stopped at start + 100
+    expect(tr.available).toBe(1000);          // 2,100 above the floor, capped at 1,000
+    expect(tr.availableReceived).toBe(900);
+    expect(tr.eligible).toBe(true);
+    expect(tr.fees).toBe(50);
+  });
+
+  it('a recorded payout lowers the balance and starts a new cycle', () => {
+    const tr = trackFunded(
+      [t('2026-02-01', 1200), t('2026-02-02', 900), t('2026-02-03', 300)],
+      funded(),
+      [{ date: '2026-02-02', gross: 1000, received: 900 }],
+    );
+    expect(tr.payoutsTaken).toBe(1);
+    expect(tr.received).toBe(900);
+    expect(tr.balance).toBe(51400);
+    expect(tr.cycleDays).toBe(1);             // only 02-03 counts in the new cycle
+    expect(tr.eligible).toBe(false);
+  });
+
+  it('blows at the floor and stops after the last allowed payout', () => {
+    expect(trackFunded([t('2026-02-01', -2000)], funded()).status).toBe('blown');
+    const done = trackFunded([t('2026-02-01', 1200), t('2026-02-02', 900), t('2026-02-03', 500)], funded({ maxPayouts: 1 }),
+      [{ date: '2026-02-02', gross: 1000, received: 900 }]);
+    expect(done.status).toBe('finished');
+    expect(done.ignoredTrades).toBe(1);
+  });
+
+  it('cycle profit minimum and best-day rule hold a payout back', () => {
+    const tr = trackFunded([t('2026-02-01', 1500), t('2026-02-02', 200)], funded({ consistencyPct: 40 }));
+    expect(tr.consistencyOk).toBe(false);     // 1,500 is 88% of 1,700
+    expect(tr.eligible).toBe(false);
+    const low = trackFunded([t('2026-02-01', 200), t('2026-02-02', 200)], funded({ minCycleProfit: 500 }));
+    expect(low.eligible).toBe(false);
+  });
+});
+
+describe('scorePractice', () => {
+  it('EV per attempt = money kept − all fees, over all attempts', () => {
+    const cfg = firm();
+    const pass = trackEval([t('2026-01-01', 3000)], cfg);
+    const blow = trackEval([t('2026-01-01', -2000)], cfg);
+    const f = { ...trackFunded([], cfg), received: 900, payoutsTaken: 1, fees: 50 };
+    const s = scorePractice([{ evalTrack: pass, funded: f }, { evalTrack: blow }]);
+    expect(s.totalFees).toBe(250);
+    expect(s.evPerAttempt).toBe((900 - 250) / 2);
+    expect(s.paidRate).toBe(0.5);
   });
 });

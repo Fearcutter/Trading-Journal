@@ -13,7 +13,7 @@ import { StatusBadge } from '../components/backtest/EvalTrackerCard';
 import FirmRulesEditor from '../components/prop-ev/FirmRulesEditor';
 import { usePracticeAttempts, useSessionStats } from '../components/backtest/usePractice';
 import { firmLabel } from '../components/backtest/usePropFirms';
-import { scoreEvals } from '../utils/prop-tracker';
+import { scorePractice } from '../utils/prop-tracker';
 import type { BacktestSession } from '../types/backtest';
 
 const pct = (x: number | null) => (x === null ? '—' : `${Math.round(x * 100)}%`);
@@ -52,8 +52,8 @@ export default function BacktestFolderPage() {
 
   const rules = folder.firmRules;
   const inside = sessions.filter(s => s.folderId === folder.id);
-  const others = inside.filter(s => !(rules && s.stage === 'eval'));
-  const score = scoreEvals(attempts.map(a => a.track));
+  const others = inside.filter(s => !(rules && (s.stage === 'eval' || s.stage === 'funded')));
+  const score = scorePractice(attempts.map(a => ({ evalTrack: a.track, funded: a.funded?.track })));
 
   const newAttempt = () => {
     const n = Math.max(0, ...inside.map(s => s.attempt ?? 0)) + 1;
@@ -110,12 +110,23 @@ export default function BacktestFolderPage() {
           <Card>
             <h3 className="text-sm font-medium text-slate-300 mb-3">Scoreboard</h3>
             <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-              <Stat label="Attempts" value={`${score.attempts} / ${folder.attemptGoal ?? '?'}`} sub={`${score.active} in progress`} />
-              <Stat label="Passed" value={String(score.passed)} />
-              <Stat label="Blown" value={String(score.blown)} sub={score.timedOut ? `${score.timedOut} ran out of days` : undefined} />
-              <Stat label="Pass rate" value={pct(score.passRate)} sub="of finished attempts" />
-              <Stat label="Median days to pass" value={score.medianDaysToPass === null ? '—' : String(score.medianDaysToPass)} />
-              <Stat label="Evaluation fees" value={money(score.fees)} sub="what these attempts would have cost" />
+              <Stat label="Attempts" value={`${score.attempts} / ${folder.attemptGoal ?? '?'}`} sub={`${score.active} evaluation${score.active === 1 ? '' : 's'} in progress`} />
+              <Stat label="Passed" value={String(score.passed)} sub={score.medianDaysToPass === null ? undefined : `median ${score.medianDaysToPass} days`} />
+              <Stat label="Blown in eval" value={String(score.blown)} sub={score.timedOut ? `${score.timedOut} ran out of days` : undefined} />
+              <Stat label="Pass rate" value={pct(score.passRate)} sub="of finished evaluations" />
+              <Stat label="Funded blown" value={String(score.fundedBlown)} sub={`of ${score.fundedStarted} funded`} />
+              <Stat label="Got paid" value={`${score.gotPaid}`} sub={`${pct(score.paidRate)} of attempts · ${score.payouts} payout${score.payouts === 1 ? '' : 's'}`} />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mt-4 pt-4 border-t border-slate-700">
+              <Stat label="Money kept" value={money(score.received)} sub="after the split" />
+              <Stat label="Fees" value={money(score.totalFees)} sub="evaluations + activations" />
+              <div>
+                <p className="text-xs text-slate-500">Your EV per evaluation</p>
+                <p className={`text-lg font-semibold font-mono ${score.evPerAttempt === null ? 'text-slate-50' : score.evPerAttempt >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {score.evPerAttempt === null ? '—' : money(score.evPerAttempt)}
+                </p>
+                <p className="text-[11px] text-slate-500">(kept − fees) ÷ attempts{score.active ? '; includes attempts still running' : ''}</p>
+              </div>
             </div>
           </Card>
 
@@ -123,7 +134,7 @@ export default function BacktestFolderPage() {
             <EmptyState icon={<Folder size={48} />} title="No attempts yet" description={readOnly ? 'No attempts yet.' : 'Press "New attempt" to start your first evaluation.'} />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {attempts.map(({ session, track }) => (
+              {attempts.map(({ session, track, funded }) => (
                 <SessionCard
                   key={session.id}
                   session={session}
@@ -135,6 +146,15 @@ export default function BacktestFolderPage() {
                     <div className="flex items-center gap-2 text-xs text-slate-400">
                       <StatusBadge status={track.status} />
                       <span>{money(track.profit)} of {money(track.target)} · {track.days} day{track.days === 1 ? '' : 's'}</span>
+                      {funded && (
+                        <span
+                          role="link"
+                          onClick={e => { e.preventDefault(); e.stopPropagation(); navigate(`/backtesting/${funded.session.id}`); }}
+                          className={`cursor-pointer px-2 py-0.5 rounded-full font-medium ${funded.track.status === 'blown' ? 'bg-rose-500/15 text-rose-300' : 'bg-emerald-500/15 text-emerald-300'}`}
+                        >
+                          Funded{funded.track.status === 'blown' ? ' · blown' : ''}{funded.track.payoutsTaken ? ` · ${funded.track.payoutsTaken} paid (${money(funded.track.received)})` : ''}
+                        </span>
+                      )}
                     </div>
                   }
                 />

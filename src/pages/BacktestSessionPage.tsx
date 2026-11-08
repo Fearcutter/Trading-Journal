@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, FlaskConical, BarChart3, BookOpen, LineChart as LineChartIcon, Target, Layers, PlusCircle, ClipboardPaste, ChevronUp, Download, Trash2, Search, Settings2, Pencil, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
@@ -19,7 +19,8 @@ import TradeRow from '../components/trade/TradeRow';
 import TimingSection from '../components/analytics/TimingSection';
 import LowerRRSection from '../components/analytics/LowerRRSection';
 import EvalTrackerCard from '../components/backtest/EvalTrackerCard';
-import { trackEval } from '../utils/prop-tracker';
+import FundedTrackerCard from '../components/backtest/FundedTrackerCard';
+import { trackEval, trackFunded } from '../utils/prop-tracker';
 import type { HiddenColumns } from '../components/trade/TradeRow';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -62,7 +63,8 @@ const TABS: { key: Tab; label: string; icon: typeof BarChart3 }[] = [
 
 export default function BacktestSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
-  const { getSession, updateSession, loading } = useBacktest();
+  const { getSession, updateSession, addSession, sessions: allSessions, loading } = useBacktest();
+  const navigate = useNavigate();
   const { trades, addTrade } = useTrades();
   const { readOnly } = useView();
 
@@ -73,6 +75,8 @@ export default function BacktestSessionPage() {
   const session = sessionId ? getSession(sessionId) : undefined;
   const folder = session?.folderId ? getSession(session.folderId) : undefined;
   const practiceRules = session?.stage === 'eval' ? folder?.firmRules : undefined;
+  const fundedRules = session?.stage === 'funded' ? folder?.firmRules : undefined;
+  const fundedSession = session?.stage === 'eval' ? allSessions.find(s => s.stage === 'funded' && s.evalSessionId === session.id) : undefined;
 
   const sessionTrades = useMemo(
     () => trades.filter(t => t.sessionId === sessionId).sort((a, b) => {
@@ -100,9 +104,15 @@ export default function BacktestSessionPage() {
     () => (practiceRules ? trackEval(sessionTrades, practiceRules) : null),
     [practiceRules, sessionTrades]
   );
+  const fundedTrack = useMemo(
+    () => (fundedRules ? trackFunded(sessionTrades, fundedRules, session?.payouts) : null),
+    [fundedRules, sessionTrades, session?.payouts]
+  );
   const lockedReason = evalTrack && evalTrack.status !== 'active'
     ? `This attempt is ${evalTrack.status === 'passed' ? 'passed' : evalTrack.status === 'blown' ? 'blown' : 'out of days'}, so new trades are locked. Fix or delete a wrong trade to reopen it.`
-    : undefined;
+    : fundedTrack && fundedTrack.status !== 'active'
+      ? `This funded account is ${fundedTrack.status === 'blown' ? 'blown' : 'finished'}, so new trades are locked.`
+      : undefined;
 
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState('');
@@ -183,7 +193,40 @@ export default function BacktestSessionPage() {
         <TradingPlanToggle planState={planState} onToggle={setEnabled} onChangeN={setTradesPerDay} />
       </div>
 
-      {evalTrack && practiceRules && <EvalTrackerCard track={evalTrack} rules={practiceRules} />}
+      {evalTrack && practiceRules && (
+        <EvalTrackerCard
+          track={evalTrack}
+          rules={practiceRules}
+          action={evalTrack.status === 'passed' && (fundedSession ? (
+            <Link to={`/backtesting/${fundedSession.id}`} className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white">
+              Open funded account
+            </Link>
+          ) : !readOnly && (
+            <button
+              onClick={() => {
+                const s = addSession(`${session.name} (funded)`, '', session.instrument, session.color, {
+                  folderId: session.folderId, stage: 'funded', attempt: session.attempt, evalSessionId: session.id,
+                  hiddenFromCoach: session.hiddenFromCoach, payouts: [],
+                });
+                navigate(`/backtesting/${s.id}`);
+              }}
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white"
+            >
+              Start funded account
+            </button>
+          ))}
+        />
+      )}
+      {fundedTrack && fundedRules && (
+        <FundedTrackerCard
+          track={fundedTrack}
+          rules={fundedRules}
+          payouts={session.payouts ?? []}
+          readOnly={readOnly}
+          payoutDate={fundedTrack.lastDay?.date ?? null}
+          onPayoutsChange={payouts => updateSession(session.id, { payouts })}
+        />
+      )}
 
       {/* Tab bar */}
       <div className="flex items-center justify-between gap-3 border-b border-slate-700 pb-px">

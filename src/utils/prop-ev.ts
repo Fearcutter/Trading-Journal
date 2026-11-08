@@ -305,6 +305,26 @@ export function consistencyOk(bestDay: number, profit: number, pct: number | nul
   return bestDay <= (pct / 100) * profit + 1e-9;
 }
 
+/** A day counts toward the payout cycle if it made at least the firm's minimum (any trading day when 0). */
+export function countsTowardPayout(dayPL: number, f: FundedRules): boolean {
+  return f.minDayProfit === 0 || dayPL >= f.minDayProfit;
+}
+
+/** Enough qualifying days, enough cycle profit, and the best-day rule met. */
+export function payoutCycleReady(cycleDays: number, cycleProfit: number, cycleBest: number, f: FundedRules): boolean {
+  if (cycleDays < f.minDaysPerPayout || cycleProfit < (f.minCycleProfit ?? 0)) return false;
+  return consistencyOk(cycleBest, cycleProfit, f.consistencyPct);
+}
+
+/** Most that can be withdrawn now (before the split): above the buffer and floor, within share and cap. */
+export function payoutAvailable(balance: number, floor: number, size: number, f: FundedRules, payoutsTaken: number): number {
+  let gross = balance - Math.max(size + f.buffer, floor);
+  if (f.payoutShareOfProfit !== null) gross = Math.min(gross, (balance - size) * f.payoutShareOfProfit);
+  const cap = f.payoutCaps.length ? f.payoutCaps[Math.min(payoutsTaken, f.payoutCaps.length - 1)] : 0;
+  if (cap > 0) gross = Math.min(gross, cap);
+  return Math.max(0, Math.floor(gross));
+}
+
 export interface RunResult {
   evalEnd: 'passed' | 'blown' | 'timeout';
   passed: boolean;
@@ -359,17 +379,9 @@ export function simulateRun(days: number[][], cfg: FirmConfig, opts: Omit<SimOpt
     if (blown) { fundedBlown = true; break; }
     cycleProfit += pl;
     cycleBest = Math.max(cycleBest, pl);
-    // A day counts toward the payout cycle if it made at least the firm's minimum (any trading day when 0)
-    if (f.minDayProfit === 0 || pl >= f.minDayProfit) cycleDays++;
-
-    if (cycleDays < f.minDaysPerPayout || cycleProfit < (f.minCycleProfit ?? 0)) continue;
-    if (!consistencyOk(cycleBest, cycleProfit, f.consistencyPct)) continue;
-    const profitAboveStart = acct.balance - cfg.size;
-    let gross = acct.balance - Math.max(cfg.size + f.buffer, acct.floor);
-    if (f.payoutShareOfProfit !== null) gross = Math.min(gross, profitAboveStart * f.payoutShareOfProfit);
-    const cap = f.payoutCaps.length ? f.payoutCaps[Math.min(payouts, f.payoutCaps.length - 1)] : 0;
-    if (cap > 0) gross = Math.min(gross, cap);
-    gross = Math.floor(gross);
+    if (countsTowardPayout(pl, f)) cycleDays++;
+    if (!payoutCycleReady(cycleDays, cycleProfit, cycleBest, f)) continue;
+    const gross = payoutAvailable(acct.balance, acct.floor, cfg.size, f, payouts);
     if (gross < Math.max(f.minPayout, 1)) continue;
 
     acct.balance -= gross;

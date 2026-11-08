@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { CheckCircle2, XCircle, Clock, Lock } from 'lucide-react';
 import Card from '../ui/Card';
 import type { EvalTrack } from '../../utils/prop-tracker';
@@ -26,7 +27,7 @@ export function StatusBadge({ status }: { status: EvalTrack['status'] }) {
 }
 
 /** Live rule check for one practice evaluation. */
-export default function EvalTrackerCard({ track, rules }: { track: EvalTrack; rules: FirmConfig }) {
+export default function EvalTrackerCard({ track, rules, action }: { track: EvalTrack; rules: FirmConfig; action?: ReactNode }) {
   const cushion = track.balance - track.floor;
   const ddAmount = rules.eval.drawdown.amount;
   const today = track.lastDay;
@@ -52,6 +53,7 @@ export default function EvalTrackerCard({ track, rules }: { track: EvalTrack; ru
           </p>
         </div>
       )}
+      {action}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
         <div>
