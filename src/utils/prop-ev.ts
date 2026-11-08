@@ -41,6 +41,8 @@ export interface FundedRules {
   minDayProfit: number;
   /** The payout cycle as a whole must have made at least this ($). Missing = 0. */
   minCycleProfit?: number;
+  /** A bigger cycle profit needed before the first payout only ($). Missing = same as later cycles. */
+  firstCycleProfit?: number;
   /** Balance must stay at least start + buffer after a payout. */
   buffer: number;
   minPayout: number;
@@ -61,6 +63,8 @@ export interface FirmConfig {
   size: number;
   eval: EvalRules;
   funded: FundedRules;
+  /** Bought straight as a funded account: no evaluation. The evaluation price is the account price. */
+  instant?: boolean;
   /** Date the rules were last checked against the firm's site (YYYY-MM-DD). */
   lastChecked: string;
   /** Rules the sources disagreed on or that couldn't be confirmed. */
@@ -310,9 +314,14 @@ export function countsTowardPayout(dayPL: number, f: FundedRules): boolean {
   return f.minDayProfit === 0 || dayPL >= f.minDayProfit;
 }
 
+/** Profit the current payout cycle needs: the first payout can have a bigger goal. */
+export function cycleProfitNeeded(f: FundedRules, payoutsTaken: number): number {
+  return payoutsTaken === 0 && f.firstCycleProfit !== undefined ? f.firstCycleProfit : f.minCycleProfit ?? 0;
+}
+
 /** Enough qualifying days, enough cycle profit, and the best-day rule met. */
-export function payoutCycleReady(cycleDays: number, cycleProfit: number, cycleBest: number, f: FundedRules): boolean {
-  if (cycleDays < f.minDaysPerPayout || cycleProfit < (f.minCycleProfit ?? 0)) return false;
+export function payoutCycleReady(cycleDays: number, cycleProfit: number, cycleBest: number, f: FundedRules, payoutsTaken = 0): boolean {
+  if (cycleDays < f.minDaysPerPayout || cycleProfit < cycleProfitNeeded(f, payoutsTaken)) return false;
   return consistencyOk(cycleBest, cycleProfit, f.consistencyPct);
 }
 
@@ -350,7 +359,8 @@ export function simulateRun(days: number[][], cfg: FirmConfig, opts: Omit<SimOpt
   let passed = false;
   let evalBlown = false;
   let day = 0;
-  while (day < maxDays) {
+  if (cfg.instant) passed = true;
+  while (!passed && day < maxDays) {
     if (ev.billing === 'monthly' && day > 0 && day % TRADING_DAYS_PER_MONTH === 0) fees += ev.fee;
     const { pl, blown } = playDay(evalAcct, pick(), toDollars, ev.dailyLossLimit);
     day++;
@@ -380,7 +390,7 @@ export function simulateRun(days: number[][], cfg: FirmConfig, opts: Omit<SimOpt
     cycleProfit += pl;
     cycleBest = Math.max(cycleBest, pl);
     if (countsTowardPayout(pl, f)) cycleDays++;
-    if (!payoutCycleReady(cycleDays, cycleProfit, cycleBest, f)) continue;
+    if (!payoutCycleReady(cycleDays, cycleProfit, cycleBest, f, payouts)) continue;
     const gross = payoutAvailable(acct.balance, acct.floor, cfg.size, f, payouts);
     if (gross < Math.max(f.minPayout, 1)) continue;
 
@@ -461,7 +471,7 @@ export function simulateFirm(days: number[][], cfg: FirmConfig, opts: SimOptions
   };
 }
 
-/** Risk levels to try, as shares of the evaluation drawdown. */
+/** Risk levels to try, as shares of the evaluation drawdown (the funded one for instant accounts). */
 export const SWEEP_SHARES = [0.02, 0.03, 0.04, 0.05, 0.06, 0.08, 0.1, 0.125, 0.15, 0.2, 0.25, 0.3, 0.4];
 
 /** Rounds to a tidy $ amount: $5 steps under $100, $10 steps above. */
@@ -472,7 +482,8 @@ export function tidyRisk(x: number): number {
 
 /** Simulate each risk level; returns all results and the one with the highest EV. */
 export function riskSweep(days: number[][], cfg: FirmConfig, opts: Omit<SimOptions, 'riskPerTrade'>): { points: SimSummary[]; best: SimSummary | null } {
-  const risks = [...new Set(SWEEP_SHARES.map(s => tidyRisk(s * cfg.eval.drawdown.amount)))];
+  const dd = (cfg.instant ? cfg.funded : cfg.eval).drawdown.amount;
+  const risks = [...new Set(SWEEP_SHARES.map(s => tidyRisk(s * dd)))];
   const points = risks.map(riskPerTrade => simulateFirm(days, cfg, { ...opts, riskPerTrade }));
   const best = points.reduce<SimSummary | null>((b, p) => (!b || p.ev > b.ev ? p : b), null);
   return { points, best };

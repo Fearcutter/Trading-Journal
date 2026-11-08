@@ -31,8 +31,8 @@ export default function FirmDetail({ firm, result, shown, accounts, edited, onSa
 
       {shown && (
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
-          <div><p className="text-xs text-slate-500">Median days to pass</p><p className="font-mono text-slate-50">{shown.medianDaysToPass ?? '—'}</p></div>
-          <div><p className="text-xs text-slate-500">Ran out of days</p><p className="font-mono text-slate-50">{pct(shown.evalTimeoutRate)}</p></div>
+          {!firm.instant && <div><p className="text-xs text-slate-500">Median days to pass</p><p className="font-mono text-slate-50">{shown.medianDaysToPass ?? '—'}</p></div>}
+          {!firm.instant && <div><p className="text-xs text-slate-500">Ran out of days</p><p className="font-mono text-slate-50">{pct(shown.evalTimeoutRate)}</p></div>}
           <div><p className="text-xs text-slate-500">Blown after funding</p><p className="font-mono text-slate-50">{pct(shown.fundedBlowRate)}</p><p className="text-[11px] text-slate-500">of passed accounts</p></div>
           <div><p className="text-xs text-slate-500">Avg payouts per eval</p><p className="font-mono text-slate-50">{shown.avgPayouts.toFixed(2)}</p></div>
           <div>

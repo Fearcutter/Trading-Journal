@@ -149,3 +149,12 @@ describe('scorePractice', () => {
     expect(s.paidRate).toBe(0.5);
   });
 });
+
+describe('instant funded accounts', () => {
+  it('the "evaluation" counts as passed straight away with no trading days', () => {
+    const tr = trackEval([], { ...firm(), instant: true });
+    expect(tr.status).toBe('passed');
+    expect(tr.days).toBe(0);
+    expect(tr.fees).toBe(100);
+  });
+});

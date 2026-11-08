@@ -1,6 +1,6 @@
 import type { Trade } from '../types/trade';
 import {
-  Account, playDay, consistencyOk, countsTowardPayout, payoutCycleReady, payoutAvailable,
+  Account, playDay, consistencyOk, countsTowardPayout, payoutCycleReady, payoutAvailable, cycleProfitNeeded,
   TRADING_DAYS_PER_MONTH, type FirmConfig,
 } from './prop-ev';
 import type { PracticePayout } from '../types/backtest';
@@ -73,6 +73,7 @@ export function trackEval(trades: Trade[], cfg: FirmConfig): EvalTrack {
   let endedOn: string | null = null;
   let bestDay = 0;
   let ignoredTrades = 0;
+  if (cfg.instant) status = 'passed';
 
   for (const { date, trades: dayTrades } of groupTradesByDay(trades)) {
     if (status !== 'active') {
@@ -204,7 +205,7 @@ export function trackFunded(trades: Trade[], cfg: FirmConfig, payouts: PracticeP
   if (status === 'active') applyPayouts('9999-12-31');
 
   const available = status === 'active' ? payoutAvailable(acct.balance, acct.floor, cfg.size, f, taken) : 0;
-  const ready = payoutCycleReady(cycleDays, cycleProfit, cycleBest, f);
+  const ready = payoutCycleReady(cycleDays, cycleProfit, cycleBest, f, taken);
   return {
     status,
     start: cfg.size,
@@ -219,7 +220,7 @@ export function trackFunded(trades: Trade[], cfg: FirmConfig, payouts: PracticeP
     cycleDays,
     cycleDaysNeeded: f.minDaysPerPayout,
     cycleProfit,
-    cycleProfitNeeded: f.minCycleProfit ?? 0,
+    cycleProfitNeeded: cycleProfitNeeded(f, taken),
     cycleBest,
     consistencyPct: f.consistencyPct,
     consistencyOk: consistencyOk(cycleBest, cycleProfit, f.consistencyPct),

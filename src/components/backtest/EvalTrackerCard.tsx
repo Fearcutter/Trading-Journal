@@ -32,6 +32,21 @@ export default function EvalTrackerCard({ track, rules, action }: { track: EvalT
   const ddAmount = rules.eval.drawdown.amount;
   const today = track.lastDay;
 
+  if (rules.instant) {
+    return (
+      <Card className="space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h3 className="text-sm font-semibold text-slate-50">{firmLabel(rules)}</h3>
+          <StatusBadge status="passed" />
+        </div>
+        <p className="text-sm text-slate-400">
+          No evaluation: this account is bought funded for {money(rules.eval.fee)}. Trade it in the funded account.
+        </p>
+        {action}
+      </Card>
+    );
+  }
+
   return (
     <Card className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">

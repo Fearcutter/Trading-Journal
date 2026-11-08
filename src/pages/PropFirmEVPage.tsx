@@ -14,12 +14,17 @@ import { edgeStats, tradesToDays, type FirmConfig, type SimSummary } from '../ut
 import { getRealizedR } from '../utils/r-multiple';
 import { scorePractice, type PracticeScore } from '../utils/prop-tracker';
 import { useAllPractice } from '../components/backtest/usePractice';
+import { firmLabel } from '../components/backtest/usePropFirms';
 
 const STANDALONE = '__standalone__';
 const STORE_KEY = 'propEv.inputs';
 
-interface Inputs { sessionIds: string[] | null; risk: number | null; cost: number; accounts: number; mode: 'best' | 'yours' }
-const DEFAULT_INPUTS: Inputs = { sessionIds: null, risk: null, cost: 0, accounts: 2, mode: 'best' };
+interface Inputs {
+  sessionIds: string[] | null; risk: number | null; cost: number; accounts: number; mode: 'best' | 'yours';
+  /** Firm to show ('' = all firms) and the plans picked to compare (null = all of them). */
+  firm: string; planIds: string[] | null;
+}
+const DEFAULT_INPUTS: Inputs = { sessionIds: null, risk: null, cost: 0, accounts: 2, mode: 'best', firm: '', planIds: null };
 
 function loadInputs(): Inputs {
   try {
@@ -101,14 +106,28 @@ export default function PropFirmEVPage() {
     () => DEFAULT_PROP_FIRMS.map(f => propFirmOverrides?.[f.id] ?? f),
     [propFirmOverrides],
   );
-  const { results, running } = usePropEvResults(days, firms, inputs.cost, yourRisk);
+  const firmNames = useMemo(() => [...new Set(firms.map(f => f.firm))], [firms]);
+  const inFirm = useMemo(() => firms.filter(f => !inputs.firm || f.firm === inputs.firm), [firms, inputs.firm]);
+  const planOptions = inFirm.map(f => ({
+    value: f.id,
+    label: inputs.firm ? `${f.plan} ${f.size / 1000}K` : firmLabel(f),
+    sublabel: f.instant ? 'No evaluation' : undefined,
+  }));
+  const pickedPlans = (inputs.planIds ?? inFirm.map(f => f.id)).filter(id => inFirm.some(f => f.id === id));
+  const plansKey = pickedPlans.join(',');
+  // Only the plans on show are simulated
+  const shownFirms = useMemo(() => {
+    const ids = new Set(plansKey.split(','));
+    return inFirm.filter(f => ids.has(f.id));
+  }, [inFirm, plansKey]);
+  const { results, running } = usePropEvResults(days, shownFirms, inputs.cost, yourRisk);
 
   const shownFor = (id: string): SimSummary | null => {
     const r = results[id];
     if (!r) return null;
     return inputs.mode === 'best' ? r.best : r.atYourRisk;
   };
-  const rows = [...firms].sort((a, b) => (shownFor(b.id)?.ev ?? -Infinity) - (shownFor(a.id)?.ev ?? -Infinity));
+  const rows = [...shownFirms].sort((a, b) => (shownFor(b.id)?.ev ?? -Infinity) - (shownFor(a.id)?.ev ?? -Infinity));
 
   const saveFirm = (next: FirmConfig) => updateSettings({ propFirmOverrides: { ...(propFirmOverrides ?? {}), [next.id]: next } });
   const resetFirm = (id: string) => {
@@ -118,7 +137,7 @@ export default function PropFirmEVPage() {
   };
 
   const th = 'px-3 py-2.5 text-xs font-medium text-slate-400 uppercase tracking-wider';
-  const openFirm = firms.find(f => f.id === openId);
+  const openFirm = shownFirms.find(f => f.id === openId);
 
   return (
     <div className="space-y-6">
@@ -192,7 +211,7 @@ export default function PropFirmEVPage() {
                   Firm comparison {running && <Loader2 size={16} className="animate-spin text-slate-400" />}
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Per evaluation bought. EV = payouts you receive − all fees (evaluation, monthly renewals, activation). Click a firm for detail and its rules.
+                  Per evaluation (or instant account) bought. EV = payouts you receive − all fees (evaluation, monthly renewals, activation). Click a firm for detail and its rules.
                 </p>
               </div>
               <div className="flex rounded-lg overflow-hidden border border-slate-600">
@@ -208,6 +227,32 @@ export default function PropFirmEVPage() {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+              <label className="block space-y-1">
+                <span className="block text-sm font-medium text-slate-300">Firm</span>
+                <select
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={inputs.firm}
+                  onChange={e => setInputs({ firm: e.target.value, planIds: null })}
+                >
+                  <option value="">All firms</option>
+                  {firmNames.map(name => <option key={name} value={name}>{name}</option>)}
+                </select>
+              </label>
+              <div className="md:col-span-2">
+                <MultiSelect
+                  label="Plans to compare"
+                  value={pickedPlans}
+                  onChange={ids => setInputs({ planIds: ids })}
+                  options={planOptions}
+                  placeholder="No plans picked"
+                />
+              </div>
+            </div>
+
+            {shownFirms.length === 0 ? (
+              <Card><p className="py-6 text-center text-sm text-slate-500">Pick at least one plan to compare.</p></Card>
+            ) : (
             <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -242,8 +287,8 @@ export default function PropFirmEVPage() {
                         {s ? (
                           <>
                             <td className="px-3 py-2 text-sm font-mono text-right text-slate-300">${s.riskPerTrade}</td>
-                            <td className="px-3 py-2 text-sm font-mono text-right text-slate-300">{pct(s.passRate)}</td>
-                            <td className="px-3 py-2 text-sm font-mono text-right text-rose-300">{pct(s.evalBlowRate)}</td>
+                            <td className="px-3 py-2 text-sm font-mono text-right text-slate-300">{f.instant ? <span className="text-xs text-slate-500">no eval</span> : pct(s.passRate)}</td>
+                            <td className="px-3 py-2 text-sm font-mono text-right text-rose-300">{f.instant ? <span className="text-xs text-slate-500">—</span> : pct(s.evalBlowRate)}</td>
                             <td className="px-3 py-2 text-sm font-mono text-right text-slate-300">{pct(s.payoutRate)}</td>
                             <td className="px-3 py-2 text-sm font-mono text-right text-slate-300">{money(s.avgPaid)}</td>
                             <td className="px-3 py-2 text-sm font-mono text-right text-slate-400">{money(s.avgFees)}</td>
@@ -273,6 +318,7 @@ export default function PropFirmEVPage() {
                 </tbody>
               </table>
             </div>
+            )}
 
             {openFirm && (
               <FirmDetail

@@ -92,22 +92,29 @@ export default function FirmRulesEditor({ firm, edited, onSave, onReset }: Props
 
       <div>
         <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Evaluation</h4>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <Num label="Price ($)" value={draft.eval.fee} onChange={v => ev({ fee: v ?? 0 })} />
-          <label className="block space-y-1">
-            <span className="block text-xs text-slate-400">Billing</span>
-            <select className={fieldCls} value={draft.eval.billing} onChange={e => ev({ billing: e.target.value as 'monthly' | 'one_time' })}>
-              <option value="one_time">One-time</option>
-              <option value="monthly">Monthly</option>
-            </select>
-          </label>
-          <Num label="Profit target ($)" value={draft.eval.profitTarget} onChange={v => ev({ profitTarget: v ?? 0 })} />
-          <DrawdownFields value={draft.eval.drawdown} onChange={drawdown => ev({ drawdown })} />
-          <Num label="Daily loss limit ($)" value={draft.eval.dailyLossLimit} blank="none" onChange={v => ev({ dailyLossLimit: v })} hint="Stops the day, doesn't fail" />
-          <Num label="Best-day rule (%)" value={draft.eval.consistencyPct} blank="none" onChange={v => ev({ consistencyPct: v })} hint="Best day ≤ this % of profit" />
-          <Num label="Min trading days" value={draft.eval.minDays} onChange={v => ev({ minDays: v ?? 0 })} />
-          <Num label="Max trading days" value={draft.eval.maxDays} blank="no limit" onChange={v => ev({ maxDays: v })} />
-        </div>
+        {draft.instant ? (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
+            <Num label="Account price ($)" value={draft.eval.fee} onChange={v => ev({ fee: v ?? 0 })} />
+            <p className="md:col-span-4 text-xs text-slate-500 pb-2">No evaluation: this account is bought funded.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <Num label="Price ($)" value={draft.eval.fee} onChange={v => ev({ fee: v ?? 0 })} />
+            <label className="block space-y-1">
+              <span className="block text-xs text-slate-400">Billing</span>
+              <select className={fieldCls} value={draft.eval.billing} onChange={e => ev({ billing: e.target.value as 'monthly' | 'one_time' })}>
+                <option value="one_time">One-time</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </label>
+            <Num label="Profit target ($)" value={draft.eval.profitTarget} onChange={v => ev({ profitTarget: v ?? 0 })} />
+            <DrawdownFields value={draft.eval.drawdown} onChange={drawdown => ev({ drawdown })} />
+            <Num label="Daily loss limit ($)" value={draft.eval.dailyLossLimit} blank="none" onChange={v => ev({ dailyLossLimit: v })} hint="Stops the day, doesn't fail" />
+            <Num label="Best-day rule (%)" value={draft.eval.consistencyPct} blank="none" onChange={v => ev({ consistencyPct: v })} hint="Best day ≤ this % of profit" />
+            <Num label="Min trading days" value={draft.eval.minDays} onChange={v => ev({ minDays: v ?? 0 })} />
+            <Num label="Max trading days" value={draft.eval.maxDays} blank="no limit" onChange={v => ev({ maxDays: v })} />
+          </div>
+        )}
       </div>
 
       <div>
@@ -120,6 +127,13 @@ export default function FirmRulesEditor({ firm, edited, onSave, onReset }: Props
           <Num label="Days per payout" value={draft.funded.minDaysPerPayout} onChange={v => fu({ minDaysPerPayout: v ?? 0 })} />
           <Num label="Min profit for a day to count ($)" value={draft.funded.minDayProfit} onChange={v => fu({ minDayProfit: v ?? 0 })} hint="0 = any trading day" />
           <Num label="Min profit per cycle ($)" value={draft.funded.minCycleProfit ?? 0} onChange={v => fu({ minCycleProfit: v ?? 0 })} hint="Whole payout cycle" />
+          <Num
+            label="First payout profit goal ($)"
+            value={draft.funded.firstCycleProfit ?? null}
+            blank="same as later"
+            onChange={v => fu({ firstCycleProfit: v ?? undefined })}
+            hint="If the first payout needs more"
+          />
           <Num label="Buffer ($)" value={draft.funded.buffer} onChange={v => fu({ buffer: v ?? 0 })} hint="Balance must stay above start + this" />
           <Num label="Min payout ($)" value={draft.funded.minPayout} onChange={v => fu({ minPayout: v ?? 0 })} />
           <label className="block space-y-1">

@@ -239,3 +239,28 @@ describe('minimum profit per payout cycle', () => {
     expect(run(700)).toBe(4);
   });
 });
+
+describe('instant funded accounts (no evaluation)', () => {
+  it('skips the evaluation: straight to funded, price charged once', () => {
+    const cfg = { ...firm({ eval: { fee: 400, profitTarget: 3000 }, funded: { activationFee: 0, payoutCaps: [500] } }), instant: true };
+    let draws = 0;
+    const rand = picks(1, 0);
+    const r = simulateRun([[0.6]], cfg, opts(1000), () => { draws++; return rand(); });
+    expect(r.evalEnd).toBe('passed');
+    expect(r.daysToPass).toBe(0);
+    expect(r.fees).toBe(400);
+    expect(r.payouts).toBe(1);
+    expect(draws).toBe(1);            // the only day played was funded
+  });
+});
+
+describe('bigger profit goal before the first payout', () => {
+  it('first cycle needs firstCycleProfit, later ones minCycleProfit', () => {
+    // +$200 days, 1 day per payout, $100 cap: first payout after $1,000 (day 5), then every day ($200 ≥ $150)
+    const cfg = firm({ eval: { profitTarget: 100 }, funded: { minDaysPerPayout: 1, firstCycleProfit: 1000, minCycleProfit: 150, payoutCaps: [100], maxPayouts: 2 } });
+    let days = 0;
+    const rand = picks(1, 0);
+    simulateRun([[0.2]], cfg, opts(1000), () => { days++; return rand(); });
+    expect(days - 1).toBe(6);
+  });
+});
