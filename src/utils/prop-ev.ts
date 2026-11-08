@@ -39,6 +39,8 @@ export interface FundedRules {
   minDaysPerPayout: number;
   /** A day qualifies only with at least this profit ($). 0 = any trading day. */
   minDayProfit: number;
+  /** The payout cycle as a whole must have made at least this ($). Missing = 0. */
+  minCycleProfit?: number;
   /** Balance must stay at least start + buffer after a payout. */
   buffer: number;
   minPayout: number;
@@ -356,7 +358,8 @@ export function simulateRun(days: number[][], cfg: FirmConfig, opts: Omit<SimOpt
     // A day counts toward the payout cycle if it made at least the firm's minimum (any trading day when 0)
     if (f.minDayProfit === 0 || pl >= f.minDayProfit) cycleDays++;
 
-    if (cycleDays < f.minDaysPerPayout || !consistencyOk(cycleBest, cycleProfit, f.consistencyPct)) continue;
+    if (cycleDays < f.minDaysPerPayout || cycleProfit < (f.minCycleProfit ?? 0)) continue;
+    if (!consistencyOk(cycleBest, cycleProfit, f.consistencyPct)) continue;
     const profitAboveStart = acct.balance - cfg.size;
     let gross = acct.balance - Math.max(cfg.size + f.buffer, acct.floor);
     if (f.payoutShareOfProfit !== null) gross = Math.min(gross, profitAboveStart * f.payoutShareOfProfit);

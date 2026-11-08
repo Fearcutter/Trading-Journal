@@ -223,3 +223,19 @@ describe('simulateFirm and riskSweep', () => {
     for (let i = 0; i < 100; i++) { const x = r(); expect(x).toBeGreaterThanOrEqual(0); expect(x).toBeLessThan(1); }
   });
 });
+
+describe('minimum profit per payout cycle', () => {
+  it('waits until the cycle has made enough', () => {
+    // +$200 days: after 3 days the cycle has $600 ≥ $500 → pays on day 3; with $700 needed it waits for day 4
+    const run = (minCycleProfit: number) => {
+      const cfg = firm({ eval: { profitTarget: 100 }, funded: { minDaysPerPayout: 3, minCycleProfit, payoutCaps: [100] } });
+      let days = 0;
+      const rand = picks(1, 0);
+      const counting = () => { days++; return rand(); };
+      simulateRun([[0.2]], cfg, opts(1000), counting);
+      return days - 1;   // minus the evaluation day
+    };
+    expect(run(500)).toBe(3);
+    expect(run(700)).toBe(4);
+  });
+});

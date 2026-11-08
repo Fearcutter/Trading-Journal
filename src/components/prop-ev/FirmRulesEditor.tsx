@@ -119,6 +119,7 @@ export default function FirmRulesEditor({ firm, edited, onSave, onReset }: Props
           <Num label="Best-day rule (%)" value={draft.funded.consistencyPct} blank="none" onChange={v => fu({ consistencyPct: v })} hint="Per payout cycle" />
           <Num label="Days per payout" value={draft.funded.minDaysPerPayout} onChange={v => fu({ minDaysPerPayout: v ?? 0 })} />
           <Num label="Min profit for a day to count ($)" value={draft.funded.minDayProfit} onChange={v => fu({ minDayProfit: v ?? 0 })} hint="0 = any trading day" />
+          <Num label="Min profit per cycle ($)" value={draft.funded.minCycleProfit ?? 0} onChange={v => fu({ minCycleProfit: v ?? 0 })} hint="Whole payout cycle" />
           <Num label="Buffer ($)" value={draft.funded.buffer} onChange={v => fu({ buffer: v ?? 0 })} hint="Balance must stay above start + this" />
           <Num label="Min payout ($)" value={draft.funded.minPayout} onChange={v => fu({ minPayout: v ?? 0 })} />
           <label className="block space-y-1">
