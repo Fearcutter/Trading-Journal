@@ -44,6 +44,7 @@ import ConfluencesTab from '../components/confluences/ConfluencesTab';
 import CoachShareToggle from '../components/ui/CoachShareToggle';
 import { usePracticeBank } from '../components/backtest/usePracticeBank';
 import CopyTradingCard from '../components/backtest/CopyTradingCard';
+import GroupSizeControl from '../components/backtest/GroupSizeControl';
 import { useTradesBySession, copiedTrades } from '../components/backtest/usePractice';
 import { bankMoney, copiesOf } from '../utils/practice-bank';
 import OverlapScopeToggle, { type OverlapScope } from '../components/filters/OverlapScopeToggle';
@@ -205,6 +206,19 @@ export default function BacktestSessionPage() {
         <TradingPlanToggle planState={planState} onToggle={setEnabled} onChangeN={setTradesPerDay} />
       </div>
 
+      {evalTrack && practiceRules && !readOnly && sessionTrades.length === 0
+        && !(fundedSession && ((bySession.get(fundedSession.id)?.length ?? 0) > 0 || (fundedSession.payouts?.length ?? 0) > 0)) && (
+        <GroupSizeControl
+          copies={copiesOf(session)}
+          price={practiceRules.eval.fee}
+          available={bank.started ? bank.spendable(session.folderId ?? '').amount : null}
+          onChange={n => {
+            const copies = n > 1 ? n : undefined;
+            updateSession(session.id, { copies });
+            if (fundedSession) updateSession(fundedSession.id, { copies });
+          }}
+        />
+      )}
       {evalTrack && practiceRules && (
         <EvalTrackerCard
           track={evalTrack}
