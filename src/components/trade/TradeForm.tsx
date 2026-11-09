@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { TradeFormData, TradeDirection, TradeResult, EmotionBefore, EmotionAfter } from '../../types/trade';
+import { POTENTIAL_REASONS, type TradeFormData, type TradeDirection, type TradeResult, type EmotionBefore, type EmotionAfter, type PotentialReason } from '../../types/trade';
 import { useSettings } from '../../context/SettingsContext';
 import { useApexAccounts } from '../../context/ApexAccountContext';
 import { calculatePointsPL, calculateDollarPL, calculateRiskReward, computeResult } from '../../utils/pnl-calculator';
@@ -19,6 +19,8 @@ interface TradeFormProps {
   submitLabel?: string;
   sessionId?: string;
   hideAccounts?: boolean;
+  /** Show the Taken | Potential switch (live trades only). */
+  allowPotential?: boolean;
 }
 
 function getDefaultFormData(settings: { defaultInstrument: string; defaultContracts: number; tradingTimezone: string }): TradeFormData {
@@ -59,7 +61,7 @@ function getDefaultFormData(settings: { defaultInstrument: string; defaultContra
   };
 }
 
-export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save Trade', sessionId, hideAccounts }: TradeFormProps) {
+export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save Trade', sessionId, hideAccounts, allowPotential }: TradeFormProps) {
   const settings = useSettings();
   const { accounts } = useApexAccounts();
   const activeAccounts = useMemo(() => accounts.filter(a => a.status === 'active'), [accounts]);
@@ -125,8 +127,10 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
       drawback2R: form.drawback2R === '' ? undefined : Number(form.drawback2R),
       customFields: form.customFields || {},
       returnedToBE: form.returnedToBE,
-      accountIds: selectedAccountIds.length > 0 ? selectedAccountIds : undefined,
+      accountIds: !form.potential && selectedAccountIds.length > 0 ? selectedAccountIds : undefined,
       sessionId: form.sessionId,
+      potential: form.potential || undefined,
+      potentialReason: form.potential ? form.potentialReason : undefined,
     });
   };
 
@@ -159,6 +163,42 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
+      {allowPotential && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="inline-flex rounded-lg border border-slate-600 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => update('potential', undefined)}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${!form.potential ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-slate-200'}`}
+            >
+              Taken
+            </button>
+            <button
+              type="button"
+              onClick={() => update('potential', true)}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${form.potential ? 'bg-sky-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-slate-200'}`}
+            >
+              Potential
+            </button>
+          </div>
+          {form.potential && (
+            <>
+              <select
+                value={form.potentialReason ?? ''}
+                onChange={e => update('potentialReason', (e.target.value || undefined) as PotentialReason | undefined)}
+                className="px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Reason (optional)</option>
+                {(Object.keys(POTENTIAL_REASONS) as PotentialReason[]).map(r => (
+                  <option key={r} value={r}>{POTENTIAL_REASONS[r]}</option>
+                ))}
+              </select>
+              <span className="text-xs text-slate-500">Logged for comparison only. Not counted in your stats or accounts.</span>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Date/Time/Instrument */}
       <div className="grid grid-cols-5 gap-4">
         <Input label="Date" type="date" value={form.date} onChange={e => update('date', e.target.value)} />
@@ -175,7 +215,7 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
       </div>
 
       {/* Apex Account Selector */}
-      {!hideAccounts && activeAccounts.length > 0 && (
+      {!hideAccounts && !form.potential && activeAccounts.length > 0 && (
         <div className="space-y-1">
           <label className="block text-sm font-medium text-slate-300">Apex Accounts</label>
           <div className="flex flex-wrap gap-2">

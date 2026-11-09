@@ -36,7 +36,7 @@ export default function LiveTradingPage() {
   const { sessions, addSession, updateSession, deleteSession } = useLiveSession();
   const { readOnly } = useView();
   const { sessions: backtestSessions } = useBacktest();
-  const { trades, updateTrade } = useTrades();
+  const { trades, allTrades, updateTrade } = useTrades();
   const settings = useSettings();
   const pl = usePLFormatter();
   const navigate = useNavigate();
@@ -73,8 +73,8 @@ export default function LiveTradingPage() {
 
   // Unsorted: no sessionId, or sessionId pointing to a deleted session
   const unsortedCount = useMemo(
-    () => trades.filter(t => !t.sessionId || !knownSessionIds.has(t.sessionId)).length,
-    [trades, knownSessionIds]
+    () => allTrades.filter(t => !t.sessionId || !knownSessionIds.has(t.sessionId)).length,
+    [allTrades, knownSessionIds]
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -96,7 +96,7 @@ export default function LiveTradingPage() {
   const handleMigrate = () => {
     if (!migrateName.trim()) return;
     const session = addSession(migrateName.trim(), '', undefined, migrateColor);
-    const unsorted = trades.filter(t => !t.sessionId || !knownSessionIds.has(t.sessionId));
+    const unsorted = allTrades.filter(t => !t.sessionId || !knownSessionIds.has(t.sessionId));
     for (const trade of unsorted) {
       updateTrade(trade.id, { sessionId: session.id });
     }

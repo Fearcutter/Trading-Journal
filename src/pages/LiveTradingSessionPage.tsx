@@ -41,6 +41,7 @@ import MultiSelect, { type MultiSelectOption } from '../components/ui/MultiSelec
 import ConfluencesTab from '../components/confluences/ConfluencesTab';
 import CoachShareToggle from '../components/ui/CoachShareToggle';
 import { useUnreadCommentTradeIds } from '../hooks/useUnreadCommentTradeIds';
+import PotentialComparisonCard from '../components/potential/PotentialComparisonCard';
 
 const SESSION_DOT_COLORS: Record<string, string> = {
   blue: 'bg-blue-500',
@@ -65,7 +66,7 @@ export default function LiveTradingSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const { readOnly } = useView();
   const { getSession, updateSession, loading } = useLiveSession();
-  const { trades, addTrade } = useTrades();
+  const { trades, allTrades, addTrade } = useTrades();
   const { accounts } = useApexAccounts();
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -74,20 +75,27 @@ export default function LiveTradingSessionPage() {
 
   const session = sessionId ? getSession(sessionId) : undefined;
 
-  const sessionTrades = useMemo(
-    () => trades.filter(t => t.sessionId === sessionId).sort((a, b) => {
+  const [overlapScope, setOverlapScope] = useState<OverlapScope>('exclude');
+  // Taken and potential trades, newest first. Stats use only the taken ones.
+  const sessionAllTrades = useMemo(
+    () => allTrades.filter(t => t.sessionId === sessionId).sort((a, b) => {
       const dateCompare = b.date.localeCompare(a.date);
       if (dateCompare !== 0) return dateCompare;
       return (b.time || '').localeCompare(a.time || '');
     }),
-    [trades, sessionId]
+    [allTrades, sessionId]
+  );
+  const sessionTrades = useMemo(() => sessionAllTrades.filter(t => !t.potential), [sessionAllTrades]);
+  const potentialCount = sessionAllTrades.length - sessionTrades.length;
+  const comparisonTrades = useMemo(
+    () => overlapScope === 'exclude' ? sessionAllTrades.filter(t => !t.overlap) : sessionAllTrades,
+    [sessionAllTrades, overlapScope]
   );
 
   const { plField } = usePLFormatter();
   const { planState, setEnabled, setTradesPerDay } = useTradingPlanMode(sessionId!);
   const planComparison = useTradingPlanStats(sessionTrades, planState, plField);
   const activeTrades = planState.enabled && planComparison ? planComparison.planTrades : sessionTrades;
-  const [overlapScope, setOverlapScope] = useState<OverlapScope>('exclude');
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
   const overlapScopedTrades = useMemo(
     () => overlapScope === 'exclude' ? activeTrades.filter(t => !t.overlap) : activeTrades,
@@ -155,7 +163,7 @@ export default function LiveTradingSessionPage() {
 
   const handleTradeSubmit = (data: TradeFormData) => {
     const trade = addTrade({ ...data, sessionId: sessionId! });
-    toast.success('Trade saved to session!');
+    toast.success(data.potential ? 'Potential trade saved' : 'Trade saved to session!');
 
     if (trade.accountIds?.length) {
       const updatedTrades = [trade, ...trades];
@@ -199,7 +207,10 @@ export default function LiveTradingSessionPage() {
               {!readOnly && <button onClick={startEditing} className="p-1 text-slate-500 hover:text-slate-300 transition-colors"><Pencil size={14} /></button>}
             </>
           )}
-          <span className="text-sm text-slate-500">{sessionTrades.length} trade{sessionTrades.length !== 1 ? 's' : ''}</span>
+          <span className="text-sm text-slate-500">
+            {sessionTrades.length} trade{sessionTrades.length !== 1 ? 's' : ''}
+            {potentialCount > 0 && <span className="text-sky-400"> · {potentialCount} potential</span>}
+          </span>
           {!readOnly && (
             <CoachShareToggle hidden={!!session.hiddenFromCoach} onChange={hidden => updateSession(sessionId!, { hiddenFromCoach: hidden })} />
           )}
@@ -244,10 +255,10 @@ export default function LiveTradingSessionPage() {
       </div>
 
       {/* Tab content */}
-      {activeTab === 'dashboard' && <DashboardTab dashboard={dashboard} tradeCount={accountScopedTrades.length} planComparison={planComparison} />}
+      {activeTab === 'dashboard' && <DashboardTab dashboard={dashboard} tradeCount={accountScopedTrades.length} planComparison={planComparison} comparisonTrades={comparisonTrades} />}
       {activeTab === 'tradelog' && (
         <TradeLogTab
-          sessionTrades={sessionTrades}
+          sessionTrades={sessionAllTrades}
           sessionId={sessionId!}
           onTradeSubmit={handleTradeSubmit}
           skippedTradeIds={planComparison?.skippedTradeIds}
@@ -270,13 +281,18 @@ export default function LiveTradingSessionPage() {
   );
 }
 
-function DashboardTab({ dashboard, tradeCount, planComparison }: { dashboard: ReturnType<typeof useDashboardStats>; tradeCount: number; planComparison?: TradingPlanComparison | null }) {
+function DashboardTab({ dashboard, tradeCount, planComparison, comparisonTrades }: { dashboard: ReturnType<typeof useDashboardStats>; tradeCount: number; planComparison?: TradingPlanComparison | null; comparisonTrades: Trade[] }) {
   const pl = usePLFormatter();
   const [visibleRLines, setVisibleRLines] = useState<Record<string, boolean>>({ loss: true, r1: true, r1_5: true, r2: true, r2_5: true, r3: true, r4plus: true });
   const toggleRLine = (key: string) => setVisibleRLines(prev => ({ ...prev, [key]: !prev[key] }));
 
   if (tradeCount === 0) {
-    return <EmptyState icon={<BarChart3 size={48} />} title="No trades yet" description="Add trades to see statistics." />;
+    return (
+      <div className="space-y-4">
+        <PotentialComparisonCard trades={comparisonTrades} />
+        <EmptyState icon={<BarChart3 size={48} />} title="No trades yet" description="Add trades to see statistics." />
+      </div>
+    );
   }
 
   const { stats, cumulativePL, plByRMultiple, cumulativePLByRMultiple } = dashboard;
@@ -286,6 +302,7 @@ function DashboardTab({ dashboard, tradeCount, planComparison }: { dashboard: Re
 
   return (
     <div className="space-y-4">
+      <PotentialComparisonCard trades={comparisonTrades} />
       {planComparison && (
         <>
           <ComparisonDashboard comparison={planComparison} />
@@ -405,8 +422,21 @@ function TradeLogTab({ sessionTrades, sessionId, onTradeSubmit, skippedTradeIds 
   const { deleteTrades } = useTrades();
   const settings = useSettings();
 
+  const [kind, setKind] = useState<'all' | 'taken' | 'potential'>(() => {
+    try { const s = sessionStorage.getItem(storageKey); return s ? JSON.parse(s).kind ?? 'all' : 'all'; } catch { return 'all'; }
+  });
+  const chooseKind = (k: typeof kind) => {
+    setKind(k);
+    try { const s = JSON.parse(sessionStorage.getItem(storageKey) || '{}'); sessionStorage.setItem(storageKey, JSON.stringify({ ...s, kind: k })); } catch { /* storage blocked: filter just isn't remembered */ }
+  };
+  const hasPotential = sessionTrades.some(t => t.potential);
+  const kindTrades = useMemo(
+    () => kind === 'all' ? sessionTrades : sessionTrades.filter(t => (kind === 'potential') === !!t.potential),
+    [sessionTrades, kind]
+  );
+
   const activeFilters = { ...filters, search };
-  const filtered = useFilteredTrades(sessionTrades, activeFilters);
+  const filtered = useFilteredTrades(kindTrades, activeFilters);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -487,6 +517,7 @@ function TradeLogTab({ sessionTrades, sessionId, onTradeSubmit, skippedTradeIds 
             key={JSON.stringify(pasteInitialData)}
             initialData={pasteInitialData}
             sessionId={sessionId}
+            allowPotential
             onSubmit={(data) => {
               onTradeSubmit(data);
               setShowAddForm(false);
@@ -498,7 +529,24 @@ function TradeLogTab({ sessionTrades, sessionId, onTradeSubmit, skippedTradeIds 
       )}
 
       <FilterBar filters={filters} onChange={setFilters} />
-      <div className="relative max-w-xs">
+      <div className="flex items-center gap-3 flex-wrap">
+      {hasPotential && (
+        <div className="inline-flex rounded-lg border border-slate-600 overflow-hidden">
+          {(['all', 'taken', 'potential'] as const).map(k => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => chooseKind(k)}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                kind === k ? (k === 'potential' ? 'bg-sky-600 text-white' : 'bg-blue-600 text-white') : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {k === 'all' ? 'All' : k === 'taken' ? 'Taken' : 'Potential'}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="relative max-w-xs flex-1">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
         <input
           value={search}
@@ -506,6 +554,7 @@ function TradeLogTab({ sessionTrades, sessionId, onTradeSubmit, skippedTradeIds 
           placeholder="Search trades..."
           className="w-full pl-9 pr-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+      </div>
       </div>
 
       {sessionTrades.length === 0 ? (

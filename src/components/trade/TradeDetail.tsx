@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
-import type { Trade } from '../../types/trade';
+import { POTENTIAL_REASONS, type Trade } from '../../types/trade';
 import { useSettings } from '../../context/SettingsContext';
 import Badge from '../ui/Badge';
 import Card from '../ui/Card';
@@ -38,6 +38,11 @@ export default function TradeDetail({ trade }: TradeDetailProps) {
         <Badge variant={trade.result === 'win' ? 'win' : trade.result === 'loss' ? 'loss' : 'breakeven'}>
           {trade.result.toUpperCase()}
         </Badge>
+        {trade.potential && (
+          <span className="px-2 py-0.5 rounded text-xs font-semibold bg-sky-500/15 text-sky-300 border border-sky-600/40">
+            POTENTIAL{trade.potentialReason ? ` · ${POTENTIAL_REASONS[trade.potentialReason]}` : ''}
+          </span>
+        )}
         <span className={`font-mono text-xl font-bold ${pl.getPL(trade) > 0 ? 'text-emerald-400' : pl.getPL(trade) < 0 ? 'text-rose-400' : 'text-amber-400'}`}>
           {pl.formatPLValue(pl.getPL(trade))}
         </span>

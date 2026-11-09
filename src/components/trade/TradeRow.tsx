@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useView } from '../../context/ViewContext';
-import type { Trade } from '../../types/trade';
+import { POTENTIAL_REASONS, type Trade } from '../../types/trade';
 import Badge from '../ui/Badge';
 import { MessageSquare } from 'lucide-react';
 import { formatDate, formatTime, formatPoints, formatCurrency } from '../../utils/formatters';
@@ -31,7 +31,7 @@ export default function TradeRow({ trade, selected, onSelect, hiddenColumns, ski
   const { instruments, plDisplayMode } = useSettings();
 
   return (
-    <tr className={`border-b border-slate-700/50 hover:bg-slate-800/50 transition-colors ${skipped ? 'opacity-50' : ''}`}>
+    <tr className={`border-b border-slate-700/50 hover:bg-slate-800/50 transition-colors ${skipped ? 'opacity-50' : ''} ${trade.potential ? 'bg-sky-500/5 border-l-2 border-l-sky-500/70' : ''}`}>
       <td className="px-3 py-3">
         <input
           type="checkbox"
@@ -43,6 +43,14 @@ export default function TradeRow({ trade, selected, onSelect, hiddenColumns, ski
       <td className="px-3 py-3 text-sm text-slate-300">
         <div className="flex items-center gap-1.5">
           {formatDate(trade.date)}
+          {trade.potential && (
+            <span
+              title={trade.potentialReason ? POTENTIAL_REASONS[trade.potentialReason] : 'Potential trade, not taken'}
+              className="text-[10px] font-semibold text-sky-300 bg-sky-500/15 px-1 py-px rounded"
+            >
+              Potential
+            </span>
+          )}
           {skipped && <span className="text-[10px] font-medium text-amber-400 bg-amber-400/10 px-1 py-px rounded">Skipped</span>}
           {hasUnreadComments && (
             <span title="New coach feedback" className="text-amber-400"><MessageSquare size={13} /></span>

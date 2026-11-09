@@ -14,7 +14,10 @@ function normalizeTrade(trade: Trade): Trade {
 }
 
 interface TradeContextValue {
+  /** Trades actually taken. Every stat, balance and payout uses these. */
   trades: Trade[];
+  /** Taken plus potential trades, for the live session trade log and comparison. */
+  allTrades: Trade[];
   loading: boolean;
   addTrade: (data: TradeFormData) => Trade;
   updateTrade: (id: string, updates: Partial<Trade>) => void;
@@ -33,7 +36,8 @@ const TradeContext = createContext<TradeContextValue | null>(null);
 
 export function TradeProvider({ children }: { children: ReactNode }) {
   const [rawTrades, setTrades, loading] = useSupabaseList<Trade>('trades', { screenshotFields: ['setupScreenshot', 'resultScreenshot', 'additionalScreenshots'] });
-  const trades = useMemo(() => rawTrades.map(normalizeTrade), [rawTrades]);
+  const allTrades = useMemo(() => rawTrades.map(normalizeTrade), [rawTrades]);
+  const trades = useMemo(() => allTrades.filter(t => !t.potential), [allTrades]);
 
   const addTrade = useCallback((data: TradeFormData): Trade => {
     const now = new Date().toISOString();
@@ -76,6 +80,8 @@ export function TradeProvider({ children }: { children: ReactNode }) {
       overlap: data.overlap,
       accountIds: data.accountIds?.length ? data.accountIds : undefined,
       sessionId: data.sessionId || undefined,
+      potential: data.potential || undefined,
+      potentialReason: data.potential ? data.potentialReason : undefined,
       createdAt: now,
       updatedAt: now,
     };
@@ -113,7 +119,7 @@ export function TradeProvider({ children }: { children: ReactNode }) {
   }, [setTrades]);
 
   return (
-    <TradeContext.Provider value={{ trades, loading, addTrade, updateTrade, deleteTrade, deleteTrades, importTrades, clearAllTrades }}>
+    <TradeContext.Provider value={{ trades, allTrades, loading, addTrade, updateTrade, deleteTrade, deleteTrades, importTrades, clearAllTrades }}>
       {children}
     </TradeContext.Provider>
   );

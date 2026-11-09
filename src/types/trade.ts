@@ -3,6 +3,13 @@ export type TradeResult = 'win' | 'loss' | 'breakeven';
 export type EmotionBefore = 'Calm/Focused' | 'Anxious' | 'Overconfident' | 'Revenge Trading' | 'FOMO' | 'Bored' | 'Frustrated';
 export type EmotionAfter = 'Satisfied' | 'Regretful' | 'Relieved' | 'Frustrated' | 'Neutral';
 
+export type PotentialReason = 'away' | 'passed';
+
+export const POTENTIAL_REASONS: Record<PotentialReason, string> = {
+  away: 'Not at the screen',
+  passed: 'Chose to pass',
+};
+
 export interface Trade {
   id: string;
   date: string; // ISO date string
@@ -42,6 +49,9 @@ export interface Trade {
   customFields?: Record<string, string[]>;
   accountIds?: string[];
   sessionId?: string;
+  /** A trade the user would have taken but didn't (not traded on any account). Kept out of real stats. */
+  potential?: boolean;
+  potentialReason?: PotentialReason;
   createdAt: string; // ISO datetime
   updatedAt: string; // ISO datetime
 }
@@ -85,4 +95,6 @@ export interface TradeFormData {
   dollarPL?: number;
   riskReward?: number;
   sessionId?: string;
+  potential?: boolean;
+  potentialReason?: PotentialReason;
 }

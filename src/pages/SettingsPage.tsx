@@ -305,7 +305,7 @@ function CategorySectionsManager({ settings }: { settings: ReturnType<typeof use
 
 export default function SettingsPage() {
   const settings = useSettings();
-  const { trades, importTrades, clearAllTrades } = useTrades();
+  const { allTrades: trades, importTrades, clearAllTrades } = useTrades();
   const { definitions: habitDefs, checkIns: habitCheckIns, badges: habitBadges } = useHabits();
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);

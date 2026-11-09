@@ -16,7 +16,7 @@ import toast from 'react-hot-toast';
 export default function TradeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { trades, updateTrade, deleteTrade } = useTrades();
+  const { allTrades: trades, updateTrade, deleteTrade } = useTrades();
   const [searchParams] = useSearchParams();
   const { readOnly, mode, sharedSections } = useView();
   const [editing, setEditing] = useState(searchParams.has('edit') && !readOnly);
@@ -63,6 +63,8 @@ export default function TradeDetailPage() {
       returnedToBE: data.returnedToBE,
       overlap: data.overlap,
       accountIds: data.accountIds,
+      potential: data.potential,
+      potentialReason: data.potentialReason,
       additionalScreenshots: data.additionalScreenshots?.length ? data.additionalScreenshots : undefined,
     });
     toast.success('Trade updated');
@@ -136,10 +138,13 @@ export default function TradeDetailPage() {
             sessionId: trade.sessionId,
             customFields: trade.customFields,
             accountIds: trade.accountIds,
+            potential: trade.potential,
+            potentialReason: trade.potentialReason,
           }}
           onSubmit={handleUpdate}
           submitLabel="Update Trade"
           hideAccounts={isBacktestTrade}
+          allowPotential={!isBacktestTrade}
         />
       ) : (
         <>
