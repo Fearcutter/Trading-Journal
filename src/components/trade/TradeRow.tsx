@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useView } from '../../context/ViewContext';
-import { POTENTIAL_REASONS, type Trade } from '../../types/trade';
+import { potentialReasonLabel, type Trade } from '../../types/trade';
 import Badge from '../ui/Badge';
 import { MessageSquare } from 'lucide-react';
 import { formatDate, formatTime, formatPoints, formatCurrency } from '../../utils/formatters';
@@ -45,7 +45,7 @@ export default function TradeRow({ trade, selected, onSelect, hiddenColumns, ski
           {formatDate(trade.date)}
           {trade.potential && (
             <span
-              title={trade.potentialReason ? POTENTIAL_REASONS[trade.potentialReason] : 'Potential trade, not taken'}
+              title={trade.potentialReason ? potentialReasonLabel(trade.potentialReason) : 'Potential trade, not taken'}
               className="text-[10px] font-semibold text-sky-300 bg-sky-500/15 px-1 py-px rounded"
             >
               Potential

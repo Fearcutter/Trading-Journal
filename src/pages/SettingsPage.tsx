@@ -1,3 +1,4 @@
+import { DEFAULT_POTENTIAL_REASONS } from '../types/trade';
 import { useState, useRef, useEffect } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { useTrades } from '../context/TradeContext';
@@ -305,6 +306,7 @@ function CategorySectionsManager({ settings }: { settings: ReturnType<typeof use
 
 export default function SettingsPage() {
   const settings = useSettings();
+  const potentialReasons = settings.potentialReasons ?? DEFAULT_POTENTIAL_REASONS;
   const { allTrades: trades, importTrades, clearAllTrades } = useTrades();
   const { definitions: habitDefs, checkIns: habitCheckIns, badges: habitBadges } = useHabits();
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
@@ -447,6 +449,13 @@ export default function SettingsPage() {
           onAdd={settings.addGrade}
           onRemove={settings.removeGrade}
           onReorder={settings.reorderGrades}
+        />
+        <ListManager
+          title="Potential trade reasons"
+          items={potentialReasons}
+          onAdd={r => settings.updateSettings({ potentialReasons: [...potentialReasons, r] })}
+          onRemove={r => settings.updateSettings({ potentialReasons: potentialReasons.filter(x => x !== r) })}
+          onReorder={items => settings.updateSettings({ potentialReasons: items })}
         />
       </div>
 

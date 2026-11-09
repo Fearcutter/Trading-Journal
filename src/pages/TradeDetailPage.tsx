@@ -9,7 +9,7 @@ import CoachFeedback from '../components/trade/CoachFeedback';
 import TradeForm from '../components/trade/TradeForm';
 import Button from '../components/ui/Button';
 import EmptyState from '../components/ui/EmptyState';
-import type { TradeFormData } from '../types/trade';
+import { potentialReasonLabel, type TradeFormData } from '../types/trade';
 import { Pencil, Trash2, ArrowLeft, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -139,7 +139,7 @@ export default function TradeDetailPage() {
             customFields: trade.customFields,
             accountIds: trade.accountIds,
             potential: trade.potential,
-            potentialReason: trade.potentialReason,
+            potentialReason: trade.potentialReason && potentialReasonLabel(trade.potentialReason),
           }}
           onSubmit={handleUpdate}
           submitLabel="Update Trade"

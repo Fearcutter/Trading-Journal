@@ -34,4 +34,6 @@ export interface Settings {
   propFirmOverrides?: Record<string, FirmConfig>;
   /** Practice bank: money moved in, allocated to and returned from practice folders. */
   practiceBank?: PracticeBankState;
+  /** Reasons offered when logging a potential trade. Unset means the defaults. */
+  potentialReasons?: string[];
 }

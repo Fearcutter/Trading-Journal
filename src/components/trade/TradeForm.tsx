@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { POTENTIAL_REASONS, type TradeFormData, type TradeDirection, type TradeResult, type EmotionBefore, type EmotionAfter, type PotentialReason } from '../../types/trade';
+import { DEFAULT_POTENTIAL_REASONS, type TradeFormData, type TradeDirection, type TradeResult, type EmotionBefore, type EmotionAfter } from '../../types/trade';
 import { useSettings } from '../../context/SettingsContext';
 import { useApexAccounts } from '../../context/ApexAccountContext';
 import { calculatePointsPL, calculateDollarPL, calculateRiskReward, computeResult } from '../../utils/pnl-calculator';
@@ -134,6 +134,11 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
     });
   };
 
+  // A reason since removed from Settings stays selectable on the trade that has it
+  const reasonList = settings.potentialReasons ?? DEFAULT_POTENTIAL_REASONS;
+  const reasonOptions = form.potentialReason && !reasonList.includes(form.potentialReason)
+    ? [...reasonList, form.potentialReason]
+    : reasonList;
   const instrumentOptions = settings.instruments.map(i => ({ value: i.symbol, label: `${i.symbol} — ${i.name}` }));
   const directionOptions = [
     { value: 'long', label: 'Long' },
@@ -185,12 +190,12 @@ export default function TradeForm({ initialData, onSubmit, submitLabel = 'Save T
             <>
               <select
                 value={form.potentialReason ?? ''}
-                onChange={e => update('potentialReason', (e.target.value || undefined) as PotentialReason | undefined)}
+                onChange={e => update('potentialReason', e.target.value || undefined)}
                 className="px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Reason (optional)</option>
-                {(Object.keys(POTENTIAL_REASONS) as PotentialReason[]).map(r => (
-                  <option key={r} value={r}>{POTENTIAL_REASONS[r]}</option>
+                {reasonOptions.map(r => (
+                  <option key={r} value={r}>{r}</option>
                 ))}
               </select>
               <span className="text-xs text-slate-500">Logged for comparison only. Not counted in your stats or accounts.</span>

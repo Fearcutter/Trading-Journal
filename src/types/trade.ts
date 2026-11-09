@@ -3,12 +3,12 @@ export type TradeResult = 'win' | 'loss' | 'breakeven';
 export type EmotionBefore = 'Calm/Focused' | 'Anxious' | 'Overconfident' | 'Revenge Trading' | 'FOMO' | 'Bored' | 'Frustrated';
 export type EmotionAfter = 'Satisfied' | 'Regretful' | 'Relieved' | 'Frustrated' | 'Neutral';
 
-export type PotentialReason = 'away' | 'passed';
+/** Starting reasons for a potential trade; the user edits the list in Settings. */
+export const DEFAULT_POTENTIAL_REASONS = ['Not at the screen', 'Chose to pass'];
 
-export const POTENTIAL_REASONS: Record<PotentialReason, string> = {
-  away: 'Not at the screen',
-  passed: 'Chose to pass',
-};
+// The first version saved short keys instead of the reason's text
+const LEGACY_REASONS: Record<string, string> = { away: 'Not at the screen', passed: 'Chose to pass' };
+export const potentialReasonLabel = (reason: string) => LEGACY_REASONS[reason] ?? reason;
 
 export interface Trade {
   id: string;
@@ -51,7 +51,7 @@ export interface Trade {
   sessionId?: string;
   /** A trade the user would have taken but didn't (not traded on any account). Kept out of real stats. */
   potential?: boolean;
-  potentialReason?: PotentialReason;
+  potentialReason?: string;
   createdAt: string; // ISO datetime
   updatedAt: string; // ISO datetime
 }
@@ -96,5 +96,5 @@ export interface TradeFormData {
   riskReward?: number;
   sessionId?: string;
   potential?: boolean;
-  potentialReason?: PotentialReason;
+  potentialReason?: string;
 }
