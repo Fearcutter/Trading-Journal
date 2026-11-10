@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Folder, Plus, X, ChevronDown, ChevronRight, ShoppingCart, Landmark } from 'lucide-react';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Folder, Plus, X, ChevronDown, ChevronRight, ShoppingCart, Landmark, LayoutGrid, LineChart as LineChartIcon, Layers, Target } from 'lucide-react';
 import { useBacktest } from '../context/BacktestContext';
 import { useView } from '../context/ViewContext';
 import Button from '../components/ui/Button';
@@ -20,7 +20,17 @@ import { BankMoveForm } from '../components/backtest/PracticeBankCard';
 import { bankMoney, copiesOf } from '../utils/practice-bank';
 import { usePropEvInputs } from '../components/prop-ev/usePropEvInputs';
 import { usePropEvResults } from '../components/prop-ev/usePropEvResults';
+import FolderTradeStats, { type FolderStatsTab } from '../components/backtest/FolderTradeStats';
 import type { BacktestSession } from '../types/backtest';
+
+type Tab = 'overview' | FolderStatsTab;
+
+const TABS: { key: Tab; label: string; icon: typeof Folder }[] = [
+  { key: 'overview', label: 'Overview', icon: LayoutGrid },
+  { key: 'analytics', label: 'Analytics', icon: LineChartIcon },
+  { key: 'confluences', label: 'Confluences', icon: Layers },
+  { key: 'mfe-mae', label: 'MFE / MAE', icon: Target },
+];
 
 const pct = (x: number | null) => (x === null ? '—' : `${Math.round(x * 100)}%`);
 const money = (x: number) => `${x < 0 ? '-' : ''}$${Math.abs(Math.round(x)).toLocaleString('en-US')}`;
@@ -38,6 +48,9 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
 export default function BacktestFolderPage() {
   const { folderId } = useParams<{ folderId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get('tab') as Tab) || 'overview';
+  const setActiveTab = (tab: Tab) => setSearchParams(tab === 'overview' ? {} : { tab }, { replace: true });
   const { sessions, folders, getSession, addSession, updateSession, deleteSession, loading } = useBacktest();
   const { readOnly } = useView();
   const moveSession = useMoveSession();
@@ -154,6 +167,26 @@ export default function BacktestFolderPage() {
         {folder.description && <p className="text-sm text-slate-400 mt-1">{folder.description}</p>}
       </div>
 
+      <div className="flex gap-1 border-b border-slate-700 pb-px">
+        {TABS.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+              activeTab === key
+                ? 'bg-slate-800 text-slate-50 border border-slate-700 border-b-slate-800 -mb-px'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+            }`}
+          >
+            <Icon size={16} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab !== 'overview' && <FolderTradeStats tab={activeTab} sessions={inside} />}
+
+      {activeTab === 'overview' && <>
       {showForm && !readOnly && <SessionForm kind="session" onCreate={createSession} />}
 
       {rules && (
@@ -272,6 +305,7 @@ export default function BacktestFolderPage() {
       {!rules && others.length === 0 && !showForm && (
         <EmptyState icon={<Folder size={48} />} title="Empty folder" description="Create a session here, or move sessions in from the Backtesting page." />
       )}
+      </>}
     </div>
   );
 }
