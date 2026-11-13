@@ -9,6 +9,7 @@ import type { FirmConfig, DrawdownRule, EvalRules } from '../utils/prop-ev';
  */
 
 const CHECKED = '2026-11-08';
+const FE_CHECKED = '2026-11-12';
 const eod = (amount: number, lockAboveStart: number | null = null): DrawdownRule => ({ amount, type: 'eod_trailing', lockAboveStart });
 const intraday = (amount: number, lockAboveStart: number | null = null): DrawdownRule => ({ amount, type: 'intraday_trailing', lockAboveStart });
 
@@ -472,5 +473,113 @@ export const DEFAULT_PROP_FIRMS: FirmConfig[] = [
     lastChecked: CHECKED,
     verify: [PRICE, 'Where the drawdown stops trailing', 'Best-day rule loosens to 25% on the 2nd payout and 30% after; modelled as 20% throughout'],
     notes: 'No evaluation: bought funded. First payout needs $3,000 profit, later ones $2,000 each, with the best day under 20% of the cycle. $1,250 daily loss limit pauses the day.',
+  },
+
+  // ---------------------------------------------------------------- Futures Elite
+  // Rules from the firm's own help centre (faq.futureselite.com), checked 2026-11-12.
+  // Prices aren't published there (checkout only), so they come from review sites.
+  {
+    id: 'futureselite-elite-25k',
+    firm: 'Futures Elite', plan: 'Elite', size: 25000,
+    eval: { fee: 99, billing: 'one_time', profitTarget: 1250, drawdown: eod(1000, 0), dailyLossLimit: null, consistencyPct: 40, minDays: 3, maxDays: null },
+    funded: {
+      activationFee: 0, drawdown: eod(1000, 0), dailyLossLimit: null, consistencyPct: null,
+      minDaysPerPayout: 6, minDayProfit: 100, buffer: 0, minPayout: 500, payoutCaps: [1000],
+      payoutShareOfProfit: 0.5, split: 0.9, maxPayouts: null,
+    },
+    lastChecked: FE_CHECKED,
+    verify: [PRICE + ' — from review sites, not the firm', 'Checkout options not modelled: a $600 daily loss limit (cheaper) or 50% best-day rule with 2 minimum days (small extra fee)'],
+    notes: 'Default checkout: no daily loss limit, best day under 40% of profit, at least 3 days. Drawdown stops trailing at the starting balance once up $1,000. Funded: no best-day rule or buffer; 6 days of $100+ per payout, up to 50% of profit, $1,000 cap. Funded contracts start at 1 (2 from $1,000 profit), which the simulation ignores. A live account usually follows the 4th payout in a row.',
+  },
+  {
+    id: 'futureselite-elite-50k',
+    firm: 'Futures Elite', plan: 'Elite', size: 50000,
+    eval: { fee: 160, billing: 'one_time', profitTarget: 3000, drawdown: eod(2000, 100), dailyLossLimit: null, consistencyPct: 40, minDays: 3, maxDays: null },
+    funded: {
+      activationFee: 0, drawdown: eod(2000, 100), dailyLossLimit: null, consistencyPct: null,
+      minDaysPerPayout: 6, minDayProfit: 150, buffer: 0, minPayout: 500, payoutCaps: [2000],
+      payoutShareOfProfit: 0.5, split: 0.9, maxPayouts: null,
+    },
+    lastChecked: FE_CHECKED,
+    verify: [PRICE + ' — from review sites, not the firm', 'Checkout options not modelled: a $1,200 daily loss limit (cheaper) or 50% best-day rule with 2 minimum days (small extra fee)'],
+    notes: 'Default checkout: no daily loss limit, best day under 40% of profit, at least 3 days. Drawdown stops trailing at start + $100. Funded: no best-day rule or buffer; 6 days of $150+ per payout, up to 50% of profit, $2,000 cap. Funded contracts start at 2 (3 from $2,500 profit, 4 from $3,499), which the simulation ignores. A live account usually follows the 4th payout in a row.',
+  },
+  {
+    id: 'futureselite-prime-25k',
+    firm: 'Futures Elite', plan: 'Prime', size: 25000,
+    eval: { fee: 96, billing: 'one_time', profitTarget: 1250, drawdown: eod(1000, 100), dailyLossLimit: 600, consistencyPct: null, minDays: 1, maxDays: null },
+    funded: {
+      activationFee: 0, drawdown: eod(1000, 100), dailyLossLimit: 600, consistencyPct: 40,
+      minDaysPerPayout: 3, minDayProfit: 0, minCycleProfit: 250, buffer: 1100, minPayout: 500, payoutCaps: [1000, 1500, 1500],
+      payoutShareOfProfit: null, split: 0.9, maxPayouts: null,
+    },
+    lastChecked: FE_CHECKED,
+    verify: [PRICE + ' — from review sites, not the firm', 'Whether the drawdown trails, and where it stops (assumed: trails, stops at start + $100)', 'How the $250 funded profit target works with the buffer (modelled as $250 profit per payout cycle)'],
+    notes: 'Fast evaluation: no minimum days or best-day rule, but a $600 daily loss limit that locks trading for 24 hours. Funded: $1,100 buffer that is never withdrawable, at least 3 days, best day under 40% of the payout. Caps $1,000 / $1,500 / $1,500.',
+  },
+  {
+    id: 'futureselite-prime-50k',
+    firm: 'Futures Elite', plan: 'Prime', size: 50000,
+    eval: { fee: 179, billing: 'one_time', profitTarget: 3000, drawdown: eod(2000, 100), dailyLossLimit: 1200, consistencyPct: null, minDays: 1, maxDays: null },
+    funded: {
+      activationFee: 0, drawdown: eod(2000, 100), dailyLossLimit: 1200, consistencyPct: 40,
+      minDaysPerPayout: 1, minDayProfit: 0, minCycleProfit: 500, buffer: 2100, minPayout: 500, payoutCaps: [2000, 2500, 2800],
+      payoutShareOfProfit: null, split: 0.9, maxPayouts: null,
+    },
+    lastChecked: FE_CHECKED,
+    verify: [PRICE + ' — from review sites, not the firm', 'Whether the drawdown trails, and where it stops (assumed: trails, stops at start + $100)', 'How the $500 funded profit target works with the buffer (modelled as $500 profit per payout cycle)'],
+    notes: 'Fast evaluation: no minimum days or best-day rule, but a $1,200 daily loss limit that locks trading for 24 hours. Funded: $2,100 buffer that is never withdrawable, best day under 40% of the payout. Caps $2,000 / $2,500 / $2,800.',
+  },
+  {
+    id: 'futureselite-nitro-25k',
+    firm: 'Futures Elite', plan: 'Nitro', size: 25000,
+    eval: { fee: 137, billing: 'one_time', profitTarget: 1250, drawdown: eod(1000, 100), dailyLossLimit: null, consistencyPct: 50, minDays: 2, maxDays: null },
+    funded: {
+      activationFee: 0, drawdown: intraday(1000, 100), dailyLossLimit: null, consistencyPct: null,
+      minDaysPerPayout: 1, minDayProfit: 0, buffer: 1100, minPayout: 500, payoutCaps: [1000],
+      payoutShareOfProfit: null, split: 0.9, maxPayouts: null,
+    },
+    lastChecked: FE_CHECKED,
+    verify: [PRICE + ' — estimate, no source gave the 25K list price', 'Where the evaluation drawdown stops trailing (assumed start + $100)'],
+    notes: 'End-of-day drawdown in the evaluation, intraday once funded (the simulation only sees closed trades, so it is a bit optimistic there). Daily payouts of $500+ above a $1,100 buffer, $1,000 cap. A $4,000 day moves the account to live; not modelled.',
+  },
+  {
+    id: 'futureselite-nitro-50k',
+    firm: 'Futures Elite', plan: 'Nitro', size: 50000,
+    eval: { fee: 152, billing: 'one_time', profitTarget: 3000, drawdown: eod(2000, 100), dailyLossLimit: null, consistencyPct: 50, minDays: 1, maxDays: null },
+    funded: {
+      activationFee: 0, drawdown: intraday(2000, 100), dailyLossLimit: null, consistencyPct: null,
+      minDaysPerPayout: 1, minDayProfit: 0, buffer: 2100, minPayout: 500, payoutCaps: [2000],
+      payoutShareOfProfit: null, split: 0.9, maxPayouts: null,
+    },
+    lastChecked: FE_CHECKED,
+    verify: [PRICE + ' — from a review site, not the firm', 'Where the evaluation drawdown stops trailing (assumed start + $100)'],
+    notes: 'End-of-day drawdown in the evaluation, intraday once funded (the simulation only sees closed trades, so it is a bit optimistic there). Daily payouts of $500+ above a $2,100 buffer, $2,000 cap. A $6,000 day moves the account to live; not modelled.',
+  },
+  {
+    id: 'futureselite-instant-25k',
+    firm: 'Futures Elite', plan: 'Instant', size: 25000, instant: true,
+    eval: noEval(239, eod(1000, 0)),
+    funded: {
+      activationFee: 0, drawdown: eod(1000, 0), dailyLossLimit: null, consistencyPct: 20,
+      minDaysPerPayout: 10, minDayProfit: 75, firstCycleProfit: 1750, minCycleProfit: 2000, buffer: 0, minPayout: 500, payoutCaps: [1000, 2500, 3000],
+      payoutShareOfProfit: 0.5, split: 0.8, maxPayouts: null,
+    },
+    lastChecked: FE_CHECKED,
+    verify: [PRICE + ' — from review sites, not the firm', 'Minimum payout request (not stated; $500 assumed)', 'Best-day rule loosens to 25% on the 2nd payout and 30% after; modelled as 20% throughout'],
+    notes: 'No evaluation: bought funded. Drawdown stops trailing at the starting balance once up $1,000. Each payout needs 10 days of $75+ and a profit goal ($1,750 first, $2,000 after), then up to 50% of the cycle profit. 80% split. Must trade at least once every 7 days.',
+  },
+  {
+    id: 'futureselite-instant-50k',
+    firm: 'Futures Elite', plan: 'Instant', size: 50000, instant: true,
+    eval: noEval(349, eod(1800, 0)),
+    funded: {
+      activationFee: 0, drawdown: eod(1800, 0), dailyLossLimit: null, consistencyPct: 20,
+      minDaysPerPayout: 10, minDayProfit: 150, firstCycleProfit: 3500, minCycleProfit: 2000, buffer: 0, minPayout: 500, payoutCaps: [1500, 2500, 3000],
+      payoutShareOfProfit: 0.5, split: 0.8, maxPayouts: null,
+    },
+    lastChecked: FE_CHECKED,
+    verify: [PRICE + ' — from review sites, not the firm', 'Minimum payout request (not stated; $500 assumed)', 'Best-day rule loosens to 25% on the 2nd payout and 30% after; modelled as 20% throughout'],
+    notes: 'No evaluation: bought funded. $1,800 drawdown that stops trailing at the starting balance once up $1,800. Each payout needs 10 days of $150+ and a profit goal ($3,500 first, $2,000 after), then up to 50% of the cycle profit. 80% split. Must trade at least once every 7 days.',
   },
 ];
