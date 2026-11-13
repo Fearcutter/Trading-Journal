@@ -2,6 +2,7 @@ import { Outlet, useLocation, Navigate } from 'react-router-dom';
 import { Eye } from 'lucide-react';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
+import PageErrorBoundary from './PageErrorBoundary';
 import WhatsNewModal from '../WhatsNewModal';
 import { useWhatsNew } from '../../hooks/useWhatsNew';
 import { useView } from '../../context/ViewContext';
@@ -41,7 +42,7 @@ export default function AppLayout() {
         )}
         <TopBar title={title} />
         <main className="flex-1 p-6 overflow-auto">
-          {allowed ? <Outlet /> : (
+          {allowed ? <PageErrorBoundary key={path}><Outlet /></PageErrorBoundary> : (
             <div className="py-24 text-center text-sm text-slate-400">This section isn't shared with you.</div>
           )}
         </main>
