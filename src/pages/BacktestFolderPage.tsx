@@ -11,6 +11,7 @@ import SessionForm, { type SessionFormValues } from '../components/backtest/Sess
 import SessionCard from '../components/backtest/SessionCard';
 import { StatusBadge } from '../components/backtest/EvalTrackerCard';
 import FirmRulesEditor from '../components/prop-ev/FirmRulesEditor';
+import PracticeFirmSetup from '../components/backtest/PracticeFirmSetup';
 import { usePracticeAttempts, useSessionStats } from '../components/backtest/usePractice';
 import { firmLabel } from '../components/backtest/usePropFirms';
 import { useMoveSession } from '../components/backtest/useMoveSession';
@@ -148,6 +149,7 @@ export default function BacktestFolderPage() {
           )}
         </div>
         {rules && <p className="text-sm text-sky-300 mt-1">Practising {firmLabel(rules)}</p>}
+        {!rules && !readOnly && <PracticeFirmSetup folder={folder} onSave={(firmRules, attemptGoal) => updateSession(folder.id, { firmRules, attemptGoal })} />}
         {rules && bank.started && (
           <div className="mt-2 space-y-2">
             <button onClick={() => setShowMoney(v => !v)} className="inline-flex items-center gap-1.5 text-sm text-slate-300 hover:text-slate-50">

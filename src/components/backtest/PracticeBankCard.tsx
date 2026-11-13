@@ -18,7 +18,9 @@ export function BankMoveForm({ bank, initial, folderId: fixedFolder, onDone }: {
   const folderIds = Object.keys(bank.folderNames);
   const [action, setAction] = useState<Action>(initial);
   const [amount, setAmount] = useState('');
-  const [folderId, setFolderId] = useState(fixedFolder ?? folderIds[0] ?? '');
+  const [picked, setFolderId] = useState(fixedFolder ?? folderIds[0] ?? '');
+  // A folder set up after this form opened, or one that was removed: fall back to the first in the list
+  const folderId = fixedFolder ?? (folderIds.includes(picked) ? picked : folderIds[0] ?? '');
   const value = Math.round((Number(amount) || 0) * 100) / 100;
   const from = action === 'allocate' ? bank.main : action === 'return' ? bank.folders[folderId] ?? 0 : Infinity;
   const ok = value > 0 && (action === 'add' || (!!folderId && value <= from + 1e-9));
@@ -63,6 +65,7 @@ export function BankMoveForm({ bank, initial, folderId: fixedFolder, onDone }: {
       {action !== 'add' && (
         <span className="text-xs text-slate-500 pb-1.5">
           {action === 'allocate' ? `Main bank has ${bankMoney(bank.main)}` : `Folder has ${bankMoney(bank.folders[folderId] ?? 0)}`}
+          {!fixedFolder && ' · only prop firm practice folders are listed'}
         </span>
       )}
     </div>
