@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import NumberInput from '../ui/NumberInput';
 import type { FirmConfig, DrawdownRule, DrawdownType } from '../../utils/prop-ev';
 
 interface Props {
@@ -24,17 +25,13 @@ function Num({ label, value, onChange, blank, hint }: {
   return (
     <label className="block space-y-1">
       <span className="block text-xs text-slate-400">{label}</span>
-      <input
-        type="number"
+      <NumberInput
         step="any"
         className={fieldCls}
-        value={value ?? ''}
+        value={value}
         placeholder={blank}
-        onChange={e => {
-          const raw = e.target.value;
-          if (raw === '') onChange(blank !== undefined ? null : 0);
-          else if (Number.isFinite(Number(raw))) onChange(Number(raw));
-        }}
+        fallback={blank !== undefined ? undefined : 0}
+        onChange={onChange}
       />
       {hint && <span className="block text-[11px] text-slate-500">{hint}</span>}
     </label>

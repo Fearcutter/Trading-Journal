@@ -11,6 +11,7 @@ import { DEFAULT_PROP_FIRMS } from '../constants/prop-firms';
 import { edgeStats, type FirmConfig, type SimSummary } from '../utils/prop-ev';
 import { scorePractice, type PracticeScore } from '../utils/prop-tracker';
 import { useAllPractice } from '../components/backtest/usePractice';
+import NumberInput from '../components/ui/NumberInput';
 import { firmLabel } from '../components/backtest/usePropFirms';
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
@@ -93,30 +94,30 @@ export default function PropFirmEVPage() {
           />
           <label className="block space-y-1">
             <span className="block text-sm font-medium text-slate-300">Your risk per trade ($)</span>
-            <input
-              type="number" min={1} step={5}
+            <NumberInput
+              min={1} step={5} minValue={1}
               className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-50 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={inputs.risk ?? ''}
+              value={inputs.risk}
               placeholder={`${suggestedRisk} (your usual)`}
-              onChange={e => setInputs({ risk: e.target.value === '' ? null : Math.max(1, Number(e.target.value)) })}
+              onChange={v => setInputs({ risk: v })}
             />
           </label>
           <label className="block space-y-1">
             <span className="block text-sm font-medium text-slate-300">Costs per trade ($)</span>
-            <input
-              type="number" min={0} step={0.5}
+            <NumberInput
+              min={0} step={0.5} minValue={0} fallback={0}
               className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-50 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={inputs.cost}
-              onChange={e => setInputs({ cost: Math.max(0, Number(e.target.value) || 0) })}
+              onChange={v => setInputs({ cost: v ?? 0 })}
             />
           </label>
           <label className="block space-y-1">
             <span className="block text-sm font-medium text-slate-300">Copied accounts</span>
-            <input
-              type="number" min={1} step={1}
+            <NumberInput
+              min={1} step={1} minValue={1} fallback={1} integer
               className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-50 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={inputs.accounts}
-              onChange={e => setInputs({ accounts: Math.max(1, Math.round(Number(e.target.value) || 1)) })}
+              onChange={v => setInputs({ accounts: v ?? 1 })}
             />
           </label>
         </div>
