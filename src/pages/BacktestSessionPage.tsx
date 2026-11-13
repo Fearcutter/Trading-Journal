@@ -43,6 +43,7 @@ import SessionAnalyticsTab from '../components/analytics/SessionAnalyticsTab';
 import CoachShareToggle from '../components/ui/CoachShareToggle';
 import { usePracticeBank } from '../components/backtest/usePracticeBank';
 import CopyTradingCard from '../components/backtest/CopyTradingCard';
+import CopyGroupDashboard from '../components/backtest/CopyGroupDashboard';
 import GroupSizeControl from '../components/backtest/GroupSizeControl';
 import { useTradesBySession, copiedTrades } from '../components/backtest/usePractice';
 import { bankMoney, copiesOf } from '../utils/practice-bank';
@@ -267,6 +268,7 @@ export default function BacktestSessionPage() {
           onPayoutsChange={payouts => updateSession(session.id, { payouts })}
         />
       )}
+      {fundedTrack && fundedRules && <CopyGroupDashboard session={session} rules={fundedRules} track={fundedTrack} />}
       {session.stage === 'funded' && fundedRules && <CopyTradingCard session={session} readOnly={readOnly} />}
 
       {/* Tab bar */}
