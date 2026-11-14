@@ -106,10 +106,22 @@ export function useSupabaseList<T extends { id: string }>(
 
     async function load() {
       try {
-        const { data, error } = await supabase
-          .from(table)
-          .select('*')
-          .eq('user_id', journalOwnerId);
+        // The API returns at most 1000 rows per request, so page through until a short page.
+        // Order by id so pages never overlap or skip rows.
+        const PAGE = 1000;
+        const data: { id: string; data: Record<string, unknown>; [col: string]: unknown }[] = [];
+        let error: { message: string } | null = null;
+        for (let from = 0; ; from += PAGE) {
+          const page = await supabase
+            .from(table)
+            .select('*')
+            .eq('user_id', journalOwnerId)
+            .order('id', { ascending: true })
+            .range(from, from + PAGE - 1);
+          if (page.error) { error = page.error; break; }
+          data.push(...((page.data ?? []) as typeof data));
+          if (!page.data || page.data.length < PAGE) break;
+        }
 
         if (!cancelled && error) {
           console.error(`[useSupabaseList] Failed to load "${table}":`, error);
