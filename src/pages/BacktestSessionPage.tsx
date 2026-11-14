@@ -111,8 +111,8 @@ export default function BacktestSessionPage() {
   const mfeStats = useMFEMAEStats(overlapScopedTrades, plField);
 
   const evalTrack = useMemo(
-    () => (practiceRules ? trackEval(sessionTrades, practiceRules) : null),
-    [practiceRules, sessionTrades]
+    () => (practiceRules && session ? trackEval(sessionTrades, practiceRules, copiedTrades(session, bySession)) : null),
+    [practiceRules, sessionTrades, session, bySession]
   );
   const fundedTrack = useMemo(
     () => (fundedRules && session ? trackFunded(sessionTrades, fundedRules, session.payouts, copiedTrades(session, bySession)) : null),
@@ -269,7 +269,7 @@ export default function BacktestSessionPage() {
         />
       )}
       {fundedTrack && fundedRules && <CopyGroupDashboard session={session} rules={fundedRules} track={fundedTrack} />}
-      {session.stage === 'funded' && fundedRules && <CopyTradingCard session={session} readOnly={readOnly} />}
+      {((session.stage === 'funded' && fundedRules) || (session.stage === 'eval' && practiceRules)) && <CopyTradingCard session={session} readOnly={readOnly} />}
 
       {/* Tab bar */}
       <div className="flex items-center justify-between gap-3 border-b border-slate-700 pb-px">

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Trade } from '../types/trade';
-import { trackEval, scoreEvals, evalFees, groupTradesByDay, trackFunded, scorePractice } from './prop-tracker';
+import { trackEval, scoreEvals, evalFees, groupTradesByDay, trackFunded, scorePractice, applyCopySettings } from './prop-tracker';
 import type { FirmConfig, DrawdownRule } from './prop-ev';
 
 const dd = (amount: number, type: DrawdownRule['type'] = 'eod_trailing', lockAboveStart: number | null = null): DrawdownRule =>
@@ -202,5 +202,60 @@ describe('copy-traded funded accounts', () => {
     const tr = trackFunded([t('2026-05-01', 100)], funded(), [], [t('2026-01-10', -2200)]);
     expect(tr.status).toBe('blown');
     expect(tr.endedOn).toBe('2026-01-10');
+  });
+});
+
+describe('copy sizing (ratio and daily cap)', () => {
+  it('scales each copied trade by the ratio', () => {
+    const r = applyCopySettings([t('2026-01-01', 2000), t('2026-01-02', -800)], { ratio: 0.5 });
+    expect(r.trades.map(x => x.dollarPL)).toEqual([1000, -400]);
+    expect(r.skipped).toBe(0);
+  });
+
+  it('stops copying for the day once the cap is reached; the crossing trade counts in full', () => {
+    const r = applyCopySettings([
+      t('2026-01-01', 600, '09:30'), t('2026-01-01', 700, '10:00'), t('2026-01-01', 400, '11:00'),
+      t('2026-01-02', 300, '09:30'),
+    ], { dailyCap: 1000 });
+    expect(r.trades.map(x => x.dollarPL)).toEqual([600, 700, 300]);
+    expect(r.skipped).toBe(1);
+  });
+
+  it('a loss keeps the copier running until the day is up the cap', () => {
+    const r = applyCopySettings([
+      t('2026-01-01', 800, '09:30'), t('2026-01-01', -500, '10:00'), t('2026-01-01', 900, '11:00'), t('2026-01-01', 200, '12:00'),
+    ], { dailyCap: 1000 });
+    expect(r.trades.map(x => x.dollarPL)).toEqual([800, -500, 900]);
+    expect(r.skipped).toBe(1);
+  });
+
+  it('applies the ratio before the cap', () => {
+    const r = applyCopySettings([t('2026-01-01', 1600, '09:30'), t('2026-01-01', 800, '10:00'), t('2026-01-01', 1000, '11:00')], { ratio: 0.5, dailyCap: 1000 });
+    expect(r.trades.map(x => x.dollarPL)).toEqual([800, 400]);
+    expect(r.skipped).toBe(1);
+  });
+
+  it('full size with no cap leaves trades untouched', () => {
+    const trades = [t('2026-01-01', 1234)];
+    expect(applyCopySettings(trades, {}).trades).toBe(trades);
+  });
+});
+
+describe('evaluations copying a funded account', () => {
+  it('copied trades count toward the evaluation, merged by date with its own', () => {
+    const tr = trackEval([t('2026-01-02', 500)], firm(), [t('2026-01-01', 1000), t('2026-01-03', 1600)]);
+    expect(tr.status).toBe('passed');
+    expect(tr.days).toBe(3);
+    expect(tr.balance).toBe(53100);
+    expect(tr.endedOn).toBe('2026-01-03');
+  });
+
+  it('a sized-down, capped copy plays each funded day at the evaluation size', () => {
+    const lead = [t('2026-01-01', 2400, '09:30'), t('2026-01-01', 1200, '10:00'), t('2026-01-02', 2000), t('2026-01-03', 2000)];
+    const sized = applyCopySettings(lead, { ratio: 0.5, dailyCap: 1000 }).trades;
+    const tr = trackEval([], firm({ consistencyPct: 50 }), sized);
+    expect(tr.dayResults.map(d => d.pl)).toEqual([1200, 1000, 1000]);
+    expect(tr.bestDay).toBe(1200);
+    expect(tr.status).toBe('passed');
   });
 });

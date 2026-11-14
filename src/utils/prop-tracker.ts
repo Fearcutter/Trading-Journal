@@ -65,7 +65,31 @@ export function evalFees(cfg: FirmConfig, days: number): number {
   return cfg.eval.fee * (1 + Math.floor(Math.max(0, days - 1) / TRADING_DAYS_PER_MONTH));
 }
 
-export function trackEval(trades: Trade[], cfg: FirmConfig): EvalTrack {
+/**
+ * Trades as they land on a copying account: each $ P&L scaled by `ratio`, and once the
+ * day's copied total reaches `dailyCap`, that day's later trades aren't copied.
+ * The trade that crosses the cap still counts in full, as it would with a real copier.
+ */
+export function applyCopySettings(trades: Trade[], settings: { ratio?: number; dailyCap?: number }): { trades: Trade[]; skipped: number } {
+  const ratio = settings.ratio ?? 1;
+  const scaled = ratio === 1 ? trades : trades.map(t => ({ ...t, dollarPL: (t.dollarPL || 0) * ratio }));
+  const cap = settings.dailyCap;
+  if (!cap || cap <= 0) return { trades: scaled, skipped: 0 };
+  const kept: Trade[] = [];
+  let skipped = 0;
+  for (const { trades: day } of groupTradesByDay(scaled)) {
+    let total = 0;
+    for (const t of day) {
+      if (total >= cap) { skipped++; continue; }
+      kept.push(t);
+      total += t.dollarPL || 0;
+    }
+  }
+  return { trades: kept, skipped };
+}
+
+/** An evaluation: its own trades plus any copied in from a funded account, played day by day in date order. */
+export function trackEval(trades: Trade[], cfg: FirmConfig, copied: Trade[] = []): EvalTrack {
   const ev = cfg.eval;
   const acct = new Account(cfg.size, ev.drawdown);
   const dayResults: DayResult[] = [];
@@ -75,7 +99,7 @@ export function trackEval(trades: Trade[], cfg: FirmConfig): EvalTrack {
   let ignoredTrades = 0;
   if (cfg.instant) status = 'passed';
 
-  for (const { date, trades: dayTrades } of groupTradesByDay(trades)) {
+  for (const { date, trades: dayTrades } of groupTradesByDay(copied.length ? [...trades, ...copied] : trades)) {
     if (status !== 'active') {
       ignoredTrades += dayTrades.length;
       continue;

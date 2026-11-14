@@ -3,7 +3,7 @@ import { useBacktest } from '../../context/BacktestContext';
 import { useTrades } from '../../context/TradeContext';
 import type { BacktestSession } from '../../types/backtest';
 import type { Trade } from '../../types/trade';
-import { trackEval, trackFunded, type EvalTrack, type FundedTrack } from '../../utils/prop-tracker';
+import { trackEval, trackFunded, applyCopySettings, type EvalTrack, type FundedTrack } from '../../utils/prop-tracker';
 import { usePLFormatter, getTradeValue } from '../../hooks/usePLFormatter';
 import type { SessionStats } from './SessionCard';
 
@@ -30,11 +30,24 @@ export function useTradesBySession(): Map<string, Trade[]> {
   }, [trades]);
 }
 
-/** Trades copied into a funded account from the accounts it was linked to, while linked. */
+/**
+ * Trades copied into an account from the accounts it was linked to, while linked,
+ * sized by each link's ratio and stopped for the day at its daily cap.
+ * `skipped` counts lead-account trades the daily cap kept off this account.
+ */
+export function copyResult(session: BacktestSession, bySession: Map<string, Trade[]>): { trades: Trade[]; skipped: number } {
+  let skipped = 0;
+  const trades = (session.copyLinks ?? []).flatMap(link => {
+    const linked = (bySession.get(link.sessionId) ?? []).filter(t => t.createdAt >= link.from && (!link.until || t.createdAt < link.until));
+    const r = applyCopySettings(linked, link);
+    skipped += r.skipped;
+    return r.trades;
+  });
+  return { trades, skipped };
+}
+
 export function copiedTrades(session: BacktestSession, bySession: Map<string, Trade[]>): Trade[] {
-  return (session.copyLinks ?? []).flatMap(link =>
-    (bySession.get(link.sessionId) ?? []).filter(t => t.createdAt >= link.from && (!link.until || t.createdAt < link.until)),
-  );
+  return copyResult(session, bySession).trades;
 }
 
 /** A practice folder's attempts (evaluation plus funded stage), run through its firm rules. */
@@ -52,7 +65,7 @@ export function buildPracticeAttempts(folder: BacktestSession, sessions: Backtes
       return {
         session,
         trades,
-        track: trackEval(trades, rules),
+        track: trackEval(trades, rules, copiedTrades(session, bySession)),
         funded: fundedSession
           ? { session: fundedSession, trades: fundedTrades, track: trackFunded(fundedTrades, rules, fundedSession.payouts, copiedTrades(fundedSession, bySession)) }
           : undefined,

@@ -51,4 +51,8 @@ export interface CopyLink {
   from: string;
   /** Unlinked at this moment; missing = still copying. */
   until?: string;
+  /** Size of each copied trade's $ P&L on this account (0.5 = half size); missing = 1. */
+  ratio?: number;
+  /** Stop copying for the day once this account is up this much $ from copied trades that day; missing = no cap. */
+  dailyCap?: number;
 }

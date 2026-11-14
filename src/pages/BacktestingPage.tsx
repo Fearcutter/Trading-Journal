@@ -9,7 +9,7 @@ import CoachShareToggle from '../components/ui/CoachShareToggle';
 import SessionForm, { type SessionFormValues } from '../components/backtest/SessionForm';
 import { SESSION_DOT_COLORS } from '../components/backtest/colors';
 import SessionCard from '../components/backtest/SessionCard';
-import { useSessionStats, useTradesBySession } from '../components/backtest/usePractice';
+import { useSessionStats, useTradesBySession, copiedTrades } from '../components/backtest/usePractice';
 import { firmLabel } from '../components/backtest/usePropFirms';
 import { useMoveSession } from '../components/backtest/useMoveSession';
 import { trackEval } from '../utils/prop-tracker';
@@ -56,7 +56,7 @@ export default function BacktestingPage() {
     const inside = sessions.filter(s => s.folderId === f.id);
     if (!f.firmRules) return `${inside.length} session${inside.length === 1 ? '' : 's'}`;
     const attempts = inside.filter(s => s.stage === 'eval');
-    const statuses = attempts.map(s => trackEval(bySession.get(s.id) ?? [], f.firmRules!).status);
+    const statuses = attempts.map(s => trackEval(bySession.get(s.id) ?? [], f.firmRules!, copiedTrades(s, bySession)).status);
     const passed = statuses.filter(s => s === 'passed').length;
     const blown = statuses.filter(s => s === 'blown').length;
     const money = bank.started && f.id in bank.folders ? ` · ${bankMoney(bank.folders[f.id])} in folder` : '';
