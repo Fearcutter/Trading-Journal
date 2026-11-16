@@ -36,4 +36,6 @@ export interface Settings {
   practiceBank?: PracticeBankState;
   /** Reasons offered when logging a potential trade. Unset means the defaults. */
   potentialReasons?: string[];
+  /** Category Analytics: confluences left out of the analysis (data kept). */
+  hiddenConfluences?: string[];
 }

@@ -8,6 +8,7 @@ import AgainstCost from './AgainstCost';
 import IFVGStopMethodSection from './IFVGStopMethodSection';
 import { usePLFormatter } from '../../hooks/usePLFormatter';
 import ConfluenceTable from './ConfluenceTable';
+import ConfluencePicker from './ConfluencePicker';
 import CombinationAnalysis from './CombinationAnalysis';
 import EmptyState from '../ui/EmptyState';
 import { Layers } from 'lucide-react';
@@ -26,10 +27,19 @@ export default function ConfluencesTab({ trades }: { trades: Trade[] }) {
   const [selectedCategory, setSelectedCategory] = useState('');
 
   // FOR / AGAINST include custom fields set to count as confluences (e.g. "TDI: Cross")
-  const { forOf, againstOf } = useMemo(
+  const lists = useMemo(
     () => confluenceLists(settings.customCategories, settings.categorySectionOrder),
     [settings.customCategories, settings.categorySectionOrder]
   );
+  const hiddenList = settings.hiddenConfluences;
+  const hidden = useMemo(() => new Set(hiddenList ?? []), [hiddenList]);
+  const forNames = useMemo(() => [...new Set(trades.flatMap(lists.forOf))].sort(), [trades, lists]);
+  const againstNames = useMemo(() => [...new Set(trades.flatMap(lists.againstOf))].sort(), [trades, lists]);
+  // Turned-off confluences are dropped from each trade, so every table treats them as untagged
+  const { forOf, againstOf } = useMemo(() => ({
+    forOf: (t: Trade) => lists.forOf(t).filter(n => !hidden.has(n)),
+    againstOf: (t: Trade) => lists.againstOf(t).filter(n => !hidden.has(n)),
+  }), [lists, hidden]);
   const forEdge = useMemo(() => analyzeEdge(trades, forOf, plField), [trades, forOf, plField]);
   const againstEdge = useMemo(() => analyzeEdge(trades, againstOf, plField), [trades, againstOf, plField]);
   const forCount = useMemo(() => analyzeForCount(trades, forOf, plField), [trades, forOf, plField]);
@@ -76,6 +86,12 @@ export default function ConfluencesTab({ trades }: { trades: Trade[] }) {
 
   return (
     <div className="space-y-6">
+      <ConfluencePicker
+        forNames={forNames}
+        againstNames={againstNames}
+        hidden={hidden}
+        onChange={next => settings.updateSettings({ hiddenConfluences: next })}
+      />
       <EdgeTable
         data={forEdge}
         title="Confluences (FOR): do they give me an edge?"
