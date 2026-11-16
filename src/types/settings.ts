@@ -38,4 +38,13 @@ export interface Settings {
   potentialReasons?: string[];
   /** Category Analytics: confluences left out of the analysis (data kept). */
   hiddenConfluences?: string[];
+  /** Category Analytics: named, saved picks of backtest folders and sessions. */
+  backtestGroups?: BacktestGroup[];
+}
+
+export interface BacktestGroup {
+  id: string;
+  name: string;
+  /** Folder and session ids. A folder means every session in it. */
+  ids: string[];
 }

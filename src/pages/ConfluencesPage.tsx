@@ -9,6 +9,8 @@ import { Layers, PlusCircle } from 'lucide-react';
 import OverlapScopeToggle, { type OverlapScope } from '../components/filters/OverlapScopeToggle';
 import ConfluencesTab from '../components/confluences/ConfluencesTab';
 import { scopeTrades, type TradeScope } from '../utils/confluence-insights';
+import BacktestPicker from '../components/confluences/BacktestPicker';
+import { useBacktestPick } from '../components/confluences/useBacktestPick';
 
 const SCOPES: { key: TradeScope; label: string }[] = [
   { key: 'live', label: 'Live' },
@@ -22,6 +24,8 @@ export default function ConfluencesPage() {
   const { sessions: backtestSessions } = useBacktest();
   const [tradeScope, setTradeScope] = useState<TradeScope>('live');
   const [overlapScope, setOverlapScope] = useState<OverlapScope>('exclude');
+  const [backtestIds, setBacktestIds] = useState<string[]>([]);
+  const pick = useBacktestPick(backtestIds);
 
   const scopedTrades = useMemo(() => {
     const inScope = scopeTrades(
@@ -30,8 +34,11 @@ export default function ConfluencesPage() {
       new Set(liveSessions.map(s => s.id)),
       new Set(backtestSessions.map(s => s.id)),
     );
-    return overlapScope === 'exclude' ? inScope.filter(t => !t.overlap) : inScope;
-  }, [trades, tradeScope, liveSessions, backtestSessions, overlapScope]);
+    const backtestIds = new Set(backtestSessions.map(s => s.id));
+    // A backtest pick narrows the backtest trades; live trades are untouched
+    const picked = pick ? inScope.filter(t => !t.sessionId || !backtestIds.has(t.sessionId) || pick.has(t.sessionId)) : inScope;
+    return overlapScope === 'exclude' ? picked.filter(t => !t.overlap) : picked;
+  }, [trades, tradeScope, liveSessions, backtestSessions, overlapScope, pick]);
 
   if (trades.length === 0) {
     return (
@@ -64,6 +71,7 @@ export default function ConfluencesPage() {
         </div>
         <OverlapScopeToggle value={overlapScope} onChange={setOverlapScope} />
       </div>
+      {tradeScope !== 'live' && backtestSessions.length > 0 && <BacktestPicker value={backtestIds} onChange={setBacktestIds} />}
       <ConfluencesTab trades={scopedTrades} />
     </div>
   );
