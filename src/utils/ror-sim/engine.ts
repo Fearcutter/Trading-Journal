@@ -128,14 +128,20 @@ export function targetBalance(setup: SimSetup, floor: number, payoutsTaken: numb
 
 const roundTo = (x: number, step: number) => Math.max(step, Math.round(x / step) * step);
 
-/** Strategy D: size from the room left, the contract limit and the profit still needed. */
-function dynamicPlan(s: Strategy, ctx: Ctx, room: number, remaining: number): TradePlan {
-  const rr = ctx.odds.rewardRisk;
-  const maxRisk = ctx.setup.maxContracts * ctx.odds.riskPerContract || Infinity;
-  let risk = Math.min((s.dynamicShare ?? 0.5) * room, maxRisk);
-  if (risk * rr > remaining) risk = remaining / rr;
+/**
+ * Strategy D's trade size: a share of the room to the floor, no more than the contract
+ * limit allows, and no bigger than needed to reach the payout goal. Rounded to $10.
+ */
+export function dynamicSize(share: number, room: number, remaining: number, rewardRisk: number, maxRisk: number): { risk: number; reward: number } {
+  let risk = Math.min(share * room, maxRisk || Infinity);
+  if (risk * rewardRisk > remaining) risk = remaining / rewardRisk;
   risk = roundTo(risk, 10);
-  return { ...s.build, risk, reward: roundTo(risk * rr, 10), winRate: null };
+  return { risk, reward: roundTo(risk * rewardRisk, 10) };
+}
+
+function dynamicPlan(s: Strategy, ctx: Ctx, room: number, remaining: number): TradePlan {
+  const size = dynamicSize(s.dynamicShare ?? 0.5, room, remaining, ctx.odds.rewardRisk, ctx.setup.maxContracts * ctx.odds.riskPerContract);
+  return { ...s.build, ...size, winRate: null };
 }
 
 export interface FundedRun {

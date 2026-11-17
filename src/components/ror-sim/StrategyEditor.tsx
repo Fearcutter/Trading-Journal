@@ -2,14 +2,17 @@ import { useState } from 'react';
 import Card from '../ui/Card';
 import PlanFields from './PlanFields';
 import { Pct } from './fields';
-import type { Odds, Strategy, TradePlan } from '../../utils/ror-sim/types';
+import DynamicSizingExplainer from './DynamicSizingExplainer';
+import { DEFAULT_STRATEGIES } from '../../utils/ror-sim/presets';
+import type { Odds, SimSetup, Strategy, TradePlan } from '../../utils/ror-sim/types';
 
 /** The evaluation plan and each funded strategy's rules. */
-export default function StrategyEditor({ evalPlan, onEvalPlan, strategies, onStrategies, odds, maxContracts }: {
+export default function StrategyEditor({ evalPlan, onEvalPlan, strategies, onStrategies, odds, setup }: {
   evalPlan: TradePlan; onEvalPlan: (p: TradePlan) => void;
   strategies: Strategy[]; onStrategies: (s: Strategy[]) => void;
-  odds: Odds; maxContracts: number;
+  odds: Odds; setup: SimSetup;
 }) {
+  const maxContracts = setup.maxContracts;
   const [openId, setOpenId] = useState(strategies[0]?.id ?? 'A');
   const s = strategies.find(x => x.id === openId) ?? strategies[0];
   const update = (patch: Partial<Strategy>) => onStrategies(strategies.map(x => (x.id === s.id ? { ...x, ...patch } : x)));
@@ -32,7 +35,7 @@ export default function StrategyEditor({ evalPlan, onEvalPlan, strategies, onStr
             </button>
           ))}
         </div>
-        <p className="text-sm text-slate-400">{s.description} Once the payout goal is reached, the qualifying-day trade below is used until the payout.</p>
+        <p className="text-sm text-slate-400">{DEFAULT_STRATEGIES.find(d => d.id === s.id)?.description ?? s.description} Once the payout goal is reached, the qualifying-day trade below is used until the payout.</p>
 
         {s.id === 'D' ? (
           <>
@@ -40,8 +43,9 @@ export default function StrategyEditor({ evalPlan, onEvalPlan, strategies, onStr
               label="Risk this share of the room to the floor"
               value={s.dynamicShare ?? 0.5}
               onChange={v => update({ dynamicShare: v ?? 0.5 })}
-              hint="Reward is risk × your reward:risk. Never more than the contract limit, never aiming past the payout goal."
+              hint="Of the room to the floor, on every trade"
             />
+            <DynamicSizingExplainer share={s.dynamicShare ?? 0.5} setup={setup} odds={odds} />
             <PlanFields title="Trades a day" plan={s.build} onChange={build => update({ build })} odds={odds} maxContracts={maxContracts} sizeless />
           </>
         ) : (

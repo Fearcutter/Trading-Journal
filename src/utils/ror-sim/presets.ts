@@ -111,7 +111,7 @@ export const DEFAULT_STRATEGIES: Strategy[] = [
   },
   {
     id: 'D', name: 'D · Automatic sizing',
-    description: 'Each trade risks a share of the room to the floor, within the contract limit, never aiming past the payout goal.',
+    description: 'Trade size changes by itself, trade by trade: you risk a fixed share of whatever room is left above the drawdown floor, so you size down after losses and back up after wins.',
     build: plan(0, 0),
     afterPayout: plan(0, 0),
     dynamicShare: 0.5,

@@ -138,7 +138,7 @@ export default function RiskOfRuinPage() {
         strategies={state.strategies}
         onStrategies={strategies => setState({ strategies })}
         odds={state.odds}
-        maxContracts={state.setup.maxContracts}
+        setup={state.setup}
       />
       <QualifyTable
         qualify={state.qualify}
