@@ -26,7 +26,7 @@ import DayRatingTrendWidget from '../components/dashboard/DayRatingTrendWidget';
 import WidgetCustomizer from '../components/dashboard/WidgetCustomizer';
 import EmptyState from '../components/ui/EmptyState';
 import Button from '../components/ui/Button';
-import { LayoutDashboard, PlusCircle, Settings2 } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Settings2, Sigma } from 'lucide-react';
 
 export default function DashboardPage() {
   const { trades } = useTrades();
@@ -90,6 +90,13 @@ export default function DashboardPage() {
           </div>
         </div>
         {!readOnly && (
+          <div className="flex items-center gap-2">
+          <Link
+            to="/ror-sim"
+            className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full bg-slate-700 text-slate-300 hover:text-slate-50 hover:bg-slate-600 transition-colors"
+          >
+            <Sigma size={13} /> Open simulator
+          </Link>
           <button
             onClick={() => setCustomizerOpen(true)}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700 transition-colors"
@@ -97,6 +104,7 @@ export default function DashboardPage() {
           >
             <Settings2 size={18} />
           </button>
+          </div>
         )}
       </div>
       <FilterBar filters={filters} onChange={setFilters} />

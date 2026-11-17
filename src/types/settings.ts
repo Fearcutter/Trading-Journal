@@ -1,6 +1,7 @@
 import type { Instrument } from './instrument';
 import type { FirmConfig } from '../utils/prop-ev';
 import type { PracticeBankState } from '../utils/practice-bank';
+import type { SimSetup } from '../utils/ror-sim/types';
 
 export interface CustomCategory {
   id: string;
@@ -40,6 +41,8 @@ export interface Settings {
   hiddenConfluences?: string[];
   /** Category Analytics: named, saved picks of backtest folders and sessions. */
   backtestGroups?: BacktestGroup[];
+  /** Risk of Ruin & EV Simulator: saved firm setups. */
+  rorSetups?: SimSetup[];
 }
 
 export interface BacktestGroup {

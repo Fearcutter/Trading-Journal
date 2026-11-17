@@ -16,6 +16,7 @@ const pageTitles: Record<string, string> = {
   '/category-analytics': 'Category Analytics',
   '/apex-accounts': 'Funded Accounts',
   '/prop-ev': 'Prop Firm EV',
+  '/ror-sim': 'Risk of Ruin & EV Simulator',
   '/settings': 'Settings',
 };
 

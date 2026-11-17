@@ -15,6 +15,7 @@ import {
   LogOut,
   ArrowLeftRight,
   Dices,
+  Sigma,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useView } from '../../context/ViewContext';
@@ -33,6 +34,7 @@ const navItems = [
   { to: '/risk-calculator', icon: Calculator, label: 'Risk Calculator' },
   { to: '/apex-accounts', icon: Landmark, label: 'Funded Accounts' },
   { to: '/prop-ev', icon: Dices, label: 'Prop Firm EV' },
+  { to: '/ror-sim', icon: Sigma, label: 'Risk of Ruin & EV' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
