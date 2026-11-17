@@ -48,6 +48,9 @@ export interface StrategyResult {
     netPerFunded: number;
     avgTradesToFirst: number | null;
     avgDaysToFirst: number | null;
+    /** Between one payout and the next, for accounts that got more than one. */
+    avgDaysBetween: number | null;
+    avgTradesBetween: number | null;
     /** Average balance and room to the floor after payout 1, 2, ... */
     afterPayout: { n: number; balance: number; room: number }[];
   };
@@ -104,6 +107,7 @@ export function summarize(inp: SimInputs, strategy: Strategy, evalPlan: TradePla
   const nets = new Float64Array(n);
   let passed = 0, failed = 0, unfinishedEval = 0, evalTrades = 0, evalDays = 0;
   let blown = 0, blownBefore = 0, finished = 0, unfinishedFunded = 0;
+  let gapDays = 0, gapTrades = 0, gaps = 0;
   let payoutCount = 0, gross = 0, kept = 0, fees = 0, firstTrades = 0, firstDays = 0, withFirst = 0, noPayout = 0;
   const atLeast = new Array(PAYOUT_LEVELS).fill(0);
   const after: { n: number; balance: number; room: number }[] = [];
@@ -126,6 +130,11 @@ export function summarize(inp: SimInputs, strategy: Strategy, evalPlan: TradePla
       gross += p.gross;
       kept += p.net;
       if (k < PAYOUT_LEVELS) atLeast[k]++;
+      if (k > 0) {
+        gaps++;
+        gapDays += p.day - life.payouts[k - 1].day;
+        gapTrades += p.trades - life.payouts[k - 1].trades;
+      }
       after[k] ??= { n: 0, balance: 0, room: 0 };
       after[k].n++;
       after[k].balance += p.balanceAfter;
@@ -187,6 +196,8 @@ export function summarize(inp: SimInputs, strategy: Strategy, evalPlan: TradePla
       netPerFunded: avg(kept, passed),
       avgTradesToFirst: withFirst ? firstTrades / withFirst : null,
       avgDaysToFirst: withFirst ? firstDays / withFirst : null,
+      avgDaysBetween: gaps ? gapDays / gaps : null,
+      avgTradesBetween: gaps ? gapTrades / gaps : null,
       afterPayout: after.map(a => ({ n: a.n, balance: a.balance / a.n, room: a.room / a.n })),
     },
     money: {

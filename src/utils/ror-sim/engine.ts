@@ -9,6 +9,8 @@ export interface PayoutRecord {
   net: number;
   /** Funded trading day it was taken on. */
   day: number;
+  /** Funded trades taken up to and including that day. */
+  trades: number;
   balanceAfter: number;
   roomAfter: number;
 }
@@ -206,7 +208,7 @@ export function runFunded(ctx: Ctx, strategy: Strategy, qualify: TradePlan, rand
     if (available < payoutGoal(setup, payouts.length) - 1e-9 || available < Math.max(f.minPayout, 1)) continue;
 
     acct.withdraw(available);
-    payouts.push({ gross: available, net: available * f.split, day, balanceAfter: acct.balance, roomAfter: acct.room });
+    payouts.push({ gross: available, net: available * f.split, day, trades, balanceAfter: acct.balance, roomAfter: acct.room });
     if (tradesToFirst === null) tradesToFirst = trades;
     cycleDays = 0; cycleProfit = 0; cycleBest = 0; cycleWins = 0;
     if (f.maxPayouts !== null && payouts.length >= f.maxPayouts) return { end: 'finished', trades, days: day, payouts, tradesToFirst };

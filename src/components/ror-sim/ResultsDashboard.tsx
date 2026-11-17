@@ -65,6 +65,7 @@ export default function ResultsDashboard({ r, exact, budget }: { r: StrategyResu
         </div>
         <p className="text-xs text-slate-500">
           {f.avgDaysToFirst !== null && `First payout after ${f.avgDaysToFirst.toFixed(1)} funded days (${f.avgTradesToFirst?.toFixed(1)} trades) on average. `}
+          {f.avgDaysBetween !== null && `Then ${f.avgDaysBetween.toFixed(1)} days (${f.avgTradesBetween?.toFixed(1)} trades) between payouts. `}
           {f.unfinished.p > 0 && `${pct(f.unfinished.p)} were still trading after 500 days; they count only the payouts they took.`}
         </p>
       </Card>

@@ -13,7 +13,7 @@ export default function StrategyComparison({ results, bestId, selected, onSelect
     <Card className="space-y-4">
       <div>
         <h3 className="text-sm font-semibold text-slate-50">Strategy comparison</h3>
-        <p className="text-xs text-slate-500">Ranked by net cash per evaluation bought (payouts kept minus all fees), not by win rate. Click a row for its full results.</p>
+        <p className="text-xs text-slate-500">Ranked by net cash per evaluation bought (payouts kept minus all fees), not by win rate. Payout timing counts funded trading days and trades, for accounts that got there. Click a row for its full results.</p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -24,6 +24,8 @@ export default function StrategyComparison({ results, bestId, selected, onSelect
               <th className="py-2 pr-3 font-medium">1st payout (funded)</th>
               <th className="py-2 pr-3 font-medium">Blown before payout</th>
               <th className="py-2 pr-3 font-medium">Avg payouts</th>
+              <th className="py-2 pr-3 font-medium">To 1st payout</th>
+              <th className="py-2 pr-3 font-medium">Between payouts</th>
               <th className="py-2 pr-3 font-medium">Money to a payout</th>
               <th className="py-2 font-medium">Bad / typical / good</th>
             </tr>
@@ -45,6 +47,14 @@ export default function StrategyComparison({ results, bestId, selected, onSelect
                 <td className="py-2 pr-3 font-mono text-slate-200">{pct(r.funded.atLeastIfFunded[0].p)}</td>
                 <td className="py-2 pr-3 font-mono text-slate-200">{pct(r.funded.ruinBeforePayout.p)}</td>
                 <td className="py-2 pr-3 font-mono text-slate-200">{r.funded.avgPayouts.toFixed(2)}</td>
+                <td className="py-2 pr-3 font-mono text-slate-200">
+                  {r.funded.avgDaysToFirst === null ? '—' : `${r.funded.avgDaysToFirst.toFixed(1)} days`}
+                  {r.funded.avgTradesToFirst !== null && <span className="block text-[11px] text-slate-500">{r.funded.avgTradesToFirst.toFixed(1)} trades</span>}
+                </td>
+                <td className="py-2 pr-3 font-mono text-slate-200">
+                  {r.funded.avgDaysBetween === null ? '—' : `${r.funded.avgDaysBetween.toFixed(1)} days`}
+                  {r.funded.avgTradesBetween !== null && <span className="block text-[11px] text-slate-500">{r.funded.avgTradesBetween.toFixed(1)} trades</span>}
+                </td>
                 <td className="py-2 pr-3 font-mono text-slate-200">{money(r.untilPayout.avgSpent)}</td>
                 <td className="py-2 font-mono text-slate-400 text-xs">{money(r.money.p10)} / {money(r.money.p50)} / {money(r.money.p90)}</td>
               </tr>
