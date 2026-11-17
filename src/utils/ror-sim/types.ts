@@ -42,7 +42,7 @@ export interface TradePlan {
   extraChance: number;
 }
 
-export type StrategyId = 'A' | 'B' | 'C' | 'D' | 'E';
+export type StrategyId = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
 
 /**
  * A funded-account strategy. Every strategy has the same stages: build to the payout
@@ -60,6 +60,10 @@ export interface Strategy {
   afterPayout: TradePlan;
   /** D: risk this share of the room to the floor on each trade. */
   dynamicShare?: number;
+  /** F: one trade size from start to finish, before and after payouts. */
+  fixed?: boolean;
+  /** F: switch to the qualifying-day trade once the payout goal is reached (off = stay fixed). */
+  useQualify?: boolean;
 }
 
 /** Your trading odds. */

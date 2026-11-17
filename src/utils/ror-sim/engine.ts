@@ -166,8 +166,12 @@ export function runFunded(ctx: Ctx, strategy: Strategy, qualify: TradePlan, rand
   let tradesToFirst: number | null = null;
 
   const stage = (): 'build' | 'qualify' => (acct.balance < targetBalance(setup, acct.floor, payouts.length) - 1e-9 ? 'build' : 'qualify');
+  // A fixed strategy that doesn't switch to the qualifying trade plays the same trade throughout
+  const pureFixed = !!strategy.fixed && !strategy.useQualify;
   const planFor = (st: 'build' | 'qualify'): TradePlan => {
+    if (pureFixed) return strategy.build;
     if (st === 'qualify') return qualify;
+    if (strategy.fixed) return strategy.build;
     if (strategy.id === 'D') return dynamicPlan(strategy, ctx, acct.room, targetBalance(setup, acct.floor, payouts.length) - acct.balance);
     if (payouts.length > 0) return strategy.afterPayout;
     if (strategy.afterFirstWin && cycleWins > 0) return strategy.afterFirstWin;
@@ -182,9 +186,11 @@ export function runFunded(ctx: Ctx, strategy: Strategy, qualify: TradePlan, rand
     while (true) {
       // A day ends when the stage changes (payout goal reached, or dropped back below it)
       const st = stage();
-      if (st !== startStage) break;
-      // Qualifying: stop once today already counts
-      if (st === 'qualify' && taken > 0 && pl >= f.minDayProfit) break;
+      if (!pureFixed) {
+        if (st !== startStage) break;
+        // Qualifying: stop once today already counts
+        if (st === 'qualify' && taken > 0 && pl >= f.minDayProfit) break;
+      }
       const plan = planFor(st);
       if (!mayTrade(plan, taken, lastWon, rand)) break;
       const won = rand() < ctx.win(plan);

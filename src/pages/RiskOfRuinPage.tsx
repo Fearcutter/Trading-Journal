@@ -36,7 +36,11 @@ const DEFAULTS: PageState = {
 function load(): PageState {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : DEFAULTS;
+    if (!raw) return DEFAULTS;
+    const saved: PageState = { ...DEFAULTS, ...JSON.parse(raw) };
+    // Strategies added since this browser last saved show up with their starting rules
+    const strategies = DEFAULT_STRATEGIES.map(d => saved.strategies.find(s => s.id === d.id) ?? d);
+    return { ...saved, strategies };
   } catch {
     return DEFAULTS;
   }

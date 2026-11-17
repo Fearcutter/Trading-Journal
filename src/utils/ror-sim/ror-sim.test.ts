@@ -110,6 +110,18 @@ describe('funded account and payouts', () => {
     expect(run.payouts[0].roomAfter).toBe(run.payouts[0].balanceAfter - 50100);
   });
 
+  it('fixed size keeps the same trade through the qualifying days', () => {
+    const f = DEFAULT_STRATEGIES.find(s => s.id === 'F')!;
+    const s = { ...f, build: { ...f.build, maxTradesPerDay: 1, winRate: 1 } };
+    // A qualifying trade that always loses: a fixed strategy never uses it
+    const neverQualify = { ...DEFAULT_QUALIFY, winRate: 0 };
+    const run = runFunded({ setup: LUCID_FLEX_50K, odds: DEFAULT_ODDS, win: makeWinChance(DEFAULT_ODDS) }, s, neverQualify, mulberry32(4));
+    expect(run.end).toBe('finished');
+    // $4,000 at $500 a day = 8 days to the first payout
+    expect(run.payouts[0].day).toBe(8);
+    expect(run.payouts[0].gross).toBe(2000);
+  });
+
   it('a lifecycle that never pays counts only fees, never the balance', () => {
     const lose = { ...onePerDay, winRate: 0 };
     const life = simulateLifecycle(LUCID_FLEX_50K, DEFAULT_ODDS, lose, DEFAULT_QUALIFY, DEFAULT_STRATEGIES[0], mulberry32(1));

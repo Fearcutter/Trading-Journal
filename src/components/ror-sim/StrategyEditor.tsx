@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Card from '../ui/Card';
 import PlanFields from './PlanFields';
-import { Pct } from './fields';
+import { Pct, Toggle } from './fields';
 import DynamicSizingExplainer from './DynamicSizingExplainer';
 import { DEFAULT_STRATEGIES } from '../../utils/ror-sim/presets';
 import type { Odds, SimSetup, Strategy, TradePlan } from '../../utils/ror-sim/types';
@@ -35,9 +35,23 @@ export default function StrategyEditor({ evalPlan, onEvalPlan, strategies, onStr
             </button>
           ))}
         </div>
-        <p className="text-sm text-slate-400">{DEFAULT_STRATEGIES.find(d => d.id === s.id)?.description ?? s.description} Once the payout goal is reached, the qualifying-day trade below is used until the payout.</p>
+        <p className="text-sm text-slate-400">{DEFAULT_STRATEGIES.find(d => d.id === s.id)?.description ?? s.description}{s.fixed && !s.useQualify ? '' : ' Once the payout goal is reached, the qualifying-day trade below is used until the payout.'}</p>
 
-        {s.id === 'D' ? (
+        {s.fixed ? (
+          <>
+            <PlanFields title="Every trade" plan={s.build} onChange={build => update({ build })} odds={odds} maxContracts={maxContracts} />
+            <Toggle
+              label="Switch to the qualifying-day trade once the payout goal is reached"
+              checked={!!s.useQualify}
+              onChange={useQualify => update({ useQualify })}
+            />
+            <p className="text-xs text-slate-500">
+              {s.useQualify
+                ? 'Fixed size until the payout goal, then the qualifying-day trade until the payout, then fixed size again.'
+                : 'Off: this trade is used for every trade, including the qualifying days. The payout is taken as soon as the rules allow it.'}
+            </p>
+          </>
+        ) : s.id === 'D' ? (
           <>
             <Pct
               label="Risk this share of the room to the floor"

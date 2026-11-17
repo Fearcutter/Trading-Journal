@@ -122,4 +122,12 @@ export const DEFAULT_STRATEGIES: Strategy[] = [
     build: plan(1000, 1000, { maxTradesPerDay: 2, stopAfterLoss: false, extraChance: 0.5 }),
     afterPayout: plan(500, 500),
   },
+  {
+    id: 'F', name: 'F · Fixed size',
+    description: 'The same trade size on every trade, from the first day through every payout. No sizing up or down, and no switch to a smaller qualifying trade unless you turn it on.',
+    build: plan(500, 500, { maxTradesPerDay: 2, stopAfterLoss: false, extraChance: 0.5 }),
+    afterPayout: plan(500, 500),
+    fixed: true,
+    useQualify: false,
+  },
 ];
