@@ -1,14 +1,26 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
+import { pendingInviteToken } from '../utils/coach-invite';
 
 export default function AuthPage() {
   const { signIn, signUp } = useAuth();
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [inviteToken] = useState(pendingInviteToken);
+  const [mode, setMode] = useState<'signin' | 'signup'>(inviteToken ? 'signup' : 'signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [signUpSuccess, setSignUpSuccess] = useState(false);
+  // undefined while checking, null if the link is used/expired, otherwise who sent it
+  const [inviter, setInviter] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (!inviteToken) return;
+    supabase.rpc('get_coach_invite', { p_token: inviteToken }).then(({ data }) => {
+      setInviter(typeof data === 'string' && data ? data : null);
+    });
+  }, [inviteToken]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +44,22 @@ export default function AuthPage() {
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <h1 className="text-2xl font-bold text-slate-50 text-center mb-8">Trading Journal</h1>
+
+        {inviteToken && inviter !== undefined && (
+          <div className={`mb-4 rounded-xl border p-4 text-sm ${inviter ? 'border-blue-500/40 bg-blue-500/10 text-slate-200' : 'border-rose-500/40 bg-rose-500/10 text-rose-200'}`}>
+            {inviter ? (
+              <>
+                <p className="font-medium text-slate-50 mb-1">You've been invited to coach {inviter}'s journal.</p>
+                <p className="text-slate-400">
+                  Create an account with any email (or sign in if you have one). After confirming your email, sign in on this
+                  device, or open the invite link again, and you'll be connected.
+                </p>
+              </>
+            ) : (
+              <p>This invite link has expired, been used, or been cancelled. Ask for a new one.</p>
+            )}
+          </div>
+        )}
 
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
           {/* Tabs */}

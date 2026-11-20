@@ -15,6 +15,8 @@ import { ApexAccountProvider } from './context/ApexAccountContext';
 import MigrationGate from './components/MigrationGate';
 import AppLayout from './components/layout/AppLayout';
 import AuthPage from './pages/AuthPage';
+import CoachInviteClaim from './components/CoachInviteClaim';
+import { pendingInviteToken } from './utils/coach-invite';
 import DashboardPage from './pages/DashboardPage';
 import LiveTradingPage from './pages/LiveTradingPage';
 import TradeDetailPage from './pages/TradeDetailPage';
@@ -53,6 +55,11 @@ function AuthGate() {
 
   if (!user) {
     return <AuthPage />;
+  }
+
+  const inviteToken = pendingInviteToken();
+  if (inviteToken) {
+    return <CoachInviteClaim token={inviteToken} />;
   }
 
   return (
